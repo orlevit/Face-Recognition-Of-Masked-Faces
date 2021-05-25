@@ -2,8 +2,8 @@
 # TODO: 3.create corona mask
 #ODO: 4. obly get one identity out of the whole image
 #ODO: 5. add saving to the proper location of image mask
-# TODO: 6. refactor main.py
-# TODO: 7. change render function
+#ODO: 6. refactor main.py
+#ODO: 7. change render function
 #change to a folder with images, or another list containing image paths
 
 import os

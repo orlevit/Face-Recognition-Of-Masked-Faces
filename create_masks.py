@@ -1,3 +1,5 @@
+# todo: delete render_plot
+
 import cv2
 import numpy as np
 from config import VERTICES_PATH, EYE_MASK_IND, HAT_MASK_IND, SCARF_MASK_IND, EYE_MASK, HAT_MASK, SCARF_MASK
@@ -94,40 +96,26 @@ def MakeHatMask(model, SEP, x, y, z):
 
 
 def render(img, pose, mask_verts, rest_of_head_verts, mask_name):
-    print('MASK NAME: ',mask_name)
+
+    # Transform the 3DMM according to the pose
     mask_trans_vertices = transform_vertices(img, pose, mask_verts)
     rest_trans_vertices = transform_vertices(img, pose, rest_of_head_verts)
     
-    # Add the forehead to the mask or as a pert of the rest of the face
-    print(mask_name == HAT_MASK, mask_name)
+    # Whether to add the forehead to the mask, this is currenly only used for eye and hat masks
     if mask_name in [HAT_MASK, EYE_MASK]:
         mask_x, mask_y = add_headTop(img, mask_trans_vertices, rest_trans_vertices)
         mask_x, mask_y = np.append(mask_x.flatten(), mask_trans_vertices[:, 0]), \
                          np.append(mask_y.flatten(), mask_trans_vertices[:, 1])
         rest_x, rest_y = rest_trans_vertices[:, 0], rest_trans_vertices[:, 1]
-        print('11111111111111111')
-    elif mask_name == SCARF_MASK:
+    else:
         mask_x, mask_y = mask_trans_vertices[:, 0], mask_trans_vertices[:, 1]
         rest_x, rest_y = rest_trans_vertices[:, 0], rest_trans_vertices[:, 1]
-#     else:
-#         print('222222222222222222222')
-#         mask_x, mask_y = mask_trans_vertices[:, 0], mask_trans_vertices[:, 1]
-#         rest_x, rest_y = add_headTop(img, rest_trans_vertices, mask_trans_vertices)
-#         rest_x, rest_y = np.append(rest_x.flatten(), rest_trans_vertices[:, 0]), \
-#                          np.append(rest_y.flatten(), rest_trans_vertices[:, 1])
 
-#     if mask_name == FOREHEAD_IN_MASK:
-#         mask_x, mask_y = add_headTop(img, mask_trans_vertices, rest_trans_vertices)
-#         rest_x, rest_y = rest_trans_vertices[:,0], rest_trans_vertices[:,1] 
-#         print('11111111111111111')
-#     else:
-#         print('222222222222222222222')
-#         mask_x, mask_y = mask_trans_vertices[:,0], mask_trans_vertices[:,1] 
-#         rest_x, rest_y = add_headTop(img, rest_trans_vertices, mask_trans_vertices)
-    
+    # Perform morphological close
     morph_mask_x, morph_mask_y = morphologicalClose(mask_x, mask_y, img)
     morph_rest_x, morph_rest_y = morphologicalClose(rest_x, rest_y, img)
-    return(morph_mask_x, morph_mask_y, morph_rest_x, morph_rest_y)
+
+    return morph_mask_x, morph_mask_y, morph_rest_x, morph_rest_y
 
 def render_plot(x, y, img, bboxes):
     plt.figure(figsize=(8, 8))     
@@ -232,9 +220,8 @@ def load_3DMM():
 	return verts, verts_rotated
 
 def create_masks():
-        #TODO: 
-# 1.not to use verts_rotated but verts
-# 2. chame Make**Mask funtions with out the None
+        #TODO: 1.not to use verts_rotated but verts
+#  todo: 2. chame Make**Mask funtions with out the None
 	verts, verts_rotated = load_3DMM()
 	x, y, z = verts_rotated[:,0],verts_rotated[:,1],verts_rotated[:,2]
 	# Change the calling for these functions!
