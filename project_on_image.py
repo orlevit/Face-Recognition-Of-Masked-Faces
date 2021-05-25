@@ -1,4 +1,7 @@
-def tansform_points(points, pose):
+import numpy as np
+from scipy.spatial.transform import Rotation
+
+def transform_points(points, pose):
     return points.dot(Rotation.from_rotvec(pose[:3]).as_matrix().T) + pose[3:]
 
 def plot_3d_landmark(verts, campose, intrinsics):

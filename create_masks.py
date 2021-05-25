@@ -1,5 +1,7 @@
-from cofig import VERTICES_PATH
-
+import cv2
+import numpy as np
+from config import VERTICES_PATH, EYE_MASK_IND, HAT_MASK_IND, SCARF_MASK_IND, EYE_MASK, HAT_MASK, SCARF_MASK
+from project_on_image import transform_vertices
 # This is the opposite of the functon in expression-net-old
 def get_hat_mask_index(a1,b1,c1,x_left,x_right,x,y):
 
@@ -91,7 +93,7 @@ def MakeHatMask(model, SEP, x, y, z):
     return (index_list)
 
 
-ef render(img, poses, mask_verts, rest_of_head_verts, mask_name):
+def render(img, poses, mask_verts, rest_of_head_verts, mask_name):
     print('MASK NAME: ',mask_name)
     mask_trans_vertices = transform_vertices(img, poses, mask_verts)
     rest_trans_vertices = transform_vertices(img, poses, rest_of_head_verts)
@@ -245,4 +247,4 @@ def create_masks():
 	masks = [indexOnSEP(maskInd, verts) for maskInd in masksInd]
 	rest_of_heads = [get_rest_mask(maskInd, verts) for maskInd in masksInd]
 
-	return masks, masks, rest_of_heads
+	return masks, rest_of_heads

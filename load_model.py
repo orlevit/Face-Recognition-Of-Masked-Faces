@@ -1,8 +1,14 @@
-from config import DEPTH, MAX_SIZE, MIN_SIZE, POSE_MEAN, POSE_STDDEV
+from config import DEPTH, MAX_SIZE, MIN_SIZE, POSE_MEAN, POSE_STDDEV, MODEL_PATH, PATH_3D_POINTS
+import sys
+sys.path.append('./img2pose')
+import numpy as np
+from torchvision import transforms
+from img2pose import img2poseModel
+from model_loader import load_model
 
-def load_model():
+def get_model():
 	transform = transforms.Compose([transforms.ToTensor()])
-
+	threed_points = np.load(PATH_3D_POINTS)
 	pose_mean = np.load(POSE_MEAN)
 	pose_stddev = np.load(POSE_STDDEV)
 
