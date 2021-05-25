@@ -93,10 +93,10 @@ def MakeHatMask(model, SEP, x, y, z):
     return (index_list)
 
 
-def render(img, poses, mask_verts, rest_of_head_verts, mask_name):
+def render(img, pose, mask_verts, rest_of_head_verts, mask_name):
     print('MASK NAME: ',mask_name)
-    mask_trans_vertices = transform_vertices(img, poses, mask_verts)
-    rest_trans_vertices = transform_vertices(img, poses, rest_of_head_verts)
+    mask_trans_vertices = transform_vertices(img, pose, mask_verts)
+    rest_trans_vertices = transform_vertices(img, pose, rest_of_head_verts)
     
     # Add the forehead to the mask or as a pert of the rest of the face
     print(mask_name == HAT_MASK, mask_name)

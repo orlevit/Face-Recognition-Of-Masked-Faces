@@ -15,28 +15,24 @@ def plot_3d_landmark(verts, campose, intrinsics):
 
     return lms_projected, lms_3d_trans_proj
 
-def transform_vertices(img, poses, vertices, global_intrinsics=None):
+def transform_vertices(img, pose, vertices, global_intrinsics=None):
         (h, w,_) = img.shape
         if global_intrinsics is None:
             global_intrinsics = np.array(
                 [[w + h, 0, w // 2], [0, w + h, h // 2], [0, 0, 1]]
             )
 
-        transformed_vertices = []
-        for pose in poses:
-            projected_lms = np.zeros_like(vertices)
-            projected_lms[:, :2], lms_3d_trans_proj = plot_3d_landmark(
-                vertices, pose, global_intrinsics
-            )
-            projected_lms[:, 2] = lms_3d_trans_proj[:, 2] * -1
+        projected_lms = np.zeros_like(vertices)
+        projected_lms[:, :2], lms_3d_trans_proj = plot_3d_landmark(
+            vertices, pose, global_intrinsics
+        )
+        projected_lms[:, 2] = lms_3d_trans_proj[:, 2] * -1
 
-            range_x = np.max(projected_lms[:, 0]) - np.min(projected_lms[:, 0])
-            range_y = np.max(projected_lms[:, 1]) - np.min(projected_lms[:, 1])
+        range_x = np.max(projected_lms[:, 0]) - np.min(projected_lms[:, 0])
+        range_y = np.max(projected_lms[:, 1]) - np.min(projected_lms[:, 1])
 
-            s = (h + w) / pose[5]
-            projected_lms[:, 2] *= s
-            projected_lms[:, 2] += (range_x + range_y) * 3
+        s = (h + w) / pose[5]
+        projected_lms[:, 2] *= s
+        projected_lms[:, 2] += (range_x + range_y) * 3
 
-            transformed_vertices.append(projected_lms)
-
-        return transformed_vertices[0]
+        return projected_lms
