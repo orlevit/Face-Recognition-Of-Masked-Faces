@@ -1,11 +1,9 @@
-# TODO: 
-# 1.Save ti images
-# 2.change forehead image
-# 3.create corona mask
-# 4. obly get one identity out of the whole image
-# 5. add saving to the proper location of image mask
-# 6. refactor main.py
-# 7. change render function
+# TODO: 2.change forehead image
+# TODO: 3.create corona mask
+# TODO: 4. obly get one identity out of the whole image
+# TODO: 5. add saving to the proper location of image mask
+# TODO: 6. refactor main.py
+# TODO: 7. change render function
 #change to a folder with images, or another list containing image paths
 
 import os
@@ -13,9 +11,9 @@ import cv2
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from load_model import get_model
+from helpers import get_model, save_image
 from create_masks import create_masks, bg_color, render
-from config import MASKS_NAMES, IMAGES_PATH, THRESHOLD, DEST_PATH
+from config import MASKS_NAMES, IMAGES_PATH, THRESHOLD
 
 model, transform = get_model()
 masks, rest_of_heads = create_masks()
@@ -26,7 +24,7 @@ else:
     img_paths = [os.path.join(IMAGES_PATH, img_path) for img_path in os.listdir(IMAGES_PATH)]
 
 for img_path in tqdm(img_paths):
-#     img = Image.open(img_path).convert("RGB")
+#   img = Image.open(img_path).convert("RGB")
     img = cv2.imread(img_path, 1)
     image_name = os.path.split(img_path)[1]
     
@@ -45,10 +43,7 @@ for img_path in tqdm(img_paths):
             poses.append(pose_pred)  
             bboxes.append(bbox)
 
-            print(img_path,'\n',poses)
-
-    if not os.path.exists(DEST_PATH):
-        os.makedirs(DEST_PATH)
+            print(img_path, '\n', poses)
 
     for mask, rest_of_head, mask_name in zip(masks, rest_of_heads, MASKS_NAMES):
         mask_x, mask_y, rest_mask_x, rest_mask_y = render(img.copy(), poses, mask, rest_of_head, mask_name)
@@ -60,4 +55,4 @@ for img_path in tqdm(img_paths):
         for x, y in zip(rest_mask_x, rest_mask_y):
             img_output[round(y), round(x), :] = img[round(y), round(x), :]
 
-        cv2.imwrite(DEST_PATH+'//'+mask_name+'_'+image_name, img_output)
+        save_image(img_path, mask_name, img_output)
