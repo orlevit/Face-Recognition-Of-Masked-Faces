@@ -1,4 +1,4 @@
-# TODO: 2.change forehead image
+#ODO: 2.change forehead image
 # TODO: 3.create corona mask
 #ODO: 4. obly get one identity out of the whole image
 #ODO: 5. add saving to the proper location of image mask
