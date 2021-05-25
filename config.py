@@ -1,0 +1,16 @@
+EYE_MASK_IND = [27086, 27344, 40454, 8150] 
+HAT_MASK_IND = [20043, 34895, 8094] 
+SCARF_MASK_IND = [19564, 34851, 8138] 
+EYE_MASK = 'eyeMask'
+HAT_MASK = 'hatMask'
+SCARF_MASK = 'scarfMask'
+MASKS_NAMES = [EYE_MASK, HAT_MASK, SCARF_MASK]
+IMAGES_PATH = "/home/or/dev/Expression-old/images/lfw/aaa"
+THRESHOLD = 0.9
+DEPTH = 18
+MAX_SIZE = 1400
+MIN_SIZE = 600
+POSE_MEAN = r"./img2pose/models/WIDER_train_pose_mean_v1.npy"
+POSE_STDDEV = r"./img2pose/models/WIDER_train_pose_stddev_v1.npy"
+MODEL_PATH = r"./img2pose/models/img2pose_v1.pth"
+VERTICES_PATH =  r"/home/or/dev/img2pose/pose_references/vertices_trans.npy"
