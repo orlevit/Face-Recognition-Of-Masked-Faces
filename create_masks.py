@@ -2,11 +2,11 @@
 
 import cv2
 import numpy as np
-from config import VERTICES_PATH, EYE_MASK_IND, HAT_MASK_IND, SCARF_MASK_IND, EYE_MASK, HAT_MASK
+from config import VERTICES_PATH, EYE_MASK_IND, HAT_MASK_IND, CORONA_MASK_IND, SCARF_MASK_IND, EYE_MASK, HAT_MASK
 from project_on_image import transform_vertices
 
 
-# This is the opposite of the functon in expression-net-old
+# This is the opposite of the function in expression-net-old
 def get_hat_mask_index(a1, b1, c1, x_left, x_right, x, y):
     index_list = []
     for i in range(len(x)):
@@ -18,7 +18,7 @@ def get_hat_mask_index(a1, b1, c1, x_left, x_right, x, y):
     return index_list
 
 
-# This is the opposite of the functon in expression-net-old
+# This is the opposite of the function in expression-net-old
 # get the scarf mask indexes on the model
 def get_scarf_mask_index(a1, b1, c1, x_left, x_right, x, y):
     index_list = []
@@ -31,7 +31,7 @@ def get_scarf_mask_index(a1, b1, c1, x_left, x_right, x, y):
     return index_list
 
 
-# This is the opposite of the functon in expression-net-old
+# This is the opposite of the function in expression-net-old
 def get_eyes_mask_index(a1, b1, c1, a2, b2, c2, x_left, x_right, x, y):
     index_list = []
     for i in range(len(x)):
@@ -44,7 +44,7 @@ def get_eyes_mask_index(a1, b1, c1, a2, b2, c2, x_left, x_right, x, y):
     return index_list
 
 
-def make_eye_mask(model, SEP, x, y, z):
+def make_eye_mask(x, y):
     x_left = x[EYE_MASK_IND[0]]
     x_right = x[EYE_MASK_IND[1]]
     y_left = y[EYE_MASK_IND[0]]
@@ -65,7 +65,7 @@ def make_eye_mask(model, SEP, x, y, z):
     return index_list
 
 
-def make_scarf_mask(model, SEP, x, y, z):
+def make_scarf_mask(x, y):
     x_left = x[SCARF_MASK_IND[0]]
     x_right = x[SCARF_MASK_IND[1]]
     y_left = y[SCARF_MASK_IND[0]]
@@ -82,7 +82,7 @@ def make_scarf_mask(model, SEP, x, y, z):
 
 
 # create hat mask
-def make_hat_mask(model, SEP, x, y, z):
+def make_hat_mask(x, y):
     x_left = x[HAT_MASK_IND[0]]
     x_right = x[HAT_MASK_IND[1]]
     y_left = y[HAT_MASK_IND[0]]
@@ -98,7 +98,85 @@ def make_hat_mask(model, SEP, x, y, z):
     return index_list
 
 
-def render(img, pose, mask_verts, rest_of_head_verts, mask_name):
+def make_corona_mask(x, y, z):
+    left_middle_ind = CORONA_MASK_IND[0]
+    center_middle_ind = CORONA_MASK_IND[1]
+    right_middle_ind = CORONA_MASK_IND[2]
+    left_lower_ind = CORONA_MASK_IND[3]
+    right_lower_ind = CORONA_MASK_IND[4]
+    left_upper_string1 = CORONA_MASK_IND[5]
+    left_upper_string2 = CORONA_MASK_IND[6]
+    left_lower_string1 = CORONA_MASK_IND[7]
+    left_lower_string2 = CORONA_MASK_IND[8]
+    right_upper_string1 = CORONA_MASK_IND[9]
+    right_upper_string2 = CORONA_MASK_IND[10]
+    right_lower_string1 = CORONA_MASK_IND[11]
+    right_lower_string2 = CORONA_MASK_IND[12]
+
+    index_list1 = center_face_ind(left_middle_ind, center_middle_ind, right_middle_ind, \
+                                  left_lower_ind, right_lower_ind, y, z)
+    index_list2 = get_mask_string(left_upper_string1, left_upper_string2, 'LEFT', x, y, z)
+    index_list3 = get_mask_string(left_lower_string1, left_lower_string2, 'LEFT', x, y, z)
+    index_list4 = get_mask_string(right_upper_string1, right_upper_string2, 'RIGHT', x, y, z)
+    index_list5 = get_mask_string(right_lower_string1, right_lower_string2, 'RIGHT', x, y, z)
+
+    corona_mask_ind = index_list1
+    corona_strings_ind = index_list2 + index_list3 + index_list4 + index_list5
+
+    # face_indices = np.arange(len(x))
+    # mask = np.ones_like(face_indices, bool)
+    # mask[np.asarray(corona_mask_ind)] = False
+    # visible_face_ind = face_indices[mask]
+
+    return corona_mask_ind, corona_strings_ind
+
+
+def center_face_ind(left_middle_ind, center_middle_ind, right_middle_ind, left_lower_ind, right_lower_ind, y, z):
+    y_middle = y[[right_lower_ind, center_middle_ind, right_middle_ind]]
+    z_middle = z[[right_lower_ind, center_middle_ind, right_middle_ind]]
+    y_lower = y[[left_lower_ind, right_lower_ind]]
+    z_lower = z[[left_lower_ind, right_lower_ind]]
+
+    a, b, c = np.polyfit(y_middle, z_middle, 2)
+    m, n = np.polyfit(y_lower, z_lower, 1)
+
+    index_list = []
+    for ii, y_i in enumerate(y):
+        if ((z[ii] >= (a * (y_i ** 2) + b * y_i + c))) and (y[right_lower_ind] < y[ii] < y[right_middle_ind]) or \
+                (z[ii] >= (m * y_i + n)) and (y[left_lower_ind] < y[ii] < y[right_lower_ind]):
+            index_list.append(ii)
+
+    return index_list
+
+
+def get_mask_string(ind1, ind2, face_side, x, y, z):
+    if face_side == 'LEFT':
+        filtered_ind = [ii for ii, x_i in enumerate(x) if (x_i >= 0)]
+    else:  # left face
+        filtered_ind = [ii for ii, x_i in enumerate(x) if (x_i <= 0)]
+
+    y_pos = y[filtered_ind]
+    z_pos = z[filtered_ind]
+
+    # Draw line
+    received_y_pt = [y[ind1], y[ind2]]
+    received_z_pt = [z[ind1], z[ind2]]
+    m, mb = np.polyfit(received_y_pt, received_z_pt, 1)
+
+    start_y = min(received_y_pt)
+    end_y = max(received_y_pt)
+    line_list = []
+    string_size = 5
+    for i in np.arange(start_y, end_y + 0.001, 0.001):
+        distances = np.asarray(((z_pos - (m * i + mb)) ** 2 + (y_pos - i) ** 2))
+        string_size_ind = np.argpartition(distances, string_size)[:string_size]
+        cond_ind = list(np.asarray(filtered_ind)[string_size_ind])
+        line_list += cond_ind
+
+    return np.unique(np.asarray(line_list)).tolist()
+
+
+def render(img, pose, mask_verts, mask_add_verts, rest_of_head_verts, mask_name):
     # Transform the 3DMM according to the pose
     mask_trans_vertices = transform_vertices(img, pose, mask_verts)
     rest_trans_vertices = transform_vertices(img, pose, rest_of_head_verts)
@@ -117,6 +195,12 @@ def render(img, pose, mask_verts, rest_of_head_verts, mask_name):
     morph_mask_x, morph_mask_y = morphologicalClose(mask_x, mask_y, img)
     morph_rest_x, morph_rest_y = morphologicalClose(rest_x, rest_y, img)
 
+    if mask_add_verts is not None:
+        mask_add_trans_vertices = np.round(transform_vertices(img, pose, mask_add_verts)).astype(int)
+        # Function that remove the
+        morph_mask_x = np.append(morph_mask_x, mask_add_trans_vertices[:, 0])
+        morph_mask_y = np.append(morph_mask_y, mask_add_trans_vertices[:, 1])
+
     return morph_mask_x, morph_mask_y, morph_rest_x, morph_rest_y
 
 
@@ -131,18 +215,18 @@ def render_plot(x, y, img, bboxes):
     plt.show()
 
 
-def index_on_verts(index_list, SEP):
-    x = SEP[:, 0]
-    y = SEP[:, 1]
-    z = SEP[:, 2]
-    xMask = x[index_list]
-    yMask = y[index_list]
-    zMask = z[index_list]
-    sizeArray = (xMask.shape[0], 3)
-    maskSEP = np.zeros(sizeArray)
-    maskSEP[:, 0] = xMask
-    maskSEP[:, 1] = yMask
-    maskSEP[:, 2] = zMask
+def index_on_vertices(index_list, vertices):
+    x = vertices[:, 0]
+    y = vertices[:, 1]
+    z = vertices[:, 2]
+    x_mask = x[index_list]
+    y_mask = y[index_list]
+    z_mask = z[index_list]
+    size_array = (x_mask.shape[0], 3)
+    maskSEP = np.zeros(size_array)
+    maskSEP[:, 0] = x_mask
+    maskSEP[:, 1] = y_mask
+    maskSEP[:, 2] = z_mask
 
     return maskSEP
 
@@ -215,7 +299,7 @@ def add_headTop(image, mask_trans_vertices, rest_trans_vertices):
 
 def get_rest_mask(maskInd, verts):
     rest_of_head_ind = np.setdiff1d(range(verts.shape[0]), maskInd)
-    rest_of_head_mask = index_on_verts(rest_of_head_ind, verts)
+    rest_of_head_mask = index_on_vertices(rest_of_head_ind, verts)
 
     return rest_of_head_mask
 
@@ -232,16 +316,23 @@ def load_3DMM():
 def create_masks():
     # TODO: 1.not to use verts_rotated but verts
     #  todo: 2. chame Make**Mask funtions with out the None
+    # todo: change the coorona creation code
     verts, verts_rotated = load_3DMM()
     x, y, z = verts_rotated[:, 0], verts_rotated[:, 1], verts_rotated[:, 2]
-    # Change the calling for these functions!
-    eyeMaskInd = make_eye_mask(None, None, x, y, None)
-    hatMaskInd = make_hat_mask(None, None, x, y, None)
-    scarfMaskInd = make_scarf_mask(None, None, x, y, None)
+    eyeMaskInd = make_eye_mask(x, y)
+    hatMaskInd = make_hat_mask(x, y)
+    scarfMaskInd = make_scarf_mask(x, y)
+    coronafMaskInd1, a = make_corona_mask(x, y, z)
+    # coronafMaskInd2 = coronafMaskInd1.tolit()
+    coronafMaskInd = coronafMaskInd1  # np.unique(np.asarray(coronafMaskInd1 + a)).tolist()
+    # coronafMaskInd = np.setdiff1d(range(len(x)), coronafMaskInd3)   # THere is a hat on it
 
-    masksInd = [eyeMaskInd, hatMaskInd, scarfMaskInd]
+    masks_ind = [eyeMaskInd, hatMaskInd, scarfMaskInd, coronafMaskInd]
+    masks_add_ind = [None, None, None, a]
 
-    masks = [index_on_verts(maskInd, verts) for maskInd in masksInd]
-    rest_of_heads = [get_rest_mask(maskInd, verts) for maskInd in masksInd]
+    masks = [index_on_vertices(maskInd, verts) for maskInd in masks_ind]
+    masks_additional = [None if mask_add_ind is None else \
+                            index_on_vertices(mask_add_ind, verts) for mask_add_ind in masks_add_ind]
+    rest_of_heads = [get_rest_mask(maskInd, verts) for maskInd in masks_ind]
 
-    return masks, rest_of_heads
+    return masks, masks_additional, rest_of_heads

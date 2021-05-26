@@ -17,7 +17,7 @@ from config import MASKS_NAMES
 model, transform = get_model()
 
 # Get the masks and their complement
-masks, rest_of_heads = create_masks()
+masks, masks_add, rest_of_heads = create_masks()
 
 # Paths of all the images to create masks for
 img_paths = read_images()
@@ -35,15 +35,15 @@ for img_path in tqdm(img_paths):
 
     print(img_path, '\n', pose)
 
-    for mask, rest_of_head, mask_name in zip(masks, rest_of_heads, MASKS_NAMES):
+    for mask, mask_add, rest_of_head, mask_name in zip(masks, masks_add, rest_of_heads, MASKS_NAMES):
         # Get the location of the masks on the image
-        mask_x, mask_y, rest_mask_x, rest_mask_y = render(img.copy(), pose, mask, rest_of_head, mask_name)
+        mask_x, mask_y, rest_mask_x, rest_mask_y = render(img.copy(), pose, mask, mask_add, rest_of_head, mask_name)
 
         # The average color of the surrounding of the image
         color = bg_color(mask_x, mask_y, img)
 
         # Put the colored mask on the face in the image
-        masked_image = color_face_mask(img, color, mask_x, mask_y, rest_mask_x, rest_mask_y)
+        masked_image = color_face_mask(img, color, mask_x, mask_y, rest_mask_x, rest_mask_y, mask_name)
 
         # Save masked image
         save_image(img_path, mask_name, masked_image)

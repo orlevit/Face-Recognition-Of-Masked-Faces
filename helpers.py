@@ -8,7 +8,7 @@ from torchvision import transforms
 from img2pose import img2poseModel
 from model_loader import load_model
 from config import DEPTH, MAX_SIZE, MIN_SIZE, POSE_MEAN, POSE_STDDEV, MODEL_PATH, PATH_3D_POINTS,\
-				   DEST_PATH, THRESHOLD, IMAGES_PATH
+				   DEST_PATH, THRESHOLD, IMAGES_PATH, CORONA_MASK
 
 def get_model():
 	transform = transforms.Compose([transforms.ToTensor()])
@@ -75,11 +75,18 @@ def read_images():
 
 	return img_paths
 
-def color_face_mask(img, color, mask_x, mask_y, rest_mask_x, rest_mask_y):
+def color_face_mask(img, color, mask_x, mask_y, rest_mask_x, rest_mask_y, mask_name):
 	img_output = img.copy()
-	for x, y in zip(mask_x, mask_y):
-		img_output[round(y), round(x), :] = [color[0], color[1], color[2]]  # BGR
-	for x, y in zip(rest_mask_x, rest_mask_y):
-		img_output[round(y), round(x), :] = img[round(y), round(x), :]
+	# todo: change the int(x) anf int(y) to x and y - also to the round
+	if mask_name == CORONA_MASK:
+		for x, y in zip(rest_mask_x, rest_mask_y):
+			img_output[round(y), round(x), :] = img[round(y), round(x), :]
+		for x, y in zip(mask_x, mask_y):
+			img_output[round(y), round(x), :] = [color[0], color[1], color[2]]  # BGR
+	else:
+		for x, y in zip(mask_x, mask_y):
+			img_output[round(y), round(x), :] = [color[0], color[1], color[2]]  # BGR
+		for x, y in zip(rest_mask_x, rest_mask_y):
+			img_output[round(y), round(x), :] = img[round(y), round(x), :]
 
 	return img_output
