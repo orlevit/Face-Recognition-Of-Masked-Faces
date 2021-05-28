@@ -1,7 +1,8 @@
 import cv2
 import numpy as np
 
-from config_file import config, VERTICES_PATH, FACE_MODEL_DENSITY, STRING_SIZE, MORPHOLOGICAL_CLOSE_FILTER
+from config_file import config, VERTICES_PATH, FACE_MODEL_DENSITY, STRING_SIZE, \
+    MORPHOLOGICAL_CLOSE_FILTER, HAT_MASK_CONFIG_NAME
 from project_on_image import transform_vertices
 
 
@@ -10,8 +11,7 @@ def get_hat_mask_index(a1, b1, c1, x_left, x_right, x, y):
     index_list = []
     for i in range(len(x)):
         if ((y[i] > (a1 * (x[i] ** 2) + b1 * x[i] + c1)) and
-                (x[i] > x_left) and (x[i] < x_right)):  # or (x[i] <= x_left) or (x[i] >= x_right):
-
+                (x[i] > x_left) and (x[i] < x_right)):
             index_list.append(i)
 
     return index_list
@@ -23,7 +23,6 @@ def get_scarf_mask_index(a1, b1, c1, x_left, x_right, x, y):
     index_list = []
     for i in range(len(x)):
         if (y[i] < (a1 * x[i] ** 2 + b1 * x[i] + c1)) and (x[i] > x_left) and (x[i] < x_right):
-
             index_list.append(i)
 
     return index_list
@@ -102,12 +101,12 @@ def make_corona_mask(x, y, z):
     right_lower_string2 = config.coronamask.inds.right_lower_string2
 
     corona_mask_ind = center_face_ind(center_middle, right_middle, left_lower, right_lower, y, z)
-    index_list2 = get_mask_string(left_upper_string1, left_upper_string2, 'LEFT', x, y, z)
-    index_list3 = get_mask_string(left_lower_string1, left_lower_string2, 'LEFT', x, y, z)
-    index_list4 = get_mask_string(right_upper_string1, right_upper_string2, 'RIGHT', x, y, z)
-    index_list5 = get_mask_string(right_lower_string1, right_lower_string2, 'RIGHT', x, y, z)
+    index_list1 = get_mask_string(left_upper_string1, left_upper_string2, 'LEFT', x, y, z)
+    index_list2 = get_mask_string(left_lower_string1, left_lower_string2, 'LEFT', x, y, z)
+    index_list3 = get_mask_string(right_upper_string1, right_upper_string2, 'RIGHT', x, y, z)
+    index_list4 = get_mask_string(right_lower_string1, right_lower_string2, 'RIGHT', x, y, z)
 
-    corona_strings_ind = index_list2 + index_list3 + index_list4 + index_list5
+    corona_strings_ind = index_list1 + index_list2 + index_list3 + index_list4
 
     return corona_mask_ind, corona_strings_ind
 
@@ -163,7 +162,7 @@ def render(img, pose, mask_name):
 
     # Whether to add the forehead to the mask, this is currently only used for eye and hat masks
     if config[mask_name].add_forehead:
-        mask_x, mask_y = add_forehead_mask(img, mask_trans_vertices, rest_trans_vertices)
+        mask_x, mask_y = add_forehead_mask(img, pose)
         mask_x, mask_y = np.append(mask_x.flatten(), mask_trans_vertices[:, 0]), \
                          np.append(mask_y.flatten(), mask_trans_vertices[:, 1])
     else:
@@ -224,14 +223,17 @@ def morphological_close(mask_x, mask_y, image):
     # morphology close
     gray_mask = cv2.cvtColor(mask_on_image, cv2.COLOR_BGR2GRAY)
     res, thresh_mask = cv2.threshold(gray_mask, 0, 255, cv2.THRESH_BINARY)
-    kernel = np.ones(MORPHOLOGICAL_CLOSE_FILTER, np.uint8)  # kernerl filter
+    kernel = np.ones(MORPHOLOGICAL_CLOSE_FILTER, np.uint8)  # kernel filter
     morph_mask = cv2.morphologyEx(thresh_mask, cv2.MORPH_CLOSE, kernel)
     yy, xx = np.where(morph_mask == 255)
 
     return xx, yy
 
 
-def add_forehead_mask(image, mask_trans_vertices, rest_trans_vertices):
+def add_forehead_mask(image, pose):  # , mask_trans_vertices, rest_trans_vertices):
+    mask_trans_vertices = transform_vertices(image, pose, config[HAT_MASK_CONFIG_NAME].mask_ind)
+    rest_trans_vertices = transform_vertices(image, pose, config[HAT_MASK_CONFIG_NAME].rest_ind)
+
     mask_on_img = np.zeros_like(image)
     mask_x_ind, mask_y_ind = mask_trans_vertices[:, 0].astype(int), mask_trans_vertices[:, 1].astype(int)
     for x, y in zip(mask_x_ind, mask_y_ind):
@@ -270,18 +272,18 @@ def get_rest_mask(mask_ind, vertices):
     return rest_of_head_mask
 
 
-def load_3DMM():
+def load_3dmm():
     vertices = np.load(VERTICES_PATH)
     th = np.pi
-    R = [[1, 0, 0], [0, np.cos(th), -np.sin(th)], [0, np.sin(th), np.cos(th)]]
+    rotation_matrix = [[1, 0, 0], [0, np.cos(th), -np.sin(th)], [0, np.sin(th), np.cos(th)]]
     vertices_rotated = vertices.copy()
-    vertices_rotated = np.matmul(vertices_rotated, R)
+    vertices_rotated = np.matmul(vertices_rotated, rotation_matrix)
     return vertices, vertices_rotated
 
 
 def create_masks():
     # todo: create config file instead of hardcoded for pick which mask to create
-    vertices, vertices_rotated = load_3DMM()
+    vertices, vertices_rotated = load_3dmm()
     x, y, z = vertices_rotated[:, 0], vertices_rotated[:, 1], vertices_rotated[:, 2]
     eye_mask_ind = make_eye_mask(x, y)
     hat_mask_ind = make_hat_mask(x, y)
@@ -300,7 +302,7 @@ def create_masks():
 
 
 def add_mask_to_config(masks, masks_add, rest_of_heads):
-    # NOTICE: this loop is for ease things, it relays that the odere of the masks are as match.
+    # NOTICE: this loop is for ease things, it relays that the order of the masks are as match.
     # Otherwise add the these separately one by one.
     for mask, mask_add, rest_of_head, mask_name in zip(masks, masks_add, rest_of_heads, config.keys()):
         config[mask_name].mask_ind = mask
