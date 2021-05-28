@@ -2,7 +2,8 @@
 
 import cv2
 import numpy as np
-from config import VERTICES_PATH, EYE_MASK_IND, HAT_MASK_IND, CORONA_MASK_IND, SCARF_MASK_IND, EYE_MASK, HAT_MASK
+
+from config_file import config, VERTICES_PATH
 from project_on_image import transform_vertices
 
 
@@ -45,13 +46,10 @@ def get_eyes_mask_index(a1, b1, c1, a2, b2, c2, x_left, x_right, x, y):
 
 
 def make_eye_mask(x, y):
-    x_left = x[EYE_MASK_IND[0]]
-    x_right = x[EYE_MASK_IND[1]]
-    y_left = y[EYE_MASK_IND[0]]
-    y_right = y[EYE_MASK_IND[1]]
-    x_middle = x[EYE_MASK_IND[2]]
-    y_chosen_top = y[EYE_MASK_IND[2]]
-    y_chosen_down = y[EYE_MASK_IND[3]]
+    x_left, y_left = x[config.eyemask.inds.left], y[config.eyemask.inds.left]
+    x_right, y_right = x[config.eyemask.inds.right], y[config.eyemask.inds.right]
+    x_middle, y_chosen_top = x[config.eyemask.inds.top], y[config.eyemask.inds.top]
+    y_chosen_down = y[config.eyemask.inds.bottom]
 
     x_3points = [x_left, x_middle, x_right]
     y_3points1 = [y_left, y_chosen_down, y_right]
@@ -66,12 +64,9 @@ def make_eye_mask(x, y):
 
 
 def make_scarf_mask(x, y):
-    x_left = x[SCARF_MASK_IND[0]]
-    x_right = x[SCARF_MASK_IND[1]]
-    y_left = y[SCARF_MASK_IND[0]]
-    y_right = y[SCARF_MASK_IND[1]]
-    x_middle = x[SCARF_MASK_IND[2]]
-    y_chosen_top = y[SCARF_MASK_IND[2]]
+    x_left, y_left = x[config.scarfmask.inds.left], y[config.scarfmask.inds.left]
+    x_right, y_right = x[config.scarfmask.inds.right], y[config.scarfmask.inds.right]
+    x_middle, y_chosen_top = x[config.scarfmask.inds.middle_top], y[config.scarfmask.inds.middle_top]
 
     x_3points = [x_left, x_middle, x_right]
     y_3points = [y_left, y_chosen_top, y_right]
@@ -83,12 +78,9 @@ def make_scarf_mask(x, y):
 
 # create hat mask
 def make_hat_mask(x, y):
-    x_left = x[HAT_MASK_IND[0]]
-    x_right = x[HAT_MASK_IND[1]]
-    y_left = y[HAT_MASK_IND[0]]
-    y_right = y[HAT_MASK_IND[1]]
-    x_middle = x[HAT_MASK_IND[2]]
-    y_chosen_down = y[HAT_MASK_IND[2]]
+    x_left, y_left = x[config.hatmask.inds.left], y[config.hatmask.inds.left]
+    x_right, y_right = x[config.hatmask.inds.right], y[config.hatmask.inds.right]
+    x_middle, y_chosen_down = x[config.hatmask.inds.middle_bottom], y[config.hatmask.inds.middle_bottom]
 
     x_3points = [x_left, x_middle, x_right]
     y_3points = [y_left, y_chosen_down, y_right]
@@ -99,22 +91,22 @@ def make_hat_mask(x, y):
 
 
 def make_corona_mask(x, y, z):
-    left_middle_ind = CORONA_MASK_IND[0]
-    center_middle_ind = CORONA_MASK_IND[1]
-    right_middle_ind = CORONA_MASK_IND[2]
-    left_lower_ind = CORONA_MASK_IND[3]
-    right_lower_ind = CORONA_MASK_IND[4]
-    left_upper_string1 = CORONA_MASK_IND[5]
-    left_upper_string2 = CORONA_MASK_IND[6]
-    left_lower_string1 = CORONA_MASK_IND[7]
-    left_lower_string2 = CORONA_MASK_IND[8]
-    right_upper_string1 = CORONA_MASK_IND[9]
-    right_upper_string2 = CORONA_MASK_IND[10]
-    right_lower_string1 = CORONA_MASK_IND[11]
-    right_lower_string2 = CORONA_MASK_IND[12]
+    left_middle = config.coronamask.inds.left_middle
+    center_middle = config.coronamask.inds.center_middle
+    right_middle = config.coronamask.inds.right_middle
+    left_lower = config.coronamask.inds.left_lower
+    right_lower = config.coronamask.inds.right_lower
+    left_upper_string1 = config.coronamask.inds.left_upper_string1
+    left_upper_string2 = config.coronamask.inds.left_upper_string2
+    left_lower_string1 = config.coronamask.inds.left_lower_string1
+    left_lower_string2 = config.coronamask.inds.left_lower_string2
+    right_upper_string1 = config.coronamask.inds.right_upper_string1
+    right_upper_string2 = config.coronamask.inds.right_upper_string2
+    right_lower_string1 = config.coronamask.inds.right_lower_string1
+    right_lower_string2 = config.coronamask.inds.right_lower_string2
 
-    index_list1 = center_face_ind(left_middle_ind, center_middle_ind, right_middle_ind, \
-                                  left_lower_ind, right_lower_ind, y, z)
+    index_list1 = center_face_ind(left_middle, center_middle, right_middle, \
+                                  left_lower, right_lower, y, z)
     index_list2 = get_mask_string(left_upper_string1, left_upper_string2, 'LEFT', x, y, z)
     index_list3 = get_mask_string(left_lower_string1, left_lower_string2, 'LEFT', x, y, z)
     index_list4 = get_mask_string(right_upper_string1, right_upper_string2, 'RIGHT', x, y, z)
@@ -152,7 +144,7 @@ def center_face_ind(left_middle_ind, center_middle_ind, right_middle_ind, left_l
 def get_mask_string(ind1, ind2, face_side, x, y, z):
     if face_side == 'LEFT':
         filtered_ind = [ii for ii, x_i in enumerate(x) if (x_i >= 0)]
-    else:  # left face
+    else:  # right face
         filtered_ind = [ii for ii, x_i in enumerate(x) if (x_i <= 0)]
 
     y_pos = y[filtered_ind]
@@ -176,28 +168,28 @@ def get_mask_string(ind1, ind2, face_side, x, y, z):
     return np.unique(np.asarray(line_list)).tolist()
 
 
-def render(img, pose, mask_verts, mask_add_verts, rest_of_head_verts, mask_name):
-    # Transform the 3DMM according to the pose
-    mask_trans_vertices = transform_vertices(img, pose, mask_verts)
-    rest_trans_vertices = transform_vertices(img, pose, rest_of_head_verts)
+def render(img, pose, mask_name):  # , mask_verts, mask_add_verts, rest_of_head_verts, mask_name):
 
-    # Whether to add the forehead to the mask, this is currenly only used for eye and hat masks
-    if mask_name in [HAT_MASK, EYE_MASK]:
+    # Transform the 3DMM according to the pose
+    mask_trans_vertices = transform_vertices(img, pose, config[mask_name].mask_ind)
+    rest_trans_vertices = transform_vertices(img, pose, config[mask_name].rest_ind)
+
+    # Whether to add the forehead to the mask, this is currently only used for eye and hat masks
+    if config[mask_name].add_forehead:
         mask_x, mask_y = add_headTop(img, mask_trans_vertices, rest_trans_vertices)
         mask_x, mask_y = np.append(mask_x.flatten(), mask_trans_vertices[:, 0]), \
                          np.append(mask_y.flatten(), mask_trans_vertices[:, 1])
-        rest_x, rest_y = rest_trans_vertices[:, 0], rest_trans_vertices[:, 1]
     else:
         mask_x, mask_y = mask_trans_vertices[:, 0], mask_trans_vertices[:, 1]
-        rest_x, rest_y = rest_trans_vertices[:, 0], rest_trans_vertices[:, 1]
+
+    rest_x, rest_y = rest_trans_vertices[:, 0], rest_trans_vertices[:, 1]
 
     # Perform morphological close
     morph_mask_x, morph_mask_y = morphologicalClose(mask_x, mask_y, img)
     morph_rest_x, morph_rest_y = morphologicalClose(rest_x, rest_y, img)
 
-    if mask_add_verts is not None:
-        mask_add_trans_vertices = np.round(transform_vertices(img, pose, mask_add_verts)).astype(int)
-        # Function that remove the
+    if config[mask_name].mask_add_ind is not None:
+        mask_add_trans_vertices = np.round(transform_vertices(img, pose, config[mask_name].mask_add_ind)).astype(int)
         morph_mask_x = np.append(morph_mask_x, mask_add_trans_vertices[:, 0])
         morph_mask_y = np.append(morph_mask_y, mask_add_trans_vertices[:, 1])
 
@@ -314,25 +306,32 @@ def load_3DMM():
 
 
 def create_masks():
+    # todo: create config file instead of hardcoded
     # TODO: 1.not to use verts_rotated but verts
     #  todo: 2. chame Make**Mask funtions with out the None
     # todo: change the coorona creation code
-    verts, verts_rotated = load_3DMM()
-    x, y, z = verts_rotated[:, 0], verts_rotated[:, 1], verts_rotated[:, 2]
-    eyeMaskInd = make_eye_mask(x, y)
-    hatMaskInd = make_hat_mask(x, y)
-    scarfMaskInd = make_scarf_mask(x, y)
-    coronafMaskInd1, a = make_corona_mask(x, y, z)
-    # coronafMaskInd2 = coronafMaskInd1.tolit()
-    coronafMaskInd = coronafMaskInd1  # np.unique(np.asarray(coronafMaskInd1 + a)).tolist()
-    # coronafMaskInd = np.setdiff1d(range(len(x)), coronafMaskInd3)   # THere is a hat on it
+    vertices, vertices_rotated = load_3DMM()
+    x, y, z = vertices_rotated[:, 0], vertices_rotated[:, 1], vertices_rotated[:, 2]
+    eye_mask_ind = make_eye_mask(x, y)
+    hat_mask_ind = make_hat_mask(x, y)
+    scarf_mask_ind = make_scarf_mask(x, y)
+    corona_mask_ind, add_corona_ind = make_corona_mask(x, y, z)
 
-    masks_ind = [eyeMaskInd, hatMaskInd, scarfMaskInd, coronafMaskInd]
-    masks_add_ind = [None, None, None, a]
+    masks_ind = [eye_mask_ind, hat_mask_ind, scarf_mask_ind, corona_mask_ind]
+    masks_add_ind = [None, None, None, add_corona_ind]
 
-    masks = [index_on_vertices(maskInd, verts) for maskInd in masks_ind]
-    masks_additional = [None if mask_add_ind is None else \
-                            index_on_vertices(mask_add_ind, verts) for mask_add_ind in masks_add_ind]
-    rest_of_heads = [get_rest_mask(maskInd, verts) for maskInd in masks_ind]
+    masks = [index_on_vertices(maskInd, vertices) for maskInd in masks_ind]
+    masks_add = [None if mask_add_ind is None else \
+                     index_on_vertices(mask_add_ind, vertices) for mask_add_ind in masks_add_ind]
+    rest_of_heads = [get_rest_mask(maskInd, vertices) for maskInd in masks_ind]
 
-    return masks, masks_additional, rest_of_heads
+    add_mask_to_config(masks, masks_add, rest_of_heads)
+
+
+def add_mask_to_config(masks, masks_add, rest_of_heads):
+    # NOTICE: this loop is for ease things, it relays that the odere of the masks are as match.
+    # Otherwise add the these separately one by one.
+    for mask, mask_add, rest_of_head, mask_name in zip(masks, masks_add, rest_of_heads, config.keys()):
+        config[mask_name].mask_ind = mask
+        config[mask_name].mask_add_ind = mask_add
+        config[mask_name].rest_ind = rest_of_head
