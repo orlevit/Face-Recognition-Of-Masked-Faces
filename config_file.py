@@ -33,7 +33,6 @@ config = {
     },
     "coronamask": {
         "inds": {
-            "left_middle": 16091,
             "center_middle": 25733,
             "right_middle": 178,
             "left_lower": 47948,
@@ -84,3 +83,8 @@ THRESHOLD = 0.9
 DEPTH = 18
 MAX_SIZE = 1400
 MIN_SIZE = 600
+
+# masks creation
+MORPHOLOGICAL_CLOSE_FILTER = (15, 15)
+FACE_MODEL_DENSITY = 0.001
+STRING_SIZE = 5

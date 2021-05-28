@@ -26,25 +26,22 @@ def main(args):
         # Get only one 6DOF from all the 6DFs that img2pose found
         pose = get_1id_pose(results, img)
 
-        print(img_path, '\n', pose)
-
         # for mask, mask_add, rest_of_head, mask_name in zip(masks, masks_add, rest_of_heads, MASKS_NAMES):
         for mask_name in config.keys():
             # Get the location of the masks on the image
-            mask_x, mask_y, rest_mask_x, rest_mask_y = render(img.copy(), pose, mask_name)
+            mask_x, mask_y, rest_mask_x, rest_mask_y = render(img, pose, mask_name)
 
             # The average color of the surrounding of the image
             color = bg_color(mask_x, mask_y, img)
 
             # Put the colored mask on the face in the image
-            masked_image = color_face_mask(img.copy(), color, mask_x, mask_y, rest_mask_x, rest_mask_y, mask_name, config)
+            masked_image = color_face_mask(img, color, mask_x, mask_y, rest_mask_x, rest_mask_y, mask_name, config)
 
             # Save masked image
             save_image(img_path, mask_name, masked_image, args.output)
 
 
 if __name__ == '__main__':
-
     # Get the input and output directories and create the masks
     args = parse_arguments()
     main(args)

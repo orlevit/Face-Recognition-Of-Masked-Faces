@@ -1,9 +1,7 @@
-# todo: delete render_plot
-
 import cv2
 import numpy as np
 
-from config_file import config, VERTICES_PATH
+from config_file import config, VERTICES_PATH, FACE_MODEL_DENSITY, STRING_SIZE, MORPHOLOGICAL_CLOSE_FILTER
 from project_on_image import transform_vertices
 
 
@@ -24,8 +22,7 @@ def get_hat_mask_index(a1, b1, c1, x_left, x_right, x, y):
 def get_scarf_mask_index(a1, b1, c1, x_left, x_right, x, y):
     index_list = []
     for i in range(len(x)):
-        if ((y[i] < (a1 * x[i] ** 2 + b1 * x[i] + c1)) and
-                (x[i] > x_left) and (x[i] < x_right)):  # or (x[i] <= x_left) or (x[i] >= x_right):
+        if (y[i] < (a1 * x[i] ** 2 + b1 * x[i] + c1)) and (x[i] > x_left) and (x[i] < x_right):
 
             index_list.append(i)
 
@@ -91,7 +88,6 @@ def make_hat_mask(x, y):
 
 
 def make_corona_mask(x, y, z):
-    left_middle = config.coronamask.inds.left_middle
     center_middle = config.coronamask.inds.center_middle
     right_middle = config.coronamask.inds.right_middle
     left_lower = config.coronamask.inds.left_lower
@@ -105,25 +101,18 @@ def make_corona_mask(x, y, z):
     right_lower_string1 = config.coronamask.inds.right_lower_string1
     right_lower_string2 = config.coronamask.inds.right_lower_string2
 
-    index_list1 = center_face_ind(left_middle, center_middle, right_middle, \
-                                  left_lower, right_lower, y, z)
+    corona_mask_ind = center_face_ind(center_middle, right_middle, left_lower, right_lower, y, z)
     index_list2 = get_mask_string(left_upper_string1, left_upper_string2, 'LEFT', x, y, z)
     index_list3 = get_mask_string(left_lower_string1, left_lower_string2, 'LEFT', x, y, z)
     index_list4 = get_mask_string(right_upper_string1, right_upper_string2, 'RIGHT', x, y, z)
     index_list5 = get_mask_string(right_lower_string1, right_lower_string2, 'RIGHT', x, y, z)
 
-    corona_mask_ind = index_list1
     corona_strings_ind = index_list2 + index_list3 + index_list4 + index_list5
-
-    # face_indices = np.arange(len(x))
-    # mask = np.ones_like(face_indices, bool)
-    # mask[np.asarray(corona_mask_ind)] = False
-    # visible_face_ind = face_indices[mask]
 
     return corona_mask_ind, corona_strings_ind
 
 
-def center_face_ind(left_middle_ind, center_middle_ind, right_middle_ind, left_lower_ind, right_lower_ind, y, z):
+def center_face_ind(center_middle_ind, right_middle_ind, left_lower_ind, right_lower_ind, y, z):
     y_middle = y[[right_lower_ind, center_middle_ind, right_middle_ind]]
     z_middle = z[[right_lower_ind, center_middle_ind, right_middle_ind]]
     y_lower = y[[left_lower_ind, right_lower_ind]]
@@ -134,7 +123,7 @@ def center_face_ind(left_middle_ind, center_middle_ind, right_middle_ind, left_l
 
     index_list = []
     for ii, y_i in enumerate(y):
-        if ((z[ii] >= (a * (y_i ** 2) + b * y_i + c))) and (y[right_lower_ind] < y[ii] < y[right_middle_ind]) or \
+        if (z[ii] >= (a * (y_i ** 2) + b * y_i + c)) and (y[right_lower_ind] < y[ii] < y[right_middle_ind]) or \
                 (z[ii] >= (m * y_i + n)) and (y[left_lower_ind] < y[ii] < y[right_lower_ind]):
             index_list.append(ii)
 
@@ -145,7 +134,7 @@ def get_mask_string(ind1, ind2, face_side, x, y, z):
     if face_side == 'LEFT':
         filtered_ind = [ii for ii, x_i in enumerate(x) if (x_i >= 0)]
     else:  # right face
-        filtered_ind = [ii for ii, x_i in enumerate(x) if (x_i <= 0)]
+        filtered_ind = [ii for ii, x_i in enumerate(x) if (x_i < 0)]
 
     y_pos = y[filtered_ind]
     z_pos = z[filtered_ind]
@@ -158,25 +147,23 @@ def get_mask_string(ind1, ind2, face_side, x, y, z):
     start_y = min(received_y_pt)
     end_y = max(received_y_pt)
     line_list = []
-    string_size = 5
-    for i in np.arange(start_y, end_y + 0.001, 0.001):
+    for i in np.arange(start_y, end_y + FACE_MODEL_DENSITY, FACE_MODEL_DENSITY):
         distances = np.asarray(((z_pos - (m * i + mb)) ** 2 + (y_pos - i) ** 2))
-        string_size_ind = np.argpartition(distances, string_size)[:string_size]
+        string_size_ind = np.argpartition(distances, STRING_SIZE)[:STRING_SIZE]
         cond_ind = list(np.asarray(filtered_ind)[string_size_ind])
         line_list += cond_ind
 
     return np.unique(np.asarray(line_list)).tolist()
 
 
-def render(img, pose, mask_name):  # , mask_verts, mask_add_verts, rest_of_head_verts, mask_name):
-
+def render(img, pose, mask_name):
     # Transform the 3DMM according to the pose
     mask_trans_vertices = transform_vertices(img, pose, config[mask_name].mask_ind)
     rest_trans_vertices = transform_vertices(img, pose, config[mask_name].rest_ind)
 
     # Whether to add the forehead to the mask, this is currently only used for eye and hat masks
     if config[mask_name].add_forehead:
-        mask_x, mask_y = add_headTop(img, mask_trans_vertices, rest_trans_vertices)
+        mask_x, mask_y = add_forehead_mask(img, mask_trans_vertices, rest_trans_vertices)
         mask_x, mask_y = np.append(mask_x.flatten(), mask_trans_vertices[:, 0]), \
                          np.append(mask_y.flatten(), mask_trans_vertices[:, 1])
     else:
@@ -185,8 +172,8 @@ def render(img, pose, mask_name):  # , mask_verts, mask_add_verts, rest_of_head_
     rest_x, rest_y = rest_trans_vertices[:, 0], rest_trans_vertices[:, 1]
 
     # Perform morphological close
-    morph_mask_x, morph_mask_y = morphologicalClose(mask_x, mask_y, img)
-    morph_rest_x, morph_rest_y = morphologicalClose(rest_x, rest_y, img)
+    morph_mask_x, morph_mask_y = morphological_close(mask_x, mask_y, img)
+    morph_rest_x, morph_rest_y = morphological_close(rest_x, rest_y, img)
 
     if config[mask_name].mask_add_ind is not None:
         mask_add_trans_vertices = np.round(transform_vertices(img, pose, config[mask_name].mask_add_ind)).astype(int)
@@ -194,17 +181,6 @@ def render(img, pose, mask_name):  # , mask_verts, mask_add_verts, rest_of_head_
         morph_mask_y = np.append(morph_mask_y, mask_add_trans_vertices[:, 1])
 
     return morph_mask_x, morph_mask_y, morph_rest_x, morph_rest_y
-
-
-def render_plot(x, y, img, bboxes):
-    plt.figure(figsize=(8, 8))
-    plt.imshow(img)
-    plt.scatter(x, y)
-    for bbox in bboxes:
-        plt.gca().add_patch(
-            patches.Rectangle((bbox[0], bbox[1]), bbox[2] - bbox[0], bbox[3] - bbox[1], linewidth=3, edgecolor='b',
-                              facecolor='none'))
-    plt.show()
 
 
 def index_on_vertices(index_list, vertices):
@@ -215,16 +191,16 @@ def index_on_vertices(index_list, vertices):
     y_mask = y[index_list]
     z_mask = z[index_list]
     size_array = (x_mask.shape[0], 3)
-    maskSEP = np.zeros(size_array)
-    maskSEP[:, 0] = x_mask
-    maskSEP[:, 1] = y_mask
-    maskSEP[:, 2] = z_mask
+    mask = np.zeros(size_array)
+    mask[:, 0] = x_mask
+    mask[:, 1] = y_mask
+    mask[:, 2] = z_mask
 
-    return maskSEP
+    return mask
 
 
 def bg_color(mask_x, mask_y, image):
-    morph_mask_x, morph_mask_y = morphologicalClose(mask_x, mask_y, image)
+    morph_mask_x, morph_mask_y = morphological_close(mask_x, mask_y, image)
     # Get the average color of the whole mask
     image_bg = image.copy()
     image_bg_effective_size = image_bg.shape[0] * image_bg.shape[1] - len(mask_x)
@@ -239,49 +215,47 @@ def bg_color(mask_x, mask_y, image):
     return [image_bg_blue_val, image_bg_green_val, image_bg_red_val]
 
 
-def morphologicalClose(mask_x, mask_y, image):
-    maskOnImage = np.zeros_like(image)
+def morphological_close(mask_x, mask_y, image):
+    mask_on_image = np.zeros_like(image)
     for x, y in zip(mask_x, mask_y):
-        if (0 <= x <= maskOnImage.shape[0] - 1) and (0 <= y <= maskOnImage.shape[1] - 1):
-            maskOnImage[int(y), int(x), :] = [255, 255, 255]
+        if (0 <= x <= mask_on_image.shape[0] - 1) and (0 <= y <= mask_on_image.shape[1] - 1):
+            mask_on_image[int(y), int(x), :] = [255, 255, 255]
 
     # morphology close
-    gray_mask = cv2.cvtColor(maskOnImage, cv2.COLOR_BGR2GRAY)
+    gray_mask = cv2.cvtColor(mask_on_image, cv2.COLOR_BGR2GRAY)
     res, thresh_mask = cv2.threshold(gray_mask, 0, 255, cv2.THRESH_BINARY)
-    kernel = np.ones((15, 15), np.uint8)  # kernerl filter
+    kernel = np.ones(MORPHOLOGICAL_CLOSE_FILTER, np.uint8)  # kernerl filter
     morph_mask = cv2.morphologyEx(thresh_mask, cv2.MORPH_CLOSE, kernel)
     yy, xx = np.where(morph_mask == 255)
 
     return xx, yy
 
 
-def add_headTop(image, mask_trans_vertices, rest_trans_vertices):
-    maskOnImage = np.zeros_like(image)
+def add_forehead_mask(image, mask_trans_vertices, rest_trans_vertices):
+    mask_on_img = np.zeros_like(image)
     mask_x_ind, mask_y_ind = mask_trans_vertices[:, 0].astype(int), mask_trans_vertices[:, 1].astype(int)
     for x, y in zip(mask_x_ind, mask_y_ind):
-        maskOnImage[y, x] = 255
+        mask_on_img[y, x] = 255
 
     bottom_hat = np.empty(image.shape[0])
     bottom_hat[:] = np.nan
     for i in range(image.shape[0]):
-        iy, _ = np.where(maskOnImage[:, i])
+        iy, _ = np.where(mask_on_img[:, i])
         if iy.any():
             bottom_hat[i] = np.min(iy)
 
-    print(mask_trans_vertices.shape, rest_trans_vertices.shape)
     all_face_proj = np.concatenate((mask_trans_vertices, rest_trans_vertices), axis=0)
-    print(all_face_proj.shape)
     all_face_proj_y = all_face_proj[:, 1]
-    max, min = np.max(all_face_proj_y), np.min(all_face_proj_y)
-    kernel_len = int((max - min) / 2)
+    max_proj_y, min_proj_y = np.max(all_face_proj_y), np.min(all_face_proj_y)
+    kernel_len = int((max_proj_y - min_proj_y) / 2)
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (1, kernel_len))
-    dilated_image = cv2.dilate(maskOnImage, kernel, iterations=1)
+    dilated_image = cv2.dilate(mask_on_img, kernel, iterations=1)
 
     forehead_x_ind, forehead_y_ind = [], []
     for i in range(image.shape[0]):
         iy, _ = np.where(dilated_image[:, i])
         jj = np.where(iy <= bottom_hat[i])
-        if jj[0] != []:
+        if jj[0].any():
             j = iy[jj]
             forehead_x_ind.append([i] * len(j))
             forehead_y_ind.append(j)
@@ -289,27 +263,24 @@ def add_headTop(image, mask_trans_vertices, rest_trans_vertices):
     return np.asarray(forehead_x_ind), np.asarray(forehead_y_ind)
 
 
-def get_rest_mask(maskInd, verts):
-    rest_of_head_ind = np.setdiff1d(range(verts.shape[0]), maskInd)
-    rest_of_head_mask = index_on_vertices(rest_of_head_ind, verts)
+def get_rest_mask(mask_ind, vertices):
+    rest_of_head_ind = np.setdiff1d(range(vertices.shape[0]), mask_ind)
+    rest_of_head_mask = index_on_vertices(rest_of_head_ind, vertices)
 
     return rest_of_head_mask
 
 
 def load_3DMM():
-    verts = np.load(VERTICES_PATH)
+    vertices = np.load(VERTICES_PATH)
     th = np.pi
     R = [[1, 0, 0], [0, np.cos(th), -np.sin(th)], [0, np.sin(th), np.cos(th)]]
-    verts_rotated = verts.copy()
-    verts_rotated = np.matmul(verts_rotated, R)
-    return verts, verts_rotated
+    vertices_rotated = vertices.copy()
+    vertices_rotated = np.matmul(vertices_rotated, R)
+    return vertices, vertices_rotated
 
 
 def create_masks():
-    # todo: create config file instead of hardcoded
-    # TODO: 1.not to use verts_rotated but verts
-    #  todo: 2. chame Make**Mask funtions with out the None
-    # todo: change the coorona creation code
+    # todo: create config file instead of hardcoded for pick which mask to create
     vertices, vertices_rotated = load_3DMM()
     x, y, z = vertices_rotated[:, 0], vertices_rotated[:, 1], vertices_rotated[:, 2]
     eye_mask_ind = make_eye_mask(x, y)

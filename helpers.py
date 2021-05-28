@@ -9,8 +9,7 @@ sys.path.append('./img2pose')
 from torchvision import transforms
 from img2pose import img2poseModel
 from model_loader import load_model
-from config_file import DEPTH, MAX_SIZE, MIN_SIZE, POSE_MEAN, POSE_STDDEV, MODEL_PATH, PATH_3D_POINTS, \
-    THRESHOLD
+from config_file import DEPTH, MAX_SIZE, MIN_SIZE, POSE_MEAN, POSE_STDDEV, MODEL_PATH, PATH_3D_POINTS, THRESHOLD
 
 
 def get_model():
@@ -82,13 +81,12 @@ def read_images(input):
 
 
 def color_face_mask(img, color, mask_x, mask_y, rest_mask_x, rest_mask_y, mask_name, config):
-    # todo: change the int(x) anf int(y) to x and y - also to the round
     img_output = mask_on_img(mask_x, mask_y, img.copy(), color)
     if config[mask_name].draw_rest_mask:
         img_output = rest_on_img(rest_mask_x, rest_mask_y, img, img_output)
 
-
     return img_output
+
 
 def mask_on_img(mask_x, mask_y, img, color):
     for x, y in zip(mask_x, mask_y):
@@ -96,11 +94,13 @@ def mask_on_img(mask_x, mask_y, img, color):
 
     return img
 
+
 def rest_on_img(rest_mask_x, rest_mask_y, img, img_output):
     for x, y in zip(rest_mask_x, rest_mask_y):
         img_output[y, x, :] = img[y, x, :]
 
     return img_output
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
