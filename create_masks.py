@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 from config_file import config, VERTICES_PATH, FACE_MODEL_DENSITY, STRING_SIZE, \
-    MORPHOLOGICAL_CLOSE_FILTER, HAT_MASK_CONFIG_NAME
+    MORPHOLOGICAL_CLOSE_FILTER, EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, CORONA_MASK_NAME
 from project_on_image import transform_vertices
 
 
@@ -231,8 +231,8 @@ def morphological_close(mask_x, mask_y, image):
 
 
 def add_forehead_mask(image, pose):  # , mask_trans_vertices, rest_trans_vertices):
-    mask_trans_vertices = transform_vertices(image, pose, config[HAT_MASK_CONFIG_NAME].mask_ind)
-    rest_trans_vertices = transform_vertices(image, pose, config[HAT_MASK_CONFIG_NAME].rest_ind)
+    mask_trans_vertices = transform_vertices(image, pose, config[HAT_MASK_NAME].mask_ind)
+    rest_trans_vertices = transform_vertices(image, pose, config[HAT_MASK_NAME].rest_ind)
 
     mask_on_img = np.zeros_like(image)
     mask_x_ind, mask_y_ind = mask_trans_vertices[:, 0].astype(int), mask_trans_vertices[:, 1].astype(int)
@@ -281,8 +281,7 @@ def load_3dmm():
     return vertices, vertices_rotated
 
 
-def create_masks():
-    # todo: create config file instead of hardcoded for pick which mask to create
+def create_masks(masks_name):
     vertices, vertices_rotated = load_3dmm()
     x, y, z = vertices_rotated[:, 0], vertices_rotated[:, 1], vertices_rotated[:, 2]
     eye_mask_ind = make_eye_mask(x, y)
@@ -290,6 +289,7 @@ def create_masks():
     scarf_mask_ind = make_scarf_mask(x, y)
     corona_mask_ind, add_corona_ind = make_corona_mask(x, y, z)
 
+    masks_order = [EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, CORONA_MASK_NAME]
     masks_ind = [eye_mask_ind, hat_mask_ind, scarf_mask_ind, corona_mask_ind]
     masks_add_ind = [None, None, None, add_corona_ind]
 
@@ -297,14 +297,23 @@ def create_masks():
     masks_add = [None if mask_add_ind is None else \
                      index_on_vertices(mask_add_ind, vertices) for mask_add_ind in masks_add_ind]
     rest_of_heads = [get_rest_mask(maskInd, vertices) for maskInd in masks_ind]
+    masks_to_create = parse_masks_name(masks_name)
+    add_mask_to_config(masks, masks_add, rest_of_heads, masks_order, masks_to_create)
 
-    add_mask_to_config(masks, masks_add, rest_of_heads)
+    return masks_to_create
 
 
-def add_mask_to_config(masks, masks_add, rest_of_heads):
-    # NOTICE: this loop is for ease things, it relays that the order of the masks are as match.
-    # Otherwise add the these separately one by one.
-    for mask, mask_add, rest_of_head, mask_name in zip(masks, masks_add, rest_of_heads, config.keys()):
-        config[mask_name].mask_ind = mask
-        config[mask_name].mask_add_ind = mask_add
-        config[mask_name].rest_ind = rest_of_head
+def parse_masks_name(masks_name):
+    masks_names_parsed = masks_name.split(',')
+    additional_mask = [config[name].additional_masks_req for name in masks_names_parsed \
+                       if config[name].additional_masks_req is not None]
+    masks_names_parsed += additional_mask
+
+    return np.unique(np.asarray(masks_names_parsed)).tolist()
+
+
+def add_mask_to_config(masks, masks_add, rest_of_heads, masks_order, masks_to_create):
+    for mask_name in masks_to_create:
+        config[mask_name].mask_ind = masks[masks_order.index(mask_name)]
+        config[mask_name].mask_add_ind = masks_add[masks_order.index(mask_name)]
+        config[mask_name].rest_ind = rest_of_heads[masks_order.index(mask_name)]

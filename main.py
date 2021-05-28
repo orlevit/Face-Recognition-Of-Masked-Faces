@@ -5,10 +5,9 @@ from helpers import get_model, save_image, get_1id_pose, read_images, color_face
 from create_masks import create_masks, bg_color, render
 from config_file import config
 
-
 def main(args):
     # Get the masks and their complement
-    create_masks()
+    masks_to_create = create_masks(args.masks)
 
     # Get img2pose model
     model, transform = get_model()
@@ -27,7 +26,7 @@ def main(args):
         pose = get_1id_pose(results, img)
 
         # for mask, mask_add, rest_of_head, mask_name in zip(masks, masks_add, rest_of_heads, MASKS_NAMES):
-        for mask_name in config.keys():
+        for mask_name in masks_to_create:
             # Get the location of the masks on the image
             mask_x, mask_y, rest_mask_x, rest_mask_y = render(img, pose, mask_name)
 
