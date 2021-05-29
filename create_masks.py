@@ -1,17 +1,16 @@
 import cv2
 import numpy as np
-
+import pandas as pd
+from project_on_image import transform_vertices
 from config_file import config, VERTICES_PATH, FACE_MODEL_DENSITY, STRING_SIZE, \
     MORPHOLOGICAL_CLOSE_FILTER, EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, CORONA_MASK_NAME
-from project_on_image import transform_vertices
 
 
 # This is the opposite of the function in expression-net-old
 def get_hat_mask_index(a1, b1, c1, x_left, x_right, x, y):
     index_list = []
     for i in range(len(x)):
-        if ((y[i] > (a1 * (x[i] ** 2) + b1 * x[i] + c1)) and
-                (x[i] > x_left) and (x[i] < x_right)):
+        if (y[i] > (a1 * (x[i] ** 2) + b1 * x[i] + c1)) and (x[i] > x_left) and (x[i] < x_right):
             index_list.append(i)
 
     return index_list
@@ -157,18 +156,19 @@ def get_mask_string(ind1, ind2, face_side, x, y, z):
 
 def render(img, pose, mask_name):
     # Transform the 3DMM according to the pose
-    mask_trans_vertices = transform_vertices(img, pose, config[mask_name].mask_ind)
-    rest_trans_vertices = transform_vertices(img, pose, config[mask_name].rest_ind)
+    #
+    frontal_mask, frontal_rest = get_frontal(img, pose, mask_name)
 
+    # todo add here the frontal ray
     # Whether to add the forehead to the mask, this is currently only used for eye and hat masks
     if config[mask_name].add_forehead:
         mask_x, mask_y = add_forehead_mask(img, pose)
-        mask_x, mask_y = np.append(mask_x.flatten(), mask_trans_vertices[:, 0]), \
-                         np.append(mask_y.flatten(), mask_trans_vertices[:, 1])
+        mask_x, mask_y = np.append(mask_x.flatten(), frontal_mask[:, 0]), \
+                         np.append(mask_y.flatten(), frontal_mask[:, 1])
     else:
-        mask_x, mask_y = mask_trans_vertices[:, 0], mask_trans_vertices[:, 1]
+        mask_x, mask_y = frontal_mask[:, 0], frontal_mask[:, 1]
 
-    rest_x, rest_y = rest_trans_vertices[:, 0], rest_trans_vertices[:, 1]
+    rest_x, rest_y = frontal_rest[:, 0], frontal_rest[:, 1]
 
     # Perform morphological close
     morph_mask_x, morph_mask_y = morphological_close(mask_x, mask_y, img)
@@ -176,10 +176,30 @@ def render(img, pose, mask_name):
 
     if config[mask_name].mask_add_ind is not None:
         mask_add_trans_vertices = np.round(transform_vertices(img, pose, config[mask_name].mask_add_ind)).astype(int)
+        # Notice: possible to add changed version of frontal if the additional mask not covered well
         morph_mask_x = np.append(morph_mask_x, mask_add_trans_vertices[:, 0])
         morph_mask_y = np.append(morph_mask_y, mask_add_trans_vertices[:, 1])
 
     return morph_mask_x, morph_mask_y, morph_rest_x, morph_rest_y
+
+
+def get_frontal(img, pose, mask_name):
+    mask_trans_vertices = transform_vertices(img, pose, config[mask_name].mask_ind)
+    rest_trans_vertices = transform_vertices(img, pose, config[mask_name].rest_ind)
+
+    mask_trans_vertices = np.round(mask_trans_vertices).astype(int)
+    rest_trans_vertices = np.round(rest_trans_vertices).astype(int)
+    mask_marks = np.ones([mask_trans_vertices.shape[0], 1], dtype=bool)
+    rest_marks = np.zeros([rest_trans_vertices.shape[0], 1], dtype=bool)
+    mask_stacked = np.hstack((mask_trans_vertices, mask_marks))
+    rest_stacked = np.hstack((rest_trans_vertices, rest_marks))
+    combined = np.vstack((mask_stacked, rest_stacked))
+    df = pd.DataFrame(combined, columns=['x', 'y', 'z', 'mask'])
+    unique_df = df.sort_values(['z', 'mask'], ascending=False).drop_duplicates(['x', 'y'], keep='last')
+    frontal_mask = unique_df[unique_df['mask'] == 1][['x', 'y', 'z']].to_numpy()
+    frontal_rest = unique_df[unique_df['mask'] == 0][['x', 'y', 'z']].to_numpy()
+
+    return frontal_mask, frontal_rest
 
 
 def index_on_vertices(index_list, vertices):
@@ -218,7 +238,7 @@ def morphological_close(mask_x, mask_y, image):
     mask_on_image = np.zeros_like(image)
     for x, y in zip(mask_x, mask_y):
         if (0 <= x <= mask_on_image.shape[0] - 1) and (0 <= y <= mask_on_image.shape[1] - 1):
-            mask_on_image[int(y), int(x), :] = [255, 255, 255]
+            mask_on_image[y, x, :] = [255, 255, 255]
 
     # morphology close
     gray_mask = cv2.cvtColor(mask_on_image, cv2.COLOR_BGR2GRAY)
@@ -231,11 +251,13 @@ def morphological_close(mask_x, mask_y, image):
 
 
 def add_forehead_mask(image, pose):  # , mask_trans_vertices, rest_trans_vertices):
-    mask_trans_vertices = transform_vertices(image, pose, config[HAT_MASK_NAME].mask_ind)
-    rest_trans_vertices = transform_vertices(image, pose, config[HAT_MASK_NAME].rest_ind)
+    frontal_mask, frontal_rest = get_frontal(image, pose, HAT_MASK_NAME)
+
+    # Perform morphological close
+    morph_mask_x, morph_mask_y = morphological_close(frontal_mask[:, 0], frontal_mask[:, 1], image)
 
     mask_on_img = np.zeros_like(image)
-    mask_x_ind, mask_y_ind = mask_trans_vertices[:, 0].astype(int), mask_trans_vertices[:, 1].astype(int)
+    mask_x_ind, mask_y_ind = morph_mask_x, morph_mask_y
     for x, y in zip(mask_x_ind, mask_y_ind):
         mask_on_img[y, x] = 255
 
@@ -246,7 +268,7 @@ def add_forehead_mask(image, pose):  # , mask_trans_vertices, rest_trans_vertice
         if iy.any():
             bottom_hat[i] = np.min(iy)
 
-    all_face_proj = np.concatenate((mask_trans_vertices, rest_trans_vertices), axis=0)
+    all_face_proj = np.concatenate((frontal_mask, frontal_rest), axis=0)
     all_face_proj_y = all_face_proj[:, 1]
     max_proj_y, min_proj_y = np.max(all_face_proj_y), np.min(all_face_proj_y)
     kernel_len = int((max_proj_y - min_proj_y) / 2)

@@ -4,7 +4,6 @@ import sys
 import argparse
 import numpy as np
 import pandas as pd
-
 sys.path.append('./img2pose')
 from torchvision import transforms
 from img2pose import img2poseModel

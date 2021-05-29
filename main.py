@@ -1,10 +1,12 @@
-# tODO: 2.change forehead image
 import cv2
 from tqdm import tqdm
-from helpers import get_model, save_image, get_1id_pose, read_images, color_face_mask, parse_arguments
-from create_masks import create_masks, bg_color, render
 from config_file import config
+from create_masks import create_masks, bg_color, render
+from helpers import get_model, save_image, get_1id_pose, read_images, color_face_mask, parse_arguments
 
+
+# todo run the program
+# todo add sunglasses mask
 def main(args):
     # Get the masks and their complement
     masks_to_create = create_masks(args.masks)
