@@ -16,7 +16,7 @@ def main(args):
     model, transform = get_model()
 
     # Paths of all the images to create masks for
-    img_paths = read_images(args.input)
+    img_paths = read_images(args.input, args.image_extensions)
 
     for img_path in tqdm(img_paths):
         # Read an image

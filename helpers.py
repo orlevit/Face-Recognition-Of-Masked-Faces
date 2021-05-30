@@ -4,11 +4,13 @@ import sys
 import argparse
 import numpy as np
 import pandas as pd
+from glob import glob
+
 sys.path.append('./img2pose')
 from torchvision import transforms
 from img2pose import img2poseModel
 from model_loader import load_model
-from config_file import DEPTH, MAX_SIZE, MIN_SIZE, POSE_MEAN, POSE_STDDEV, MODEL_PATH,\
+from config_file import DEPTH, MAX_SIZE, MIN_SIZE, POSE_MEAN, POSE_STDDEV, MODEL_PATH, \
     PATH_3D_POINTS, THRESHOLD, ALL_MASKS
 
 
@@ -70,12 +72,13 @@ def get_1id_pose(results, img):
     return results["dofs"].cpu().numpy()[bbox_idx].squeeze().astype('float')
 
 
-def read_images(input):
+def read_images(input, image_extensions):
     if os.path.isfile(input):
         img_paths = pd.read_csv(input, delimiter=" ", header=None)
         img_paths = np.asarray(img_paths).squeeze()
     else:
-        img_paths = [os.path.join(input, img_path) for img_path in os.listdir(input)]
+        img_paths = [image for ext in image_extensions.split(',')
+                     for image in glob(os.path.join(input, '**', '*' + ext), recursive=True)]
 
     return img_paths
 
@@ -106,6 +109,8 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input', type=str, help='Directory with input images or csv file with paths.')
     parser.add_argument('-o', '--output', type=str, help='Output directory.')
+    parser.add_argument('-e', '--image_extensions', default='.jpg,.bmp,.jpeg,.png,.gif',
+                        type=str, help='The extensions of the images.')
     parser.add_argument('-m', '--masks', default=ALL_MASKS, type=str, help='Which masks to create.')
 
     return parser.parse_args()

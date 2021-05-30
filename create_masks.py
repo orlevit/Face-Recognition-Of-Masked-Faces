@@ -9,11 +9,9 @@ from config_file import config, VERTICES_PATH, EYE_MASK_NAME, HAT_MASK_NAME, \
 
 
 def render(img, pose, mask_name):
-    # Transform the 3DMM according to the pose
-    #
+    # Transform the 3DMM according to the pose and get only frontal face areas
     frontal_mask, frontal_rest = get_frontal(img, pose, mask_name)
 
-    # todo add here the frontal ray
     # Whether to add the forehead to the mask, this is currently only used for eye and hat masks
     if config[mask_name].add_forehead:
         mask_x, mask_y = add_forehead_mask(img, pose)
