@@ -9,14 +9,19 @@ MAX_SIZE = 1400
 MIN_SIZE = 600
 
 # masks creation
-MORPHOLOGICAL_CLOSE_FILTER = (15, 15)
 FACE_MODEL_DENSITY = 0.001
+LENS_RADIUS = 40 * FACE_MODEL_DENSITY
 STRING_SIZE = 5
 EYE_MASK_NAME = "eyemask"
 HAT_MASK_NAME = "hatmask"
 SCARF_MASK_NAME = "scarfmask"
 CORONA_MASK_NAME = "coronamask"
-ALL_MASKS = f"{EYE_MASK_NAME},{HAT_MASK_NAME},{SCARF_MASK_NAME},{CORONA_MASK_NAME}"
+SUNGLASSES_MASK_NAME = "sunglasses"
+CENTER_FACE_PART = 'CENTER'
+LEFT_FACE_PART = 'LEFT'
+RIGHT_FACE_PART = 'RIGHT'
+
+ALL_MASKS = f"{EYE_MASK_NAME},{HAT_MASK_NAME},{SCARF_MASK_NAME},{CORONA_MASK_NAME},{SUNGLASSES_MASK_NAME}"
 
 # ------------------------------------------------ masks configuration ------------------------------------------------
 config = {
@@ -29,7 +34,8 @@ config = {
         },
         "add_forehead": True,
         "draw_rest_mask": True,
-        "additional_masks_req": HAT_MASK_NAME
+        "additional_masks_req": HAT_MASK_NAME,
+        "filter_size": (15, 15)
     },
     HAT_MASK_NAME: {
         "inds": {
@@ -39,7 +45,8 @@ config = {
         },
         "add_forehead": True,
         "draw_rest_mask": True,
-        "additional_masks_req": None
+        "additional_masks_req": None,
+        "filter_size": (15, 15)
     },
     SCARF_MASK_NAME: {
         "inds": {
@@ -49,7 +56,8 @@ config = {
         },
         "add_forehead": False,
         "draw_rest_mask": True,
-        "additional_masks_req": None
+        "additional_masks_req": None,
+        "filter_size": (15, 15)
     },
     CORONA_MASK_NAME: {
         "inds": {
@@ -68,7 +76,17 @@ config = {
         },
         "add_forehead": False,
         "draw_rest_mask": False,
-        "additional_masks_req": None
+        "additional_masks_req": None,
+        "filter_size": (15, 15)
+    },
+    SUNGLASSES_MASK_NAME: {
+        "inds": {
+            "right": 4791
+        },
+        "add_forehead": False,
+        "draw_rest_mask": False,
+        "additional_masks_req": None,
+        "filter_size": (5, 5)
     }
 }
 config = edict(config)
