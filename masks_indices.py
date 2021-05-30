@@ -171,36 +171,10 @@ def get_mask_string(ind1, ind2, face_side, split_face_cord, x, y):
     return np.unique(np.asarray(line_list)).tolist()
 
 
-# def get_mask_string(ind1, ind2, face_side, x, y, z):
-#     if face_side == 'LEFT':
-#         filtered_ind = [ii for ii, x_i in enumerate(x) if (x_i >= 0)]
-#     else:  # right face
-#         filtered_ind = [ii for ii, x_i in enumerate(x) if (x_i < 0)]
-#
-#     y_pos = y[filtered_ind]
-#     z_pos = z[filtered_ind]
-#
-#     # Draw line
-#     received_y_pt = [y[ind1], y[ind2]]
-#     received_z_pt = [z[ind1], z[ind2]]
-#     m, mb = np.polyfit(received_y_pt, received_z_pt, 1)
-#
-#     start_y = min(received_y_pt)
-#     end_y = max(received_y_pt)
-#     line_list = []
-#     for i in np.arange(start_y, end_y + FACE_MODEL_DENSITY, FACE_MODEL_DENSITY):
-#         distances = np.asarray(((z_pos - (m * i + mb)) ** 2 + (y_pos - i) ** 2))
-#         string_size_ind = np.argpartition(distances, STRING_SIZE)[:STRING_SIZE]
-#         cond_ind = list(np.asarray(filtered_ind)[string_size_ind])
-#         line_list += cond_ind
-#
-#     return np.unique(np.asarray(line_list)).tolist()
-
-
 def get_sunglasses_left_eye(eye_ind, x, y):
     distances = []
     indices = []
-    
+
     for i in np.arange(len(x)):
         if -x[eye_ind] - LENS_RADIUS < x[i] < -x[eye_ind] + LENS_RADIUS and \
                 y[eye_ind] - LENS_RADIUS < y[i] < y[eye_ind] + LENS_RADIUS:
@@ -215,12 +189,12 @@ def get_sunglasses_left_eye(eye_ind, x, y):
 def get_lens(center_eye_ind, x, y):
     distances = []
     indices = []
-    
+
     for i in np.arange(len(x)):
         if ((x[center_eye_ind] - x[i]) ** 2 + (y[center_eye_ind] - y[i]) ** 2) <= LENS_RADIUS:
             distances.append(x[i])
             indices.append(i)
-            
+
     array = np.column_stack((distances, indices))
     right_ind = array[np.argmin(array[:, 0]), 1].astype(int)
     left_ind = array[np.argmax(array[:, 0]), 1].astype(int)
