@@ -15,8 +15,8 @@ def render(img, pose, mask_name):
     # Whether to add the forehead to the mask, this is currently only used for eye and hat masks
     if config[mask_name].add_forehead:
         mask_x, mask_y = add_forehead_mask(img, pose)
-        mask_x, mask_y = np.append(mask_x.flatten(), frontal_mask[:, 0]), \
-                         np.append(mask_y.flatten(), frontal_mask[:, 1])
+        mask_x, mask_y = np.append(mask_x, frontal_mask[:, 0]), \
+                         np.append(mask_y, frontal_mask[:, 1])
     else:
         mask_x, mask_y = frontal_mask[:, 0], frontal_mask[:, 1]
 
@@ -141,8 +141,8 @@ def add_forehead_mask(image, pose):  # , mask_trans_vertices, rest_trans_vertice
         jj = np.where(iy <= bottom_hat[i])
         if jj[0].any():
             j = iy[jj]
-            forehead_x_ind.append([i] * len(j))
-            forehead_y_ind.append(j)
+            forehead_x_ind.extend([i] * len(j))
+            forehead_y_ind.extend(j)
 
     return np.asarray(forehead_x_ind), np.asarray(forehead_y_ind)
 

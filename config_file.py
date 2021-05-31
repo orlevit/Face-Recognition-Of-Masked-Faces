@@ -3,7 +3,6 @@ from easydict import EasyDict as edict
 
 # ------------------------------------------------ miscellaneous ------------------------------------------------
 # img2pose constants
-THRESHOLD = 0.9
 DEPTH = 18
 MAX_SIZE = 1400
 MIN_SIZE = 600

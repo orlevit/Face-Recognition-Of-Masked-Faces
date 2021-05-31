@@ -11,7 +11,7 @@ from torchvision import transforms
 from img2pose import img2poseModel
 from model_loader import load_model
 from config_file import DEPTH, MAX_SIZE, MIN_SIZE, POSE_MEAN, POSE_STDDEV, MODEL_PATH, \
-    PATH_3D_POINTS, THRESHOLD, ALL_MASKS
+    PATH_3D_POINTS, ALL_MASKS
 
 
 def get_model():
@@ -46,7 +46,7 @@ def save_image(img_path, mask_name, img_output, output):
     cv2.imwrite(image_dst, img_output)
 
 
-def get_1id_pose(results, img):
+def get_1id_pose(results, img, threshold):
     h, w, _ = img.shape
     img_h_center = h / 2
     img_w_center = w / 2
@@ -55,7 +55,7 @@ def get_1id_pose(results, img):
     all_bboxes = results["boxes"].cpu().numpy().astype('float')
 
     # only the bounding boxes that have sufficient threshold
-    possible_id_ind = [i for i in range(len(all_bboxes)) if results["scores"][i] > THRESHOLD]
+    possible_id_ind = [i for i in range(len(all_bboxes)) if results["scores"][i] > threshold]
 
     # If only one identity recognized, return it
     if len(possible_id_ind) == 1:
@@ -72,13 +72,13 @@ def get_1id_pose(results, img):
     return results["dofs"].cpu().numpy()[bbox_idx].squeeze().astype('float')
 
 
-def read_images(input, image_extensions):
-    if os.path.isfile(input):
-        img_paths = pd.read_csv(input, delimiter=" ", header=None)
+def read_images(input_images, image_extensions):
+    if os.path.isfile(input_images):
+        img_paths = pd.read_csv(input_images, delimiter=" ", header=None)
         img_paths = np.asarray(img_paths).squeeze()
     else:
         img_paths = [image for ext in image_extensions.split(',')
-                     for image in glob(os.path.join(input, '**', '*' + ext), recursive=True)]
+                     for image in glob(os.path.join(input_images, '**', '*' + ext), recursive=True)]
 
     return img_paths
 
@@ -109,8 +109,10 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input', type=str, help='Directory with input images or csv file with paths.')
     parser.add_argument('-o', '--output', type=str, help='Output directory.')
-    parser.add_argument('-e', '--image_extensions', default='.jpg,.bmp,.jpeg,.png,.gif',
+    parser.add_argument('-e', '--image_extensions', default='.jpg,.bmp,.jpeg,.png',
                         type=str, help='The extensions of the images.')
     parser.add_argument('-m', '--masks', default=ALL_MASKS, type=str, help='Which masks to create.')
+    parser.add_argument('-t', '--threshold', default=0.0, type=float,
+                        help='The minimum confidence score for img2pose for face detection')
 
     return parser.parse_args()
