@@ -93,14 +93,16 @@ def color_face_mask(img, color, mask_x, mask_y, rest_mask_x, rest_mask_y, mask_n
 
 def mask_on_img(mask_x, mask_y, img, color):
     for x, y in zip(mask_x, mask_y):
-        img[y, x, :] = [color[0], color[1], color[2]]
+        if 0 <= x < img.shape[1] and 0 <= y < img.shape[0]:
+            img[y, x, :] = [color[0], color[1], color[2]]
 
     return img
 
 
 def rest_on_img(rest_mask_x, rest_mask_y, img, img_output):
     for x, y in zip(rest_mask_x, rest_mask_y):
-        img_output[y, x, :] = img[y, x, :]
+        if 0 <= x < img.shape[1] and 0 <= y < img.shape[0]:
+            img_output[y, x, :] = img[y, x, :]
 
     return img_output
 
