@@ -43,7 +43,7 @@ config = {
             "middle_bottom": 8094
         },
         "add_forehead": True,
-        "draw_rest_mask": True,
+        "draw_rest_mask": False,
         "additional_masks_req": None,
         "filter_size": (15, 15)
     },
@@ -54,7 +54,7 @@ config = {
             "middle_top": 8138
         },
         "add_forehead": False,
-        "draw_rest_mask": True,
+        "draw_rest_mask": False,
         "additional_masks_req": None,
         "filter_size": (15, 15)
     },
