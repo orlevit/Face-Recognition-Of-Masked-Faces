@@ -5,6 +5,7 @@ import argparse
 import numpy as np
 import pandas as pd
 from glob import glob
+from time import time
 
 sys.path.append('./img2pose')
 from torchvision import transforms
@@ -37,14 +38,14 @@ def save_image(img_path, mask_name, img_output, output):
     image_org_dir = os.path.basename(full_path)
     image_dst_dir = os.path.join(output, mask_name, image_org_dir)
     image_dst = os.path.join(image_dst_dir, image_name)
-
+    t1 = time()
     # Create the directory if it doesn't exists
     if not os.path.exists(image_dst_dir):
         os.makedirs(image_dst_dir)
 
     # Save the image
     cv2.imwrite(image_dst, img_output)
-
+    return time()-t1
 
 def get_1id_pose(results, img, threshold):
     h, w, _ = img.shape
