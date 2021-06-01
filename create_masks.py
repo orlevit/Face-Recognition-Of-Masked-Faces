@@ -4,17 +4,17 @@ import pandas as pd
 from project_on_image import transform_vertices
 from masks_indices import make_eye_mask, make_hat_mask, make_corona_mask, \
     make_scarf_mask, make_sunglasses_mask
-from config_file import config, VERTICES_PATH, EYE_MASK_NAME, HAT_MASK_NAME, \
+from config_file import  VERTICES_PATH, EYE_MASK_NAME, HAT_MASK_NAME, \
     SCARF_MASK_NAME, CORONA_MASK_NAME, SUNGLASSES_MASK_NAME
 
 
-def render(img, pose, mask_name):
+def render(img, pose, mask_name,config):
     # Transform the 3DMM according to the pose and get only frontal face areas
-    frontal_mask, frontal_rest = get_frontal(img, pose, mask_name)
+    frontal_mask, frontal_rest = get_frontal(img, pose, mask_name, config)
 
     # Whether to add the forehead to the mask, this is currently only used for eye and hat masks
     if config[mask_name].add_forehead:
-        mask_x, mask_y = add_forehead_mask(img, pose)
+        mask_x, mask_y = add_forehead_mask(img, pose,config)
         mask_x, mask_y = np.append(mask_x, frontal_mask[:, 0]), \
                          np.append(mask_y, frontal_mask[:, 1])
     else:
@@ -23,8 +23,8 @@ def render(img, pose, mask_name):
     rest_x, rest_y = frontal_rest[:, 0], frontal_rest[:, 1]
 
     # Perform morphological close
-    morph_mask_x, morph_mask_y = morphological_close(mask_x, mask_y, img, mask_name)
-    morph_rest_x, morph_rest_y = morphological_close(rest_x, rest_y, img, mask_name)
+    morph_mask_x, morph_mask_y = morphological_close(mask_x, mask_y, img,config, mask_name)
+    morph_rest_x, morph_rest_y = morphological_close(rest_x, rest_y, img,config, mask_name)
 
     if config[mask_name].mask_add_ind is not None:
         mask_add_trans_vertices = np.round(transform_vertices(img, pose, config[mask_name].mask_add_ind)).astype(int)
@@ -35,7 +35,7 @@ def render(img, pose, mask_name):
     return morph_mask_x, morph_mask_y, morph_rest_x, morph_rest_y
 
 
-def get_frontal(img, pose, mask_name):
+def get_frontal(img, pose, mask_name,config):
     # Masks projection on the image plane
     mask_trans_vertices = transform_vertices(img, pose, config[mask_name].mask_ind)
     rest_trans_vertices = transform_vertices(img, pose, config[mask_name].rest_ind)
@@ -77,8 +77,8 @@ def index_on_vertices(index_list, vertices):
     return mask
 
 
-def bg_color(mask_x, mask_y, image):
-    morph_mask_x, morph_mask_y = morphological_close(mask_x, mask_y, image)
+def bg_color(mask_x, mask_y, image,config):
+    morph_mask_x, morph_mask_y = morphological_close(mask_x, mask_y, image, config)
     # Get the average color of the whole mask
     image_bg = image.copy()
     image_bg_effective_size = image_bg.shape[0] * image_bg.shape[1] - len(mask_x)
@@ -93,7 +93,7 @@ def bg_color(mask_x, mask_y, image):
     return [image_bg_blue_val, image_bg_green_val, image_bg_red_val]
 
 
-def morphological_close(mask_x, mask_y, image, mask_name=EYE_MASK_NAME):
+def morphological_close(mask_x, mask_y, image, config,mask_name=EYE_MASK_NAME):
     mask_on_image = np.zeros_like(image)
     for x, y in zip(mask_x, mask_y):
         if (0 <= x <= mask_on_image.shape[0] - 1) and (0 <= y <= mask_on_image.shape[1] - 1):
@@ -109,12 +109,12 @@ def morphological_close(mask_x, mask_y, image, mask_name=EYE_MASK_NAME):
     return xx, yy
 
 
-def add_forehead_mask(image, pose):  # , mask_trans_vertices, rest_trans_vertices):
-    frontal_mask, frontal_rest = get_frontal(image, pose, HAT_MASK_NAME)
+def add_forehead_mask(image, pose,config):  # , mask_trans_vertices, rest_trans_vertices):
+    frontal_mask, frontal_rest = get_frontal(image, pose, HAT_MASK_NAME, config)
 
     # Perform morphological close
     morph_mask_x, morph_mask_y = morphological_close(frontal_mask[:, 0],
-                                                     frontal_mask[:, 1], image, HAT_MASK_NAME)
+                                                     frontal_mask[:, 1], image,config, HAT_MASK_NAME)
 
     mask_on_img = np.zeros_like(image)
     mask_x_ind, mask_y_ind = morph_mask_x, morph_mask_y
@@ -163,7 +163,7 @@ def load_3dmm():
     return vertices, vertices_rotated
 
 
-def create_masks(masks_name):
+def create_masks(masks_name,config):
     vertices, vertices_rotated = load_3dmm()
     x, y, z = vertices_rotated[:, 0], vertices_rotated[:, 1], vertices_rotated[:, 2]
     eye_mask_ind = make_eye_mask(x, y)
@@ -180,13 +180,13 @@ def create_masks(masks_name):
     masks_add = [None if mask_add_ind is None else
                  index_on_vertices(mask_add_ind, vertices) for mask_add_ind in masks_add_ind]
     rest_of_heads = [get_rest_mask(maskInd, vertices) for maskInd in masks_ind]
-    masks_to_create = parse_masks_name(masks_name)
-    add_mask_to_config(masks, masks_add, rest_of_heads, masks_order, masks_to_create)
+    masks_to_create = parse_masks_name(masks_name,config)
+    add_mask_to_config(masks, masks_add, rest_of_heads, masks_order, masks_to_create,config)
 
     return masks_to_create
 
 
-def parse_masks_name(masks_name):
+def parse_masks_name(masks_name,config):
     masks_names_parsed = masks_name.split(',')
     additional_mask = [config[name].additional_masks_req for name in masks_names_parsed
                        if config[name].additional_masks_req is not None]
@@ -195,7 +195,7 @@ def parse_masks_name(masks_name):
     return np.unique(np.asarray(masks_names_parsed)).tolist()
 
 
-def add_mask_to_config(masks, masks_add, rest_of_heads, masks_order, masks_to_create):
+def add_mask_to_config(masks, masks_add, rest_of_heads, masks_order, masks_to_create, config):
     for mask_name in masks_to_create:
         config[mask_name].mask_ind = masks[masks_order.index(mask_name)]
         config[mask_name].mask_add_ind = masks_add[masks_order.index(mask_name)]

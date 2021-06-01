@@ -16,11 +16,12 @@ from time import time
 # todo multitread with ? multi i/o?
 
 def main(args):
+    start_t = time()
     io_time = 0
     cpu_time = 0
     img2pose_time = 0
     # Get the masks and their complement
-    masks_to_create = create_masks(args.masks)
+    masks_to_create = create_masks(args.masks,config)
 
     # Get img2pose model
     model, transform = get_model()
@@ -51,10 +52,10 @@ def main(args):
             # for mask, mask_add, rest_of_head, mask_name in zip(masks, masks_add, rest_of_heads, MASKS_NAMES):
             for mask_name in masks_to_create:
                 # Get the location of the masks on the image
-                mask_x, mask_y, rest_mask_x, rest_mask_y = render(img, pose, mask_name)
+                mask_x, mask_y, rest_mask_x, rest_mask_y = render(img, pose, mask_name,config)
 
                 # The average color of the surrounding of the image
-                color = bg_color(mask_x, mask_y, img)
+                color = bg_color(mask_x, mask_y, img,config)
 
                 # Put the colored mask on the face in the image
                 masked_image = color_face_mask(img, color, mask_x, mask_y, rest_mask_x, rest_mask_y, mask_name, config)
@@ -66,10 +67,11 @@ def main(args):
         else:
             print(f'No face detected for: {img_path}')
         cpu_time += time() -t1 - img2pose_time_curr - io_time_curr1 - io_time_curr2
+    end_t = time()
     print(f'io_time: {io_time} and per img: {io_time/len(img_paths)}')
     print(f'img2pose_time: {img2pose_time} and per img: {img2pose_time/len(img_paths)}')
     print(f'cpu_time: {cpu_time} and per img: {cpu_time/len(img_paths)}')
-
+    print(f'time in total: {end_t- start_t}')
 if __name__ == '__main__':
     # Get the input and output directories and create the masks
     args = parse_arguments()

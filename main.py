@@ -1,6 +1,6 @@
 import cv2
 from tqdm import tqdm
-import multiprocessing
+from torch.multiprocessing import spawn
 
 from config_file import config
 from create_masks import create_masks, bg_color, render
@@ -15,7 +15,7 @@ from time import time
 # todo test gpu time
 # todo multitread with ? multi i/o?
 
-def run(img_path, masks_to_create, model, transform):
+def run_masks(ps_idx, img_path, masks_to_create, model, transform, args, config):
     io_time = 0
     cpu_time = 0
     img2pose_time = 0
@@ -38,10 +38,10 @@ def run(img_path, masks_to_create, model, transform):
         # for mask, mask_add, rest_of_head, mask_name in zip(masks, masks_add, rest_of_heads, MASKS_NAMES):
         for mask_name in masks_to_create:
             # Get the location of the masks on the image
-            mask_x, mask_y, rest_mask_x, rest_mask_y = render(img, pose, mask_name)
+            mask_x, mask_y, rest_mask_x, rest_mask_y = render(img, pose, mask_name, config)
 
             # The average color of the surrounding of the image
-            color = bg_color(mask_x, mask_y, img)
+            color = bg_color(mask_x, mask_y, img,config)
 
             # Put the colored mask on the face in the image
             masked_image = color_face_mask(img, color, mask_x, mask_y, rest_mask_x, rest_mask_y, mask_name, config)
@@ -59,9 +59,10 @@ def run(img_path, masks_to_create, model, transform):
 
 
 def main(args):
+    t1=time()
 
     # Get the masks and their complement
-    masks_to_create = create_masks(args.masks)
+    masks_to_create = create_masks(args.masks,config)
 
     # Get img2pose model
     model, transform = get_model()
@@ -69,9 +70,14 @@ def main(args):
     # Paths of all the images to create masks for
     img_paths = read_images(args.input, args.image_extensions)
 
-    thread_args = [[img_path] + [masks_to_create, model, transform] for img_path in img_paths]
-    with multiprocessing.Pool() as pool:
-        pool.starmap(run, thread_args)
+    #thread_args = [[img_path] + [masks_to_create, model, transform] for img_path in img_paths]
+    for img_path in img_paths:
+        spawn(run_masks,args=(img_path, masks_to_create, model, transform, args, config))
+        #p.start()
+        #del p
+    print('time in total: ',time()-t1)
+#    with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
+#        pool.starmap(run, thread_args)
 
 
 if __name__ == '__main__':
