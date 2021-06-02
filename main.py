@@ -19,7 +19,6 @@ def main(args):
     img_paths = read_images(args.input, args.image_extensions)
 
     for img_path in tqdm(img_paths):
-        print('\n', img_path)
         # Read an image
         img = cv2.imread(img_path, 1)
 

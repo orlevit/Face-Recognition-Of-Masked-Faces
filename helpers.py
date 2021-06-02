@@ -63,7 +63,7 @@ def get_1id_pose(results, img, threshold):
 
     # If zero identities were recognized
     elif not possible_id_ind:
-        return possible_id_ind
+        return np.array([])
 
     else:
         # if more than one identity recognized, then check who has the biggest condition:
