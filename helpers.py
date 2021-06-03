@@ -123,3 +123,4 @@ def parse_arguments():
                         help='The minimum confidence score for img2pose for face detection')
 
     return parser.parse_args()
+

@@ -1,5 +1,17 @@
 import argparse
+import multiprocessing
 
+
+def run_multy(func, inputs):
+    jobs = []
+    for input in enumerate(inputs):
+        # print(i)
+        p = multiprocessing.Process(target=func, args=(input,))
+        jobs.append(p)
+        p.start()
+
+    for job in jobs:
+        job.join()
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
