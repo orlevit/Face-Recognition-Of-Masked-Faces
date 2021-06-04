@@ -1,8 +1,7 @@
 import os
-import multiprocessing
 from shutil import copyfile
-from scripts.script_helper import run_multy
-from scripts.script_config import START_ENV, BIN_FUNC, ARCFACE_DATSETS_LOC
+from scripts.script_helper import train_input_dir
+from scripts.script_config import START_ENV, BIN_FUNC
 
 
 def prerequisite_bin(pairs_files):
@@ -13,8 +12,9 @@ def prerequisite_bin(pairs_files):
 
 
 def make_bin(input):
-    rest_path, dir_name = os.path.split(input)
-    rest_path, ds_name = os.path.split(rest_path)
+    print('Start make bin for: ', input)
 
-    output_dir = os.path.join(ARCFACE_DATSETS_LOC, ds_name, dir_name)
+    output_dir = train_input_dir(input)
+
     os.system(f'{START_ENV} python {BIN_FUNC} --data-dir {input} --output {output_dir} - -image-size 112, 112')
+    print('Finished make bin for: ', input)

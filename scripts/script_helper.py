@@ -1,5 +1,7 @@
+import os
 import argparse
 import multiprocessing
+from scripts.script_config import ARCFACE_DATSETS_LOC
 
 
 def run_multy(func, inputs):
@@ -12,6 +14,13 @@ def run_multy(func, inputs):
 
     for job in jobs:
         job.join()
+
+def train_input_dir(input):
+    rest_path, dir_name = os.path.split(input)
+    # rest_path, ds_name = os.path.split(rest_path)
+    output_dir = os.path.join(ARCFACE_DATSETS_LOC, dir_name[1:])
+
+    return output_dir
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
