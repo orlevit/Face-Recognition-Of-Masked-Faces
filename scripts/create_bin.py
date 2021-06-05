@@ -1,7 +1,7 @@
 import os
 from shutil import copyfile
-from scripts.script_helper import train_input_dir
-from scripts.script_config import START_ENV, BIN_FUNC
+from script_helper import train_input_dir
+from script_config import START_INSIGHT_ENV, BIN_FUNC
 
 
 def prerequisite_bin(pairs_files):
@@ -16,5 +16,5 @@ def make_bin(input):
 
     output_dir = train_input_dir(input)
 
-    os.system(f'{START_ENV} python {BIN_FUNC} --data-dir {input} --output {output_dir} - -image-size 112, 112')
+    os.system(f'sbatch create_bin.sh {input} {output_dir}')
     print('Finished make bin for: ', input)

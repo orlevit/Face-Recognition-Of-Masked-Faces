@@ -1,11 +1,14 @@
 import os
 import multiprocessing
-from scripts.script_config import START_ENV, ALIGN_FUNC
+from script_helper import aligned_output_dir
+from script_config import START_MTCNN_ENV, ALIGN_FUNC
 
 
-def run_align(input_dir):
+def align_mtcnn(input_dir):
+    #import pdb;  pdb.set_trace()
     print(f'Start align: {input_dir}')
-    os.system(f'{START_ENV} python {ALIGN_FUNC} --input-dir {input_dir[1]} --output-dir {output_dir}')
+    output_dir = aligned_output_dir(input_dir)
+    os.system(f'{START_MTCNN_ENV} python {ALIGN_FUNC} --input-dir {input_dir} --output-dir {output_dir}')
     print(f'End align: {input_dir}')
 
 

@@ -82,7 +82,7 @@ def bg_color(mask_x, mask_y, image):
     # Get the average color of the whole mask
     image_bg = image.copy()
     image_bg_effective_size = image_bg.shape[0] * image_bg.shape[1] - len(mask_x)
-    image_bg[morph_mask_x.astype(int), morph_mask_y.astype(int), :] = [0, 0, 0]
+    image_bg[morph_mask_y.astype(int), morph_mask_x.astype(int), :] = [0, 0, 0]
     image_bg_blue = image_bg[:, :, 0]
     image_bg_green = image_bg[:, :, 1]
     image_bg_red = image_bg[:, :, 2]
@@ -96,7 +96,7 @@ def bg_color(mask_x, mask_y, image):
 def morphological_close(mask_x, mask_y, image, mask_name=EYE_MASK_NAME):
     mask_on_image = np.zeros_like(image)
     for x, y in zip(mask_x, mask_y):
-        if (0 <= x <= mask_on_image.shape[0] - 1) and (0 <= y <= mask_on_image.shape[1] - 1):
+        if (0 <= x <= mask_on_image.shape[1] - 1) and (0 <= y <= mask_on_image.shape[0] - 1):
             mask_on_image[y, x, :] = [255, 255, 255]
 
     # morphology close
@@ -121,9 +121,9 @@ def add_forehead_mask(image, pose):  # , mask_trans_vertices, rest_trans_vertice
     for x, y in zip(mask_x_ind, mask_y_ind):
         mask_on_img[y, x] = 255
 
-    bottom_hat = np.empty(image.shape[0])
+    bottom_hat = np.empty(image.shape[1])
     bottom_hat[:] = np.nan
-    for i in range(image.shape[0]):
+    for i in range(image.shape[1]):
         iy, _ = np.where(mask_on_img[:, i])
         if iy.any():
             bottom_hat[i] = np.min(iy)
@@ -136,7 +136,7 @@ def add_forehead_mask(image, pose):  # , mask_trans_vertices, rest_trans_vertice
     dilated_image = cv2.dilate(mask_on_img, kernel, iterations=1)
 
     forehead_x_ind, forehead_y_ind = [], []
-    for i in range(image.shape[0]):
+    for i in range(image.shape[1]):
         iy, _ = np.where(dilated_image[:, i])
         jj = np.where(iy <= bottom_hat[i])
         if jj[0].any():

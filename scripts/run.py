@@ -1,10 +1,10 @@
 import os
 
-from scripts.alignment import run_align
-from scripts.create_bin import prerequisite_bin, make_bin
-from scripts.create_idx_rec import prerequisite_idx_rec, make_idx_rec
-from scripts.script_helper import parse_arguments, run_multy
-from scripts.script_config import LFW_PAIRS, CASIA_PAIRS, AGEDB30_PAIRS
+from alignment import align_mtcnn
+from create_bin import prerequisite_bin, make_bin
+from create_idx_rec import prerequisite_idx_rec, make_idx_rec
+from script_helper import parse_arguments, run_multy
+from script_config import LFW_PAIRS, CASIA_PAIRS, AGEDB30_PAIRS
 
 
 
@@ -19,25 +19,31 @@ def main(args):
     for ds_dir in datasets_dirs:
         for masked_dir in os.listdir(ds_dir):
             masked_faces_input_dirs.append(os.path.join(ds_dir, masked_dir))
-            masked_faces_output_dirs.append(os.path.join(ds_dir, 'a'+masked_dir))
+            #masked_faces_output_dirs.append(os.path.join(ds_dir, 'a'+masked_dir))
 
-            if ds_dir.find('/lfw') != -1:
+            #print(masked_dir, masked_dir.startswith('a'))
+            if ds_dir.find('/lfw') != -1 and ds_dir.find('/lfw2') == -1 and not masked_dir.startswith('a'):
+                print(masked_dir, masked_dir.find('/a'))
                 lfw_dirs.append(os.path.join(ds_dir, 'a'+masked_dir))
             elif ds_dir.find('/agedb') != -1:
                 agedb30_dirs.append(os.path.join(ds_dir, 'a'+masked_dir))
-            elif ds_dir.find('/casia') != -1:
+            elif ds_dir.find('/casia') != -1 and ds_dir.find('/casia2') == -1:
                 casia_dirs.append(os.path.join(ds_dir, 'a'+masked_dir))
             else:
                 print(f'What is this dataset?! {ds_dir}')
                 # exit(1)
 
-    # run_multy(align_mtcnn, masked_faces_dirs)
+    #import pdb;  pdb.set_trace()
+    #run_multy(align_mtcnn,masked_faces_input_dirs)
     pairs_files =  [[LFW_PAIRS, CASIA_PAIRS, AGEDB30_PAIRS] ,[lfw_dirs, casia_dirs, agedb30_dirs]]
+    pairs_files =  [[LFW_PAIRS, CASIA_PAIRS] ,[lfw_dirs, casia_dirs]]
+    pairs_files =  [[LFW_PAIRS] ,[lfw_dirs]]
 
-    prerequisite_bin(masked_faces_input_dirs)
-    # run_multy(make_bin, masked_faces_output_dirs)
-    make_bin(pairs_files)
-    prerequisite_idx_rec(casia_dirs)
+    prerequisite_bin(pairs_files)
+    run_multy(make_bin, lfw_dirs)
+    #run_multy(make_bin, masked_faces_output_dirs) #this is expect ot a.. directories starting in the directory
+    #make_bin(pairs_files)
+    #prerequisite_idx_rec(casia_dirs)
     # run_multy(make_idx_rec, casia_dirs)
 
 

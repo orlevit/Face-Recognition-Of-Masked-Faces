@@ -1,19 +1,25 @@
 import os
 import argparse
 import multiprocessing
-from scripts.script_config import ARCFACE_DATSETS_LOC
+from script_config import ARCFACE_DATSETS_LOC
 
 
 def run_multy(func, inputs):
     jobs = []
-    for input in enumerate(inputs):
-        # print(i)
+    #import pdb;  pdb.set_trace()
+    for input in inputs:
         p = multiprocessing.Process(target=func, args=(input,))
         jobs.append(p)
         p.start()
 
     for job in jobs:
         job.join()
+
+def aligned_output_dir(input):
+    rest_path, dir_name = os.path.split(input)
+    output_dir = os.path.join(rest_path, 'a' + dir_name)
+
+    return output_dir
 
 def train_input_dir(input):
     rest_path, dir_name = os.path.split(input)
