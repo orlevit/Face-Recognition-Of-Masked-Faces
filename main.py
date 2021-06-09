@@ -19,6 +19,7 @@ def main(args):
     img_paths = read_images(args.input, args.image_extensions)
 
     for img_path in tqdm(img_paths):
+        print(img_path)
         # Read an image
         img = cv2.imread(img_path, 1)
 
@@ -26,12 +27,13 @@ def main(args):
         results = model.predict([transform(img)])[0]
 
         # Get only one 6DOF from all the 6DFs that img2pose found
-        pose = get_1id_pose(results, img, args.threshold)
+        pose, bbox = get_1id_pose(results, img, args.threshold)
 
         # face detected with img2pose and above the threshold
         if pose.size != 0:
             # for mask, mask_add, rest_of_head, mask_name in zip(masks, masks_add, rest_of_heads, MASKS_NAMES):
             for mask_name in masks_to_create:
+                print(mask_name)
                 # Get the location of the masks on the image
                 mask_x, mask_y, rest_mask_x, rest_mask_y = render(img, pose, mask_name)
 
@@ -42,7 +44,7 @@ def main(args):
                 masked_image = color_face_mask(img, color, mask_x, mask_y, rest_mask_x, rest_mask_y, mask_name, config)
 
                 # Save masked image
-                save_image(img_path, mask_name, masked_image, args.output)
+                save_image(img_path, mask_name, masked_image, args.output, img, bbox)
         else:
             print(f'No face detected for: {img_path}')
 
