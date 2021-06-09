@@ -44,7 +44,7 @@ def main(args):
                 masked_image = color_face_mask(img, color, mask_x, mask_y, rest_mask_x, rest_mask_y, mask_name, config)
 
                 # Save masked image
-                save_image(img_path, mask_name, masked_image, args.output, img, bbox)
+                save_image(img_path, mask_name, masked_image, args.output, bbox, args.bbox_ind, args.inc_bbox)
         else:
             print(f'No face detected for: {img_path}')
 
