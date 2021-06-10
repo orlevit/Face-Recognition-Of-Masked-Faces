@@ -60,8 +60,8 @@ def crop_bbox(img, bbox, inc_bbox):
     cy = half_l + bbox[1]
     n0 = max(np.round(cx - half_w_inc).astype(int), 0)
     n1 = max(np.round(cy - half_l_inc).astype(int), 0)
-    n2 = min(np.round(cx + half_w_inc).astype(int), img.shape[0] - 1)
-    n3 = min(np.round(cy + half_l_inc).astype(int), img.shape[1] - 1)
+    n2 = min(np.round(cx + half_w_inc).astype(int), img.shape[1] - 1)
+    n3 = min(np.round(cy + half_l_inc).astype(int), img.shape[0] - 1)
 
     return img[n1:n3, n0:n2, :]
 
@@ -133,19 +133,28 @@ def rest_on_img(rest_mask_x, rest_mask_y, img, img_output):
 
     return img_output
 
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input', type=str, help='Directory with input images or csv file with paths.')
     parser.add_argument('-o', '--output', type=str, help='Output directory.')
-    parser.add_argument('-e', '--image_extensions', default='.jpg,.bmp,.jpeg,.png',
+    parser.add_argument('-e', '--image-extensions', default='.jpg,.bmp,.jpeg,.png',
                         type=str, help='The extensions of the images.')
     parser.add_argument('-m', '--masks', default=ALL_MASKS, type=str, help='Which masks to create.')
     parser.add_argument('-t', '--threshold', default=0.0, type=float,
                         help='The minimum confidence score for img2pose for face detection')
-    parser.add_argument('-b', '--bbox_ind', default=True, type=bool, help='Return the original or cropped'
+    parser.add_argument('-b', '--bbox-ind', default=True, type=str2bool, help='Return the original or cropped'
                                                                           'bounding box image with mask')
-    parser.add_argument('-inc', '--inc_bbox', default=0.25, type=float,
+    parser.add_argument('-inc', '--inc-bbox', default=0.25, type=float,
                         help='The increase of the bbox in percent')
 
     return parser.parse_args()
