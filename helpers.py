@@ -87,14 +87,17 @@ def get_1id_pose(results, img, threshold):
         return np.array([]), np.array([])
 
     else:
-        # if more than one identity recognized, then check who has the biggest condition:
-        # bounding box area - (distance of bounding box center from image center)^4
-        bbox = results["boxes"].cpu().numpy()[possible_id_ind].astype('float')
-        bounding_box_size = (bbox[:, 2] - bbox[:, 0]) * (bbox[:, 3] - bbox[:, 1])
-        offsets = np.vstack(
-            [(bbox[:, 0] + bbox[:, 2]) / 2 - img_w_center, (bbox[:, 1] + bbox[:, 3]) / 2 - img_h_center])
+        # if more than one identity recognized, then check who has the biggest condition
+        bboxes = results["boxes"].cpu().numpy()[possible_id_ind].astype('float')
+        scores = results["scores"].cpu().numpy()[possible_id_ind].astype('float')
+        bounding_box_size = (bboxes[:, 2] - bboxes[:, 0]) * (bboxes[:, 3] - bboxes[:, 1])
+        center_x = (bboxes[:, 0] + bboxes[:, 2]) / 2
+        center_y = (bboxes[:, 1] + bboxes[:, 3]) / 2
+        dist_x = np.min(np.vstack((center_x, abs(center_x-img.shape[1]))), axis=0)
+        dist_y = np.min(np.vstack((center_y, abs(center_y-img.shape[0]))), axis=0)
+        offsets = np.vstack([dist_x, dist_y])
         offset_dist_squared = np.sum(np.power(offsets, 2.0), 0)
-        bbox_idx = np.argmax(bounding_box_size - offset_dist_squared * 2.0)
+        bbox_idx = np.argmax(scores * (bounding_box_size + offset_dist_squared))
 
         return all_dofs[bbox_idx], all_bboxes[bbox_idx]
 
