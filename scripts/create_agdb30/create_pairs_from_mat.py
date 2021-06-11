@@ -17,15 +17,17 @@ def create_pairs_file(mat_file, dest_loc):
 
                 # First person
                 first_person = fold[0][0,match][0][0][0][0]
-                first_person_split =first_person.split('_')
-                first_person_id  = first_person_split[0]
-                first_person_picture  = first_person_split[2]
+                first_person_split = first_person.split('_')
+                first_person_id = first_person_split[0]
+                first_person_picture = first_person_split[2] if first_person_split[2].isnumeric() else first_person_split[3]
+                first_person_picture = '{:04d}'.format(int(first_person_picture))
 
                 # Second person        
                 second_person = fold[0][1,match][0][0][0][0]
                 second_person_split = second_person.split('_')
-                second_person_id  = second_person_split[0]
-                second_person_picture  = second_person_split[2]
+                second_person_id = second_person_split[0]
+                second_person_picture = second_person_split[2] if second_person_split[2].isnumeric() else second_person_split[3]
+                second_person_picture = '{:04d}'.format(int(second_person_picture))
 
                 if same_diff_person == 1:
                     f.write(first_person_id + "\t" + first_person_picture + "\t" + second_person_picture + "\n")
