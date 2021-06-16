@@ -28,6 +28,13 @@ BIN_JOBS_NAME = 'create_bin'
 #BIN_JOBS_NUMBER = 5
 BIN_FILE = os.path.join(SCRIPTS_BASE_DIR, 'bin_finished.txt')
 BIN_SBATCH_FILE = 'sbatch_bin.sh'
+
+# IDX_REC
+IDX_REC_MEM = 16
+IDX_REC_JOBS_NAME = 'create_idx_rec'
+#BIN_JOBS_NUMBER = 5
+IDX_REC_FILE = os.path.join(SCRIPTS_BASE_DIR, 'idx_rec_finished.txt')
+IDX_REC_SBATCH_FILE = 'sbatch_idx_rec.sh'
 #####################################################
 #SBATCH='sbatch --mem={}g --gres=gpu --job-name={} --array=1-{} sbatch_bin.sh' 
 

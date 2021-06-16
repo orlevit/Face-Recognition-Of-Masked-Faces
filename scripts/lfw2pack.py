@@ -4,7 +4,7 @@ import argparse
 import pickle
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'eval'))
+sys.path.append('align')
 import lfw
 
 parser = argparse.ArgumentParser(description='Package LFW images')

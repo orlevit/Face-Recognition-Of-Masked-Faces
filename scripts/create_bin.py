@@ -1,6 +1,6 @@
 import os
 from shutil import copyfile
-from script_helper import train_input_dir, wait_until_jobs_finished, delete_create_file, sbatch
+from script_helper import bin_output_dir, wait_until_jobs_finished, delete_create_file, sbatch
 from script_config import ARCFACE_ENV, BIN_MEM, BIN_FILE, SLEEP_TIME, BIN_JOBS_NAME, BIN_SBATCH_FILE
 
 
@@ -15,7 +15,7 @@ def make_bin(inputs):
     delete_create_file(BIN_FILE)
 
     env = [ARCFACE_ENV] * len(inputs)
-    output_dir = train_input_dir(inputs)
+    output_dir = bin_output_dir(inputs)
     file = [BIN_FILE] * len(inputs)
 
     input_str = ''

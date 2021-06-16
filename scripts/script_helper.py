@@ -2,6 +2,8 @@ import os
 import time
 import argparse
 import multiprocessing
+import os
+import shutil
 from script_config import ARCFACE_DATSETS_LOC, SBATCH, SLEEP_TIME
 
 
@@ -19,17 +21,31 @@ def run_multy(func, inputs):
 def aligned_output_dir(inputs):
     output_dirs = [] 
     for input in inputs:
-	    rest_path, dir_name = os.path.split(input)
-	    output_dirs.append(os.path.join(rest_path, 'a' + dir_name))
+            rest_path, dir_name = os.path.split(input)
+            output_dirs.append(os.path.join(rest_path, 'a' + dir_name))
 
     return output_dirs
 
-def train_input_dir(inputs):
+def bin_output_dir(inputs):
     output_dirs = [] 
     for input in inputs:
-	    rest_path, dir_name = os.path.split(input)
-	    # rest_path, ds_name = os.path.split(rest_path)
-	    output_dirs.append(os.path.join(ARCFACE_DATSETS_LOC, dir_name[1:]))
+            rest_path, dir_name = os.path.split(input)
+            _, base_dir_name = os.path.split(rest_path)
+            output_dir = os.path.join(ARCFACE_DATSETS_LOC, base_dir_name, dir_name[1:])
+            delete_create_dir(output_dir)
+            output_dirs.append(os.path.join(output_dir, dir_name[1:]) + ".bin")
+
+    return output_dirs
+
+def idx_rec_output_dir(inputs):
+    output_dirs = [] 
+    for input in inputs:
+            rest_path, dir_name = os.path.split(input)
+            _, base_dir_name = os.path.split(rest_path)
+            output_dir = os.path.join(ARCFACE_DATSETS_LOC, base_dir_name, dir_name[1:])
+            if not os.path.exists(output_dir):
+               os.makedirs(output_dir)
+            output_dirs.append(output_dir)
 
     return output_dirs
 
@@ -41,6 +57,11 @@ def wait_until_jobs_finished(log_file, line_number):
     
     if 'FAIL\n' in open(log_file).readlines():
        raise ValueError(f'{log_file} - Job failed!') 
+
+def delete_create_dir(dir):
+    if os.path.exists(dir):
+       shutil.rmtree(dir)
+    os.makedirs(dir)
 
 def delete_create_file(log_file):
     print('Existsa fiel1',os.path.exists(log_file))

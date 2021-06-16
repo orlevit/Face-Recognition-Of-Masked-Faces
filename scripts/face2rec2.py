@@ -30,7 +30,6 @@ import time
 import traceback
 #from builtins import range
 from easydict import EasyDict as edict
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'common'))
 import face_preprocess
 import face_image
 
