@@ -1,7 +1,8 @@
 import os
+import time
 import argparse
 import multiprocessing
-from script_config import ARCFACE_DATSETS_LOC
+from script_config import ARCFACE_DATSETS_LOC, SBATCH, SLEEP_TIME
 
 
 def run_multy(func, inputs):
@@ -15,18 +16,42 @@ def run_multy(func, inputs):
     for job in jobs:
         job.join()
 
-def aligned_output_dir(input):
-    rest_path, dir_name = os.path.split(input)
-    output_dir = os.path.join(rest_path, 'a' + dir_name)
+def aligned_output_dir(inputs):
+    output_dirs = [] 
+    for input in inputs:
+	    rest_path, dir_name = os.path.split(input)
+	    output_dirs.append(os.path.join(rest_path, 'a' + dir_name))
 
-    return output_dir
+    return output_dirs
 
-def train_input_dir(input):
-    rest_path, dir_name = os.path.split(input)
-    # rest_path, ds_name = os.path.split(rest_path)
-    output_dir = os.path.join(ARCFACE_DATSETS_LOC, dir_name[1:])
+def train_input_dir(inputs):
+    output_dirs = [] 
+    for input in inputs:
+	    rest_path, dir_name = os.path.split(input)
+	    # rest_path, ds_name = os.path.split(rest_path)
+	    output_dirs.append(os.path.join(ARCFACE_DATSETS_LOC, dir_name[1:]))
 
-    return output_dir
+    return output_dirs
+
+def wait_until_jobs_finished(log_file, line_number):
+    print(log_file)
+    while len(open(log_file).readlines()) != line_number:
+       print('line_number',line_number,'content ', open(log_file).readlines())
+       time.sleep(SLEEP_TIME)
+    
+    if 'FAIL\n' in open(log_file).readlines():
+       raise ValueError(f'{log_file} - Job failed!') 
+
+def delete_create_file(log_file):
+    print('Existsa fiel1',os.path.exists(log_file))
+    if os.path.exists(log_file):
+       os.remove(log_file)
+
+    open(log_file, 'a').close()
+    print('Existsa fiel2',os.path.exists(log_file))
+
+def sbatch(sbatch_file, mem, job_name, jobs_number, input_str):
+    os.system(f'{SBATCH.format(mem, job_name, jobs_number)} {sbatch_file} {input_str}')
 
 def parse_arguments():
     parser = argparse.ArgumentParser()

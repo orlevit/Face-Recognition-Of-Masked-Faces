@@ -1,7 +1,7 @@
 import os
 from shutil import copyfile
-from script_helper import train_input_dir
-from script_config import START_INSIGHT_ENV, BIN_FUNC
+from script_helper import train_input_dir, wait_until_jobs_finished, delete_create_file, sbatch
+from script_config import ARCFACE_ENV, BIN_MEM, BIN_FILE, SLEEP_TIME, BIN_JOBS_NAME, BIN_SBATCH_FILE
 
 
 def prerequisite_bin(pairs_files):
@@ -11,10 +11,17 @@ def prerequisite_bin(pairs_files):
             copyfile(input_dir, os.path.join(dst, file_name))
 
 
-def make_bin(input):
-    print('Start make bin for: ', input)
+def make_bin(inputs):
+    delete_create_file(BIN_FILE)
 
-    output_dir = train_input_dir(input)
+    env = [ARCFACE_ENV] * len(inputs)
+    output_dir = train_input_dir(inputs)
+    file = [BIN_FILE] * len(inputs)
 
-    os.system(f'sbatch create_bin.sh {input} {output_dir}')
-    print('Finished make bin for: ', input)
+    input_str = ''
+    for i, j, k, l in zip(env, inputs, output_dir, file):
+       input_str += f'{i} {j} {k} {l} '
+
+    sbatch(BIN_SBATCH_FILE, BIN_MEM, BIN_JOBS_NAME, len(inputs), input_str)
+    
+    wait_until_jobs_finished(BIN_FILE, len(inputs))

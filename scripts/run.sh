@@ -1,17 +1,27 @@
-#!/bin/sh
-echo 'Start running Insightface on all masks'
+#!/bin/bash
+### Allocation Start
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=50g
+#SBATCH --gres=gpu
+#SBATCH --job-name=run
+#SBATCH --output=%x-%A-%a.out
+#SBATCH --error=%x-%A-%a.err
+#SBATCH --qos=gpu
+#SBATCH --array=1-4
+#--array=1-6
 
-source /home/orlev/work/project/scripts/run/constants.sh
+# %A = job_name
+# %a = array id
 
-for ((j=0; j<${#name_executed_arr[@]}; j++ ));
-do
-	sbatch /home/orlev/work/project/scripts/run/run_one.sh $j
-done
+#conda deactivate
+module load anaconda3 gcc/8.3.0 cuda/10.0.130 cudnn/7.6.5.32-10.2-linux-x64
+source /opt/apps/anaconda3/etc/profile.d/conda.sh
+source activate tf_gpu_py36
 
-python job.py
+n=$SLURM_ARRAY_TASK_ID
+name=$(sed "${n}q;d" input_tests.txt)
 
-if [ $? -eq 0 ]; then
- echo "SUCCESS" > outputfile
-else
-  echo "FAIL" > outputfile
-fi
+echo "Job array index >>> $n <<< started to work"
+
+python -u  /home/orlev/work/project/insightface/recognition/ArcFace/train.py --network r100 --loss arcface --dataset $name
