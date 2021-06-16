@@ -2,8 +2,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from scipy import misc
-import cv2
 from PIL import Image
 import sys
 import os
@@ -12,12 +10,9 @@ import tensorflow as tf
 import numpy as np
 #import facenet
 import detect_face
-import random
-from time import sleep
 #sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'common'))
 import face_image
 import face_preprocess
-from skimage import transform as trans
 import cv2
 
 def to_rgb(img):

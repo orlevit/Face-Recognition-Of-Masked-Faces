@@ -1,7 +1,6 @@
-import os
-#import multiprocessing
-from script_helper import aligned_output_dir, delete_create_file, sbatch, wait_until_jobs_finished
-from script_config import MTCNN_ENV, ALIGN_MEM, ALIGN_JOBS_NAME, ALIGN_FILE, ALIGN_SBATCH_FILE
+# import multiprocessing
+from scripts.script_helper import aligned_output_dir, delete_create_file, sbatch, wait_until_jobs_finished
+from scripts.script_config import MTCNN_ENV, ALIGN_MEM, ALIGN_JOBS_NAME, ALIGN_FILE, ALIGN_SBATCH_FILE
 
 
 def make_align(inputs):
@@ -13,13 +12,13 @@ def make_align(inputs):
 
     input_str = ''
     for i, j, k, l in zip(env, inputs, output_dir, file):
-       input_str += f'{i} {j} {k} {l} '
+        input_str += f'{i} {j} {k} {l} '
 
     sbatch(ALIGN_SBATCH_FILE, ALIGN_MEM, ALIGN_JOBS_NAME, len(inputs), input_str)
-    
+
     wait_until_jobs_finished(ALIGN_FILE, len(inputs))
 
-#def align_mtcnn(input_dir):
+# def align_mtcnn(input_dir):
 #    #import pdb;  pdb.set_trace()
 #    print(f'Start align: {input_dir}')
 #    output_dir = aligned_output_dir(input_dir)

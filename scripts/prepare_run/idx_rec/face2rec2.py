@@ -18,16 +18,13 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 import os
-import sys
 
 #curr_path = os.path.abspath(os.path.dirname(__file__))
 #sys.path.append(os.path.join(curr_path, "../python"))
 import mxnet as mx
-import random
 import argparse
 import cv2
 import time
-import traceback
 #from builtins import range
 from easydict import EasyDict as edict
 import face_preprocess
@@ -95,7 +92,7 @@ def image_encode(args, i, item, q_out):
       else:
         img = cv2.imread(fullpath, args.color)
         assert item.landmark is not None
-        img = face_preprocess.preprocess(img, bbox = item.bbox, landmark=item.landmark, image_size='%d,%d'%(args.image_h, args.image_w))
+        img = face_preprocess.preprocess(img, bbox = item.bbox, landmark=item.landmark, image_size='%d,%d' % (args.image_h, args.image_w))
         s = mx.recordio.pack_img(header, img, quality=args.quality, img_fmt=args.encoding)
         q_out.put((i, s, oitem))
     else: 

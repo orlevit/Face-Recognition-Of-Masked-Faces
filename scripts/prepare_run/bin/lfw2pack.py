@@ -4,7 +4,7 @@ import argparse
 import pickle
 import sys
 import os
-sys.path.append('align')
+sys.path.append('../align')
 import lfw
 
 parser = argparse.ArgumentParser(description='Package LFW images')

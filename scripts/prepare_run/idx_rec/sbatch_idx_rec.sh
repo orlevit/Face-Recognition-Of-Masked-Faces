@@ -7,7 +7,6 @@
 #SBATCH --error=logs/%x-%A-%a.err
 #SBATCH --qos=gpu
 
-#conda deactivate
 module load anaconda3
 source /opt/apps/anaconda3/etc/profile.d/conda.sh
 source deactivate
@@ -15,12 +14,13 @@ source activate $1
 
 n=$SLURM_ARRAY_TASK_ID
 echo "Job array index >>> $n <<< started to work"
-echo "$@ $#"
 shift_num=$((4 * ($n - 1)))
 shift $shift_num
 
-echo "python /home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/lfw2pack.py --data-dir $2 --output $3 --image-size 112,112"
-python /home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/lfw2pack.py --data-dir $2 --output $3 --image-size 112,112
+cd $2
+python /home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/face2rec2.py $2 
+cp *.idx "$3/tain.idx"
+cp *.rec "$3/tain.rec"
 
 if [ $? -eq 0 ]; then
  echo "SUCCESS" >> $4
