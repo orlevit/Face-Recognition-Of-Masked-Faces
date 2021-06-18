@@ -29,9 +29,9 @@ def bin_output_dir(inputs):
     for one_input in inputs:
         rest_path, dir_name = os.path.split(one_input)
         _, base_dir_name = os.path.split(rest_path)
-        output_dir = os.path.join(ARCFACE_DATSETS_LOC, base_dir_name, dir_name[1:])
+        output_dir = os.path.join(ARCFACE_DATSETS_LOC, dir_name[1:])
         delete_create_dir(output_dir)
-        output_dirs.append(os.path.join(output_dir, dir_name[1:]) + ".bin")
+        output_dirs.append(os.path.join(output_dir, base_dir_name) + ".bin")
 
     return output_dirs
 
@@ -41,7 +41,7 @@ def idx_rec_output_dir(inputs):
     for one_input in inputs:
         rest_path, dir_name = os.path.split(one_input)
         _, base_dir_name = os.path.split(rest_path)
-        output_dir = os.path.join(ARCFACE_DATSETS_LOC, base_dir_name, dir_name[1:])
+        output_dir = os.path.join(ARCFACE_DATSETS_LOC, dir_name[1:])
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         output_dirs.append(output_dir)

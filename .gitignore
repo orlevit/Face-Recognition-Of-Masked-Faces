@@ -1,3 +1,7 @@
+.idea/
+*_finished.txt
+log*.txt
+images_masked*
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
