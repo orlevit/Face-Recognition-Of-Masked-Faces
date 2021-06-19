@@ -32,6 +32,12 @@ IDX_REC_MEM = 16
 IDX_REC_JOBS_NAME = 'create_idx_rec'
 IDX_REC_FILE = os.path.join(SCRIPTS_BASE_DIR, 'idx_rec_finished.txt')
 IDX_REC_SBATCH_FILE = 'prepare_run/idx_rec/sbatch_idx_rec.sh'
+
+# TEST SAME
+TEST_MEM = 16
+TEST_JOBS_NAME = 'test_same'
+TEST_FILE = os.path.join(SCRIPTS_BASE_DIR, 'test_same_finished.txt')
+TEST_SBATCH_FILE = 'test/sbatch_test_same.sh'
 ##########################################################################
 
 # files for idx and rec
