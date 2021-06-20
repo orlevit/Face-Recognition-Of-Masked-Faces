@@ -11,8 +11,8 @@ AGEDB30_PAIRS_FILE_NAME = 'agedb30_pairs.txt'
 # ALIGN_FUNC_ONLY = 'align_lfw_no_misc_or.py'
 # DS_BASE_DIR = '/home/orlev/work/datasets/original_ds'
 # CASIA_BASE_DIR = os.path.join(DS_BASE_DIR, 'CASIA-WebFace')
-# ARCFACE_DATSETS_LOC = '/home/orlev/work/project/insightface/datasets'
 # ALIGN_BASE_DIR = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/align'
+ARCFACE_DATSETS_LOC = '/home/orlev/work/project/insightface/datasets'
 SCRIPTS_BASE_DIR = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts'
 PREPARE_FILES_DIR = os.path.join(SCRIPTS_BASE_DIR, 'prepare_run/files/no_missings')
 
@@ -20,7 +20,7 @@ PREPARE_FILES_DIR = os.path.join(SCRIPTS_BASE_DIR, 'prepare_run/files/no_missing
 SBATCH = 'sbatch --mem={}g --gres=gpu --job-name={} --array=1-{}'
 
 # ALIGN
-ALIGN_MEM = 16
+ALIGN_MEM = 32
 ALIGN_JOBS_NAME = 'align'
 ALIGN_FILE = os.path.join(SCRIPTS_BASE_DIR, 'align_finished.txt')
 ALIGN_SBATCH_FILE = 'prepare_run/align/sbatch_align.sh'

@@ -17,7 +17,7 @@ echo "Job array index >>> $n <<< started to work"
 shift_num=$((4 * ($n - 1)))
 shift $shift_num
 
-python /home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/align/align_lfw_no_misc_or.py --input-dir $2 --output-dir $3
+python /home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/align/align_lfw_no_misc_or.py --input-dir $2 --output-dir $3
 
 if [ $? -eq 0 ]; then
  echo "SUCCESS" >> $4

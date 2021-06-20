@@ -1,7 +1,7 @@
 import os
-from scripts.prepare_run.bin.create_bin import make_bin, prerequisite_bin
-from scripts.prepare_run.align.alignment import make_align
-from scripts.prepare_run.idx_rec.create_idx_rec import make_idx_rec, prerequisite_idx_rec
+from prepare_run.bin.create_bin import make_bin, prerequisite_bin
+from prepare_run.align.alignment import make_align
+from prepare_run.idx_rec.create_idx_rec import make_idx_rec, prerequisite_idx_rec
 from script_helper import parse_arguments
 from script_config import LFW_PAIRS, CASIA_PAIRS, AGEDB30_PAIRS
 

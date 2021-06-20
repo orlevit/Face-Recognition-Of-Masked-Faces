@@ -1,6 +1,6 @@
 # import multiprocessing
-from scripts.script_helper import aligned_output_dir, delete_create_file, sbatch, wait_until_jobs_finished
-from scripts.script_config import MTCNN_ENV, ALIGN_MEM, ALIGN_JOBS_NAME, ALIGN_FILE, ALIGN_SBATCH_FILE
+from script_helper import aligned_output_dir, delete_create_file, sbatch, wait_until_jobs_finished
+from script_config import MTCNN_ENV, ALIGN_MEM, ALIGN_JOBS_NAME, ALIGN_FILE, ALIGN_SBATCH_FILE
 
 
 def make_align(inputs):
