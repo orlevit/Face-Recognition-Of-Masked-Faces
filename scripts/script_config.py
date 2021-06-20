@@ -1,16 +1,20 @@
 import os
 
-SLEEP_TIME = 10
+SLEEP_TIME = 30
 MTCNN_ENV = 'mtcnn'
-PROPERTY = 'property'
+CASIA_PROPERTY = 'property'
 ARCFACE_ENV = 'arcface'
-LST_FILE = 'CASIA-WebFace.lst'
-ALIGN_FUNC_ONLY = 'align_lfw_no_misc_or.py'
-DS_BASE_DIR = '/home/orlev/work/datasets/original_ds'
-CASIA_BASE_DIR = os.path.join(DS_BASE_DIR, 'CASIA-WebFace')
-ARCFACE_DATSETS_LOC = '/home/orlev/work/project/insightface/datasets'
+LST_FILE = 'casia.lst'
+LFW_PAIRS_FILE_NAME = 'lfw_pairs.txt'
+CASIA_PAIRS_FILE_NAME = 'casia_pairs_5k.txt'
+AGEDB30_PAIRS_FILE_NAME = 'agedb30_pairs.txt'
+# ALIGN_FUNC_ONLY = 'align_lfw_no_misc_or.py'
+# DS_BASE_DIR = '/home/orlev/work/datasets/original_ds'
+# CASIA_BASE_DIR = os.path.join(DS_BASE_DIR, 'CASIA-WebFace')
+# ARCFACE_DATSETS_LOC = '/home/orlev/work/project/insightface/datasets'
+# ALIGN_BASE_DIR = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/align'
 SCRIPTS_BASE_DIR = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts'
-ALIGN_BASE_DIR = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/align'
+PREPARE_FILES_DIR = os.path.join(SCRIPTS_BASE_DIR, 'prepare_run/files/no_missings')
 
 ################################ SBATCHES ################################
 SBATCH = 'sbatch --mem={}g --gres=gpu --job-name={} --array=1-{}'
@@ -41,15 +45,10 @@ TEST_SBATCH_FILE = 'test/sbatch_test_same.sh'
 ##########################################################################
 
 # files for idx and rec
-CASIA_LST_FILE = os.path.join(CASIA_BASE_DIR, LST_FILE)
-CASIA_PROPERTY = os.path.join(CASIA_BASE_DIR, PROPERTY)
+CASIA_LST_FILE = os.path.join(PREPARE_FILES_DIR, LST_FILE)
+CASIA_PROPERTY = os.path.join(PREPARE_FILES_DIR, CASIA_PROPERTY)
 
 # pairs file
-LFW_PAIRS = os.path.join(DS_BASE_DIR, 'lfw/pairs.txt')
-AGEDB30_PAIRS = os.path.join(DS_BASE_DIR, 'AgeDB/agedb30/pairs.txt')
-CASIA_PAIRS = os.path.join(CASIA_BASE_DIR, 'pairs_5k.txt')
-
-## Functions
-# ALIGN_FUNC = os.path.join(ALIGN_BASE_DIR, ALIGN_FUNC_ONLY)
-# BIN_FUNC = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/lfw2pack.py'
-# IDX_REC_FUNC = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/face2rec2.py'
+LFW_PAIRS = os.path.join(PREPARE_FILES_DIR, LFW_PAIRS_FILE_NAME)
+AGEDB30_PAIRS = os.path.join(PREPARE_FILES_DIR, AGEDB30_PAIRS_FILE_NAME)
+CASIA_PAIRS = os.path.join(PREPARE_FILES_DIR, CASIA_PAIRS_FILE_NAME)
