@@ -20,8 +20,8 @@ def make_bin(inputs):
 
     input_str = ''
     for i, j, k, l in zip(env, inputs, output_dir, file):
-       input_str += f'{i} {j} {k} {l} '
+        input_str += f'{i} {j} {k} {l} '
 
     sbatch(BIN_SBATCH_FILE, BIN_MEM, BIN_JOBS_NAME, len(inputs), input_str)
-    
+
     wait_until_jobs_finished(BIN_FILE, len(inputs))

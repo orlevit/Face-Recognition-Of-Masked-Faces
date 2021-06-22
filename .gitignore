@@ -1,8 +1,8 @@
 .idea/
 *_finished.txt
 *.npy
-scripts/logs
-#log*.txt
+scripts/logs/finished_logs/*
+scripts/logs/slurm_logs/*
 images_masked*
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -3,9 +3,10 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --gres=gpu
-#SBATCH --output=logs/%x-%A-%a.out
-#SBATCH --error=logs/%x-%A-%a.err
+#SBATCH --output=logs/slurm_logs/%x-%A-%a.out
+#SBATCH --error=logs/slurm_logs/%x-%A-%a.err
 #SBATCH --qos=gpu
+#SBATCH --exclude=gpu6
 
 module load anaconda3
 source /opt/apps/anaconda3/etc/profile.d/conda.sh

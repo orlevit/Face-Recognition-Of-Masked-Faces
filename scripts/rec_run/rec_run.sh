@@ -5,8 +5,8 @@
 #SBATCH --mem=50g
 #SBATCH --gres=gpu
 #SBATCH --job-name=run
-#SBATCH --output=%x-%A-%a.out
-#SBATCH --error=%x-%A-%a.err
+#SBATCH --output=logs/slurm_logs/%x-%A-%a.out
+#SBATCH --error=logs/slurm_logs/%x-%A-%a.err
 #SBATCH --qos=gpu
 #SBATCH --array=1-5
 
