@@ -65,12 +65,10 @@ def delete_create_dir(directory):
 
 
 def delete_create_file(log_file):
-    print('Existsa fiel1', os.path.exists(log_file))
     if os.path.exists(log_file):
         os.remove(log_file)
 
-    open(log_file, 'a').close()
-    print('Existsa fiel2', os.path.exists(log_file))
+    open(log_file, 'w').close()
 
 
 def sbatch(sbatch_file, mem, job_name, jobs_number, input_str):
