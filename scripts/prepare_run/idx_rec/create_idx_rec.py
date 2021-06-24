@@ -1,14 +1,14 @@
 import os
 from shutil import copyfile
 from script_helper import delete_create_file, wait_until_jobs_finished, sbatch, idx_rec_output_dir
-from script_config import ARCFACE_ENV, CASIA_PROPERTY, CASIA_LST_FILE, LST_FILE, IDX_REC_MEM, IDX_REC_JOBS_NAME, IDX_REC_FILE, IDX_REC_SBATCH_FILE
+from script_config import ARCFACE_ENV, CASIA_PROPERTY_FILE, CASIA_PROPERTY_LOC, CASIA_LST_FILE, LST_FILE, IDX_REC_MEM, IDX_REC_JOBS_NAME, IDX_REC_FILE, IDX_REC_SBATCH_FILE
 
 
 def prerequisite_idx_rec(output_dirs):
     for output_dir in output_dirs:
-            print(output_dir)
+            #print(CASIA_PROPERTY_LOC, os.path.join(output_dir, CASIA_PROPERTY_FILE))
             copyfile(CASIA_LST_FILE, os.path.join(output_dir, LST_FILE))
-            copyfile(CASIA_PROPERTY, os.path.join(output_dir, PROPERTY))
+            copyfile(CASIA_PROPERTY_LOC, os.path.join(output_dir, CASIA_PROPERTY_FILE))
 
 
 def make_idx_rec(inputs):

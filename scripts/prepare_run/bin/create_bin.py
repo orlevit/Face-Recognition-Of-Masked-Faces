@@ -8,7 +8,7 @@ def prerequisite_bin(pairs_files):
     for input_dir, output_dirs in zip(pairs_files[0], pairs_files[1]):
         full_path, file_name = os.path.split(input_dir)
         for dst in output_dirs:
-            copyfile(input_dir, os.path.join(dst, file_name))
+            copyfile(input_dir, os.path.join(dst, 'pairs.txt'))
 
 
 def make_bin(inputs):

@@ -19,9 +19,9 @@ shift_num=$((4 * ($n - 1)))
 shift $shift_num
 
 cd $2
-python /home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/face2rec2.py $2 
-cp *.idx "$3/tain.idx"
-cp *.rec "$3/tain.rec"
+python /home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/idx_rec/face2rec2.py $2 
+cp *.idx "$3/train.idx"
+cp *.rec "$3/train.rec"
 
 if [ $? -eq 0 ]; then
  echo "SUCCESS" >> $4

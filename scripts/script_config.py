@@ -2,7 +2,7 @@ import os
 
 SLEEP_TIME = 30
 MTCNN_ENV = 'mtcnn'
-CASIA_PROPERTY = 'property'
+CASIA_PROPERTY_FILE = 'property'
 ARCFACE_ENV = 'arcface'
 LST_FILE = 'casia.lst'
 LFW_PAIRS_FILE_NAME = 'lfw_pairs.txt'
@@ -51,7 +51,7 @@ TEST_SBATCH_FILE = 'test/sbatch_test_same.sh'
 
 # files for idx and rec
 CASIA_LST_FILE = os.path.join(PREPARE_FILES_DIR, LST_FILE)
-CASIA_PROPERTY = os.path.join(PREPARE_FILES_DIR, CASIA_PROPERTY)
+CASIA_PROPERTY_LOC = os.path.join(PREPARE_FILES_DIR, CASIA_PROPERTY_FILE)
 
 # pairs file
 LFW_PAIRS = os.path.join(PREPARE_FILES_DIR, LFW_PAIRS_FILE_NAME)

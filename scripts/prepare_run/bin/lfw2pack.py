@@ -1,10 +1,10 @@
+import sys
 import mxnet as mx
 from mxnet import ndarray as nd
 import argparse
 import pickle
-import sys
 import os
-sys.path.append('../align')
+#sys.path.append(os.path.join(os.getcwd(),'prepare_run/align'))
 import lfw
 
 parser = argparse.ArgumentParser(description='Package LFW images')

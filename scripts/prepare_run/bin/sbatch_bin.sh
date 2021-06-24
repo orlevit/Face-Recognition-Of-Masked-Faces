@@ -17,8 +17,8 @@ n=$SLURM_ARRAY_TASK_ID
 echo "Job array index >>> $n <<< started to work"
 shift_num=$((4 * ($n - 1)))
 shift $shift_num
-
-python /home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/lfw2pack.py --data-dir $2 --output $3 --image-size 112,112
+_
+python /home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/lfw2pack.py --data-dir $2 --output $3 --image-size 112,112
 
 if [ $? -eq 0 ]; then
  echo "SUCCESS" >> $4
