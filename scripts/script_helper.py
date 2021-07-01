@@ -2,7 +2,8 @@ import os
 import time
 import shutil
 import argparse
-from script_config import ARCFACE_DATSETS_LOC, SBATCH, SLEEP_TIME
+import sys
+from scripts.script_config import ARCFACE_DATSETS_LOC, SBATCH, SLEEP_TIME
 
 
 # def run_multy(func, inputs):

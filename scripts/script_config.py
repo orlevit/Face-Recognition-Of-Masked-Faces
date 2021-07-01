@@ -38,11 +38,11 @@ IDX_REC_FILE = os.path.join(FINISHED_LOGS_DIR, 'idx_rec_finished.txt')
 IDX_REC_SBATCH_FILE = 'prepare_run/idx_rec/sbatch_idx_rec.sh'
 
 # TEST SAME
-TEST_MEM = 16
+TEST_MEM = 4
 TEST_JOBS_NAME = 'test_same'
 TEST_RESULTS_FILE = os.path.join(SCRIPTS_BASE_DIR, 'test/results_same.txt')
 TEST_TRACK_FILE = os.path.join(FINISHED_LOGS_DIR, 'test_same_finished.txt')
-TEST_SBATCH_FILE = 'test/sbatch_test_same.sh'
+TEST_SBATCH_FILE = os.path.join(SCRIPTS_BASE_DIR, 'test/sbatch_test_same.sh')
 ##########################################################################
 
 # files for idx and rec
@@ -63,6 +63,7 @@ SCARF_MASK_MODEL = os.path.join(MODELS_BASE_LOC, 'r100-arcface-scarf_masked')
 SUNGLASSES_MASK_MODEL = os.path.join(MODELS_BASE_LOC, 'r100-arcface-sunglasses_masked')
 
 MODELS_DIRS_LIST = [EYE_MASK_MODEL, CORONA_MASK_MODEL, HAT_MASK_MODEL, SCARF_MASK_MODEL, SUNGLASSES_MASK_MODEL]
+MODELS_DIRS_LIST = [CORONA_MASK_MODEL, HAT_MASK_MODEL, SCARF_MASK_MODEL, SUNGLASSES_MASK_MODEL]
 
 ##kill
 #ARCFACE_DATSETS_LOC = '/home/or/Downloads/kill2'

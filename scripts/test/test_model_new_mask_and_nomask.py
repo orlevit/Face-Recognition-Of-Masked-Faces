@@ -239,29 +239,16 @@ def load_bin(path, image_size):
     print(data_list[0].shape)
     return (data_list, issame_list)
 
-
-def test(data_set,
-         mx_model,
-         batch_size,
-         threshold,
-         nfolds=10,
-         data_extra=None,
-         label_shape=None,
-         ROC = False,
-         target_name=None):
-    print('testing verification..')
-    #print(len(data_set[0]),,data_set[1].shape)
-    data_list = data_set[0]
-    issame_list = data_set[1]
-    model = mx_model
+def calc_emb(data_list, model, batch_size, data_extra, label_shape):
+    time_consumed = 0.0
     embeddings_list = []
     if data_extra is not None:
         _data_extra = nd.array(data_extra)
-    time_consumed = 0.0
     if label_shape is None:
         _label = nd.ones((batch_size, ))
     else:
         _label = nd.ones(label_shape)
+
     for i in range(len(data_list)):
         data = data_list[i]
         embeddings = None
@@ -315,8 +302,6 @@ def test(data_set,
 
     embeddings = embeddings_list[0].copy()
     embeddings = sklearn.preprocessing.normalize(embeddings)
-    acc1 = 0.0
-    std1 = 0.0
     #_, _, accuracy, val, val_std, far = evaluate(embeddings, issame_list, nrof_folds=10)
     #acc1, std1 = np.mean(accuracy), np.std(accuracy)
 
@@ -326,6 +311,34 @@ def test(data_set,
     embeddings = sklearn.preprocessing.normalize(embeddings)
     print(embeddings.shape)
     print('infer time', time_consumed)
+    return embeddings, _xnorm
+
+def test(data_set,
+         nomasks_data_set,
+         mx_model,
+         batch_size,
+         threshold,
+         nfolds=10,
+         data_extra=None,
+         label_shape=None,
+         ROC = False,
+         target_name=None):
+    print('testing verification..')
+    mask_data_list = data_set[0]
+    nomask_data_list = nomasks_data_set[0]
+    issame_list = data_set[1]
+    model = mx_model
+
+    mask_embeddings, _xnorm_mask = calc_emb(mask_data_list, model, batch_size, data_extra, label_shape)
+    nomask_embeddings, _xnorm_nomask= calc_emb(nomask_data_list, model, batch_size, data_extra, label_shape)
+    _xnorm = (_xnorm_mask +_xnorm_nomask)/2
+
+    # Combinning the embedding from the mask and from the no mask, it is emvedding of first image and second image. 
+    replace_idx = np.arange(1,len(nomask_embeddings),2)
+    mask_embeddings[replace_idx] = nomask_embeddings[1::2]
+    embeddings = mask_embeddings
+    acc1 = 0.0
+    std1 = 0.0
     tpr, fpr, accuracy, val, val_std, far, tpr_graph, fpr_graph = evaluate(threshold,
                                                  embeddings,
                                                  issame_list,
@@ -350,7 +363,7 @@ def test(data_set,
        path = os.getcwd()
        plt.savefig(str(target_name)+'_ROC.jpg')
 
-    return acc1, std1, acc2, std2, _xnorm, embeddings_list, roc_auc
+    return acc1, std1, acc2, std2, _xnorm, roc_auc
 
 
 if __name__ == '__main__':
@@ -361,13 +374,13 @@ if __name__ == '__main__':
     group.add_argument('--threshold', type=float, help='The treshold selected')
     group.add_argument('--threshold-dir', default='', type=str, help='The tresholds file location, calc the avg threshold of the selected epoch ')
     # general
-    parser.add_argument('--data-dir', default='', help='')
+    arser.add_argument('--data-dir-mask', default='', help='')
+    parser.add_argument('--data-dir-nomask', default='', help='Just make sure the issame list is equal to the one in mask(checking the same benchmark)')
     parser.add_argument('--model',
                         default='../model/softmax,50',
                         help='path to load model.')
-    parser.add_argument('--target',
-                        default='lfw,cfp_ff,cfp_fp,agedb_30',
-                        help='test targets.')
+    parser.add_argument('--target-mask', default='lfw,cfp_ff,cfp_fp,agedb_30', help='test targets.')
+    parser.add_argument('--target-nomask', default='lfw,cfp_ff,cfp_fp,agedb_30', help='test targets.')
     parser.add_argument('--plot-roc',default =False, help='true or false to plot ROC curve')
     parser.add_argument('--roc-name', help='test targets.')
     parser.add_argument('--gpu', default=0, type=int, help='gpu id')
@@ -433,19 +446,24 @@ if __name__ == '__main__':
 
     ver_list = []
     ver_name_list = []
-    for name in args.target.split(','):
-        path = os.path.join(args.data_dir, name + ".bin")
+    for name in args.target_mask.split(','):
+        path = os.path.join(args.data_dir_mask, name + ".bin")
         if os.path.exists(path):
             print('loading.. ', name)
             data_set = load_bin(path, image_size)
             ver_list.append(data_set)
             ver_name_list.append(name)
 
+    # Add the additonal file of the nomasks
+    path = os.path.join(args.data_dir_nomask, args.target_nomask + ".bin")
+    print('loading.. ', name) 
+    nomasks_data_set = load_bin(path, image_size)
+
     if args.mode == 0:
         for i in range(len(ver_list)):
             results = []
             for model, threshold in zip(nets, epoch_thresholds):
-                acc1, std1, acc2, std2, xnorm, embeddings_list, roc_auc = test(ver_list[i], model, args.batch_size, threshold, args.nfolds, ROC=args.plot_roc, target_name=args.roc_name)
+                acc1, std1, acc2, std2, xnorm, roc_auc = test(ver_list[i], nomasks_data_set, model, args.batch_size, threshold, args.nfolds, ROC=args.plot_roc, target_name=args.roc_name)
  
                 roc_auc_mean, roc_auc_std = np.mean(roc_auc), np.std(roc_auc)
 

@@ -1,6 +1,16 @@
 import os
+import sys
+import inspect
 from glob import iglob
 from itertools import groupby
+
+currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+parent_dir = os.path.dirname(currentdir)
+parent_parent_dir = os.path.dirname(parent_dir)
+sys.path.insert(-1, parent_dir) 
+sys.path.insert(-1, parent_parent_dir) 
+
+from glob import iglob
 from scripts.script_helper import sbatch, delete_create_file, wait_until_jobs_finished
 from scripts.script_config import TEST_MEM, TEST_JOBS_NAME, TEST_SBATCH_FILE, ARCFACE_ENV, TEST_RESULTS_FILE, \
     TEST_TRACK_FILE, MODELS_DIRS_LIST, ARCFACE_DATSETS_LOC, ARCFACE_DS_NAMES, ARCDACE_VALIDATON_DS
@@ -63,7 +73,7 @@ def make_test():
                 _, dir_name = os.path.split(data_dir)
                 target_name_only = target.split('.')[0]
                 roc_name = f'{target_name_only}_{model_name}_{dir_name}'
-                input_str += f'{ARCFACE_ENV} {data_dir} {target} {model} ' \
+                input_str += f'{ARCFACE_ENV} {data_dir} {target_name_only} {model} ' \
                              f'{roc_name} {threshold} {TEST_RESULTS_FILE} {TEST_TRACK_FILE} '
 
     sbatch(TEST_SBATCH_FILE, TEST_MEM, TEST_JOBS_NAME, input_number, input_str)
