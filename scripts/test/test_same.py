@@ -58,7 +58,7 @@ def get_model(model_dir):
     return model_loc, threshold
 
 
-def make_test():
+def make_test_same():
     grouped_input = get_bin_test_files()
     delete_create_file(TEST_SAME_TRACK_FILE)
     items_number = sum([len(list_input) for list_input in grouped_input])
@@ -83,4 +83,4 @@ def make_test():
 
 
 if __name__ == '__main__':
-    make_test()
+    make_test_same()
