@@ -1,19 +1,10 @@
 import os
-import sys
-import inspect
 from glob import iglob
 from itertools import groupby
-
-currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-parent_dir = os.path.dirname(currentdir)
-parent_parent_dir = os.path.dirname(parent_dir)
-sys.path.insert(-1, parent_dir) 
-sys.path.insert(-1, parent_parent_dir) 
-
-from glob import iglob
 from scripts.script_helper import sbatch, delete_create_file, wait_until_jobs_finished
-from scripts.script_config import TEST_MEM, TEST_JOBS_NAME, TEST_SBATCH_FILE, ARCFACE_ENV, TEST_RESULTS_FILE, \
-    TEST_TRACK_FILE, MODELS_DIRS_LIST, ARCFACE_DATSETS_LOC, ARCFACE_DS_NAMES, ARCDACE_VALIDATON_DS
+from scripts.script_config import TEST_DIFF_MEM, TEST_DIFF_JOBS_NAME, TEST_DIFF_SBATCH_FILE, ARCFACE_ENV, \
+    TEST_DIFF_RESULTS_FILE, TEST_DIFF_TRACK_FILE, MODELS_DIRS_LIST, ARCFACE_DATSETS_LOC, ARCFACE_DS_NAMES, \
+    ARCDACE_VALIDATON_DS, NOMASK_DATA_LOC
 
 
 def get_bin_test_files():
@@ -59,24 +50,27 @@ def get_model(model_dir):
 
 def make_test():
     grouped_input = get_bin_test_files()
-    delete_create_file(TEST_TRACK_FILE)
+    delete_create_file(TEST_DIFF_TRACK_FILE)
     items_number = sum([len(list_input) for list_input in grouped_input])
     input_number = items_number * len(MODELS_DIRS_LIST)
 
     input_str = ''
+    # TODO: create manually the .bin files from the new pairs.txt files for nomasks
+    # TODO: test manually the threshold on nomask casia and add it to a threshold file!!!!!!!!!!!!!!!!!!
+    # TODO: move the relevant files to the scripts relevant location
     for model_dir in MODELS_DIRS_LIST:
         model, threshold = get_model(model_dir)
         for input_files_list in grouped_input:
             for input_file in input_files_list:
                 model_name = model.split('/')[-2]
-                data_dir, target = os.path.split(input_file)
-                _, dir_name = os.path.split(data_dir)
+                data_dir_mask, target = os.path.split(input_file)
+                _, dir_name = os.path.split(data_dir_mask)
                 target_name_only = target.split('.')[0]
-                roc_name = f'{target_name_only}_{model_name}_{dir_name}'
-                input_str += f'{ARCFACE_ENV} {data_dir} {target_name_only} {model} ' \
-                             f'{roc_name} {threshold} {TEST_RESULTS_FILE} {TEST_TRACK_FILE} '
+                roc_name = f'{target_name_only}_{model_name}_{dir_name}_nomask'
+                input_str += f'{ARCFACE_ENV} {data_dir_mask} {NOMASK_DATA_LOC} {target} {target} {model} ' \
+                             f'{roc_name} {threshold} {TEST_DIFF_RESULTS_FILE} {TEST_DIFF_TRACK_FILE} '
 
-    sbatch(TEST_SBATCH_FILE, TEST_MEM, TEST_JOBS_NAME, input_number, input_str)
+    sbatch(TEST_DIFF_SBATCH_FILE, TEST_DIFF_MEM, TEST_DIFF_JOBS_NAME, input_number, input_str)
 
     wait_until_jobs_finished(TEST_TRACK_FILE, input_number)
 
