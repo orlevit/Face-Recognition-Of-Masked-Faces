@@ -63,8 +63,8 @@ CASIA_PAIRS = os.path.join(PREPARE_FILES_DIR, CASIA_PAIRS_FILE_NAME)
 
 # Models locaton
 MODELS_BASE_LOC = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/rec_run/models/transfer_learning'
-NOMASK_MODEL_LOC = '/home/orlev/work/project/insightface/models/model-r100-ii'
-NOMASK_DATA_LOC = '/home/orlev/work/project/insightface/datasets/nomask'
+NOMASK_DATA_LOC = '/home/orlev/work/project/insightface/datasets/nomask' ## CHANGE!
+NOMASK_MODEL_LOC = os.path.join(MODELS_BASE_LOC, 'model-r100-ii')
 EYE_MASK_MODEL = os.path.join(MODELS_BASE_LOC, 'r100-arcface-eye_masked')
 CORONA_MASK_MODEL = os.path.join(MODELS_BASE_LOC, 'r100-arcface-corona_masked')
 HAT_MASK_MODEL = os.path.join(MODELS_BASE_LOC, 'r100-arcface-hat_masked')
