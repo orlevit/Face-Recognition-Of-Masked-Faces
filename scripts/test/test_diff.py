@@ -1,6 +1,15 @@
 import os
+import sys
+import inspect
 from glob import iglob
 from itertools import groupby
+
+currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+parent_dir = os.path.dirname(currentdir)
+parent_parent_dir = os.path.dirname(parent_dir)
+sys.path.insert(-1, parent_dir)
+sys.path.insert(-1, parent_parent_dir)
+
 from scripts.script_helper import sbatch, delete_create_file, wait_until_jobs_finished
 from scripts.script_config import TEST_DIFF_MEM, TEST_DIFF_JOBS_NAME, TEST_DIFF_SBATCH_FILE, ARCFACE_ENV, \
     TEST_DIFF_RESULTS_FILE, TEST_DIFF_TRACK_FILE, MODELS_DIRS_LIST, ARCFACE_DATSETS_LOC, ARCFACE_DS_NAMES, \
@@ -72,7 +81,7 @@ def make_test_diff():
 
     sbatch(TEST_DIFF_SBATCH_FILE, TEST_DIFF_MEM, TEST_DIFF_JOBS_NAME, input_number, input_str)
 
-    wait_until_jobs_finished(TEST_TRACK_FILE, input_number)
+    wait_until_jobs_finished(TEST_DIFF_TRACK_FILE, input_number)
 
 
 if __name__ == '__main__':

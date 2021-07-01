@@ -10,7 +10,6 @@ parent_parent_dir = os.path.dirname(parent_dir)
 sys.path.insert(-1, parent_dir) 
 sys.path.insert(-1, parent_parent_dir) 
 
-from glob import iglob
 from scripts.script_helper import sbatch, delete_create_file, wait_until_jobs_finished
 from scripts.script_config import TEST_SAME_MEM, TEST_SAME_JOBS_NAME, TEST_SAME_SBATCH_FILE, ARCFACE_ENV, \
     TEST_SAME_RESULTS_FILE, TEST_SAME_TRACK_FILE, MODELS_DIRS_LIST, ARCFACE_DATSETS_LOC, ARCFACE_DS_NAMES, \
