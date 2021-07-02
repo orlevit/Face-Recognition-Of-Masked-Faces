@@ -2,13 +2,13 @@
 ### Allocation Start
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=32g
+#SBATCH --mem=16g
 #SBATCH --gres=gpu
 #SBATCH --job-name=run
 #SBATCH --output=../logs/slurm_logs/%x-%A-%a.out
 #SBATCH --error=../logs/slurm_logs/%x-%A-%a.err
 #SBATCH --qos=gpu
-#SBATCH --array=1-5
+#SBATCH --array=1-1
 #SBATCH --exclude=gpu6
 
 # %A = job_name

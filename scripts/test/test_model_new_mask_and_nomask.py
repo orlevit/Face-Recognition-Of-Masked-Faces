@@ -374,7 +374,7 @@ if __name__ == '__main__':
     group.add_argument('--threshold', type=float, help='The treshold selected')
     group.add_argument('--threshold-dir', default='', type=str, help='The tresholds file location, calc the avg threshold of the selected epoch ')
     # general
-    arser.add_argument('--data-dir-mask', default='', help='')
+    parser.add_argument('--data-dir-mask', default='', help='')
     parser.add_argument('--data-dir-nomask', default='', help='Just make sure the issame list is equal to the one in mask(checking the same benchmark)')
     parser.add_argument('--model',
                         default='../model/softmax,50',

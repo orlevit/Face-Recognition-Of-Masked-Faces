@@ -76,8 +76,8 @@ def make_test_diff():
                 _, dir_name = os.path.split(data_dir_mask)
                 target_name_only = target.split('.')[0]
                 roc_name = f'{target_name_only}_{model_name}_{dir_name}_nomask'
-                input_str += f'{ARCFACE_ENV} {data_dir_mask} {NOMASK_DATA_LOC} {target} {target} {model} ' \
-                             f'{roc_name} {threshold} {TEST_DIFF_RESULTS_FILE} {TEST_DIFF_TRACK_FILE} '
+                input_str += f'{ARCFACE_ENV} {data_dir_mask} {NOMASK_DATA_LOC} {target_name_only} {model} ' \
+                             f'{roc_name} {threshold} {TEST_DIFF_RESULTS_FILE} {str(TEST_DIFF_TRACK_FILE)} '
 
     sbatch(TEST_DIFF_SBATCH_FILE, TEST_DIFF_MEM, TEST_DIFF_JOBS_NAME, input_number, input_str)
 

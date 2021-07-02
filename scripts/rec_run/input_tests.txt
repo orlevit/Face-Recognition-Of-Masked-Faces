@@ -1,5 +1,1 @@
 eye_masked
-hat_masked
-scarf_masked
-corona_masked
-sunglasses_masked

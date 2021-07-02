@@ -73,7 +73,7 @@ def make_test_same():
                 _, dir_name = os.path.split(data_dir)
                 target_name_only = target.split('.')[0]
                 roc_name = f'{target_name_only}_{model_name}_{dir_name}'
-                input_str += f'{ARCFACE_ENV} {data_dir} {target} {model} ' \
+                input_str += f'{ARCFACE_ENV} {data_dir} {target_name_only} {model} ' \
                              f'{roc_name} {threshold} {TEST_SAME_RESULTS_FILE} {TEST_SAME_TRACK_FILE} '
 
     sbatch(TEST_SAME_SBATCH_FILE, TEST_SAME_MEM, TEST_SAME_JOBS_NAME, input_number, input_str)

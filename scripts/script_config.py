@@ -42,14 +42,14 @@ TEST_SAME_MEM = 8
 TEST_SAME_JOBS_NAME = 'test_same'
 TEST_SAME_RESULTS_FILE = os.path.join(SCRIPTS_BASE_DIR, 'test/results_same.txt')
 TEST_SAME_TRACK_FILE = os.path.join(FINISHED_LOGS_DIR, 'test_same_finished.txt')
-TEST_SAME_SBATCH_FILE = 'test/sbatch_test_same.sh'
+TEST_SAME_SBATCH_FILE = 'sbatch_test_same.sh'
 
 # TEST MASK NOMASK
 TEST_DIFF_MEM = 8 
 TEST_DIFF_JOBS_NAME = 'test_diff'
 TEST_DIFF_RESULTS_FILE = os.path.join(SCRIPTS_BASE_DIR, 'test/results_diff.txt')
 TEST_DIFF_TRACK_FILE = os.path.join(FINISHED_LOGS_DIR, 'test_diff_finished.txt')
-TEST_DIFF_SBATCH_FILE = 'test/sbatch_test_diff.sh'
+TEST_DIFF_SBATCH_FILE = 'sbatch_test_diff.sh'
 ##########################################################################
 
 # files for idx and rec
