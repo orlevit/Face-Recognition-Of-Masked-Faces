@@ -10,10 +10,10 @@ parent_parent_dir = os.path.dirname(parent_dir)
 sys.path.insert(-1, parent_dir)
 sys.path.insert(-1, parent_parent_dir)
 
-from scripts.script_helper import sbatch, delete_create_file, wait_until_jobs_finished
+from scripts.script_helper import sbatch, delete_create_file, wait_until_jobs_finished, organized_results
 from scripts.script_config import TEST_DIFF_MEM, TEST_DIFF_JOBS_NAME, TEST_DIFF_SBATCH_FILE, ARCFACE_ENV, \
-    TEST_DIFF_RESULTS_FILE, TEST_DIFF_TRACK_FILE, MODELS_DIRS_LIST, ARCFACE_DATSETS_LOC, ARCFACE_DS_NAMES, \
-    ARCDACE_VALIDATON_DS, NOMASK_DATA_LOC
+    TEST_DIFF_COMMANDS_FILE, TEST_DIFF_TRACK_FILE, MODELS_DIRS_LIST, ARCFACE_DATSETS_LOC, ARCFACE_DS_NAMES, \
+    ARCDACE_VALIDATON_DS, NOMASK_DATA_LOC, TEST_DIFF_RESULTS_FILE
 
 
 def get_bin_test_files():
@@ -77,11 +77,13 @@ def make_test_diff():
                 target_name_only = target.split('.')[0]
                 roc_name = f'{target_name_only}_{model_name}_{dir_name}_nomask'
                 input_str += f'{ARCFACE_ENV} {data_dir_mask} {NOMASK_DATA_LOC} {target_name_only} {model} ' \
-                             f'{roc_name} {threshold} {TEST_DIFF_RESULTS_FILE} {str(TEST_DIFF_TRACK_FILE)} '
+                             f'{roc_name} {threshold} {TEST_DIFF_COMMANDS_FILE} {str(TEST_DIFF_TRACK_FILE)} '
 
     sbatch(TEST_DIFF_SBATCH_FILE, TEST_DIFF_MEM, TEST_DIFF_JOBS_NAME, input_number, input_str)
 
     wait_until_jobs_finished(TEST_DIFF_TRACK_FILE, input_number)
+
+    organized_results(os.path.basename(__file__).rsplit('.')[0], TEST_DIFF_RESULTS_FILE)
 
 
 if __name__ == '__main__':

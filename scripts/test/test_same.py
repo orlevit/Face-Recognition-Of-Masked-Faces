@@ -7,13 +7,13 @@ from itertools import groupby
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parent_dir = os.path.dirname(currentdir)
 parent_parent_dir = os.path.dirname(parent_dir)
-sys.path.insert(-1, parent_dir) 
-sys.path.insert(-1, parent_parent_dir) 
+sys.path.insert(-1, parent_dir)
+sys.path.insert(-1, parent_parent_dir)
 
 from scripts.script_helper import sbatch, delete_create_file, wait_until_jobs_finished, organized_results
 from scripts.script_config import TEST_SAME_MEM, TEST_SAME_JOBS_NAME, TEST_SAME_SBATCH_FILE, ARCFACE_ENV, \
-    TEST_SAME_RESULTS_FILE, TEST_SAME_TRACK_FILE, MODELS_DIRS_LIST, ARCFACE_DATSETS_LOC, ARCFACE_DS_NAMES, \
-    ARCDACE_VALIDATON_DS
+    TEST_SAME_COMMANDS_FILE, TEST_SAME_TRACK_FILE, MODELS_DIRS_LIST, ARCFACE_DATSETS_LOC, ARCFACE_DS_NAMES, \
+    ARCDACE_VALIDATON_DS, TEST_SAME_RESULTS_FILE
 
 
 def get_bin_test_files():
@@ -56,6 +56,7 @@ def get_model(model_dir):
 
     return model_loc, threshold
 
+
 def make_test_same():
     grouped_input = get_bin_test_files()
     delete_create_file(TEST_SAME_TRACK_FILE)
@@ -73,13 +74,14 @@ def make_test_same():
                 target_name_only = target.split('.')[0]
                 roc_name = f'{target_name_only}_{model_name}_{dir_name}'
                 input_str += f'{ARCFACE_ENV} {data_dir} {target_name_only} {model} ' \
-                             f'{roc_name} {threshold} {TEST_SAME_RESULTS_FILE} {TEST_SAME_TRACK_FILE} '
+                             f'{roc_name} {threshold} {TEST_SAME_COMMANDS_FILE} {TEST_SAME_TRACK_FILE} '
 
-   # sbatch(TEST_SAME_SBATCH_FILE, TEST_SAME_MEM, TEST_SAME_JOBS_NAME, input_number, input_str)
+    # sbatch(TEST_SAME_SBATCH_FILE, TEST_SAME_MEM, TEST_SAME_JOBS_NAME, input_number, input_str)
 
-#    wait_until_jobs_finished(TEST_SAME_TRACK_FILE, input_number)
+    #    wait_until_jobs_finished(TEST_SAME_TRACK_FILE, input_number)
 
     organized_results(os.path.basename(__file__).rsplit('.')[0], TEST_SAME_RESULTS_FILE)
 
+
 if __name__ == '__main__':
-   make_test_same()
+    make_test_same()
