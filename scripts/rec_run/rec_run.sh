@@ -2,7 +2,7 @@
 ### Allocation Start
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=16g
+#SBATCH --mem=8g
 #SBATCH --gres=gpu
 #SBATCH --job-name=run
 #SBATCH --output=../logs/slurm_logs/%x-%A-%a.out
