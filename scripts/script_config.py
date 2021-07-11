@@ -9,7 +9,7 @@ LFW_PAIRS_FILE_NAME = 'lfw_pairs.txt'
 CASIA_PAIRS_FILE_NAME = 'casia_pairs_5k.txt'
 AGEDB30_PAIRS_FILE_NAME = 'agedb30_pairs.txt'
 ARCFACE_DATSETS_LOC = '/home/orlev/work/project/insightface/datasets'
-ARCFACE_DS_NAMES = ['eyemask', 'hatmask', 'sunglassesmask', 'scarfmask', 'coronamask']
+ARCFACE_DS_NAMES = ['nomask', 'eyemask', 'hatmask', 'coronamask', 'scarfmask','sunglassesmask']
 ARCDACE_VALIDATON_DS = 'casia.bin'
 SCRIPTS_BASE_DIR = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts'
 FINISHED_LOGS_DIR = os.path.join(SCRIPTS_BASE_DIR, 'logs', 'finished_logs')
@@ -63,15 +63,18 @@ CASIA_PAIRS = os.path.join(PREPARE_FILES_DIR, CASIA_PAIRS_FILE_NAME)
 
 # Models locaton
 MODELS_BASE_LOC = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/rec_run/models/transfer_learning'
-NOMASK_DATA_LOC = '/home/orlev/work/project/insightface/datasets/nomask' ## CHANGE!
-NOMASK_MODEL_LOC = os.path.join(MODELS_BASE_LOC, 'model-r100-ii')
+NOMASK_MODEL_LOC = os.path.join(MODELS_BASE_LOC, 'r100-arcface-nomask_masked')
 EYE_MASK_MODEL = os.path.join(MODELS_BASE_LOC, 'r100-arcface-eye_masked')
 CORONA_MASK_MODEL = os.path.join(MODELS_BASE_LOC, 'r100-arcface-corona_masked')
 HAT_MASK_MODEL = os.path.join(MODELS_BASE_LOC, 'r100-arcface-hat_masked')
 SCARF_MASK_MODEL = os.path.join(MODELS_BASE_LOC, 'r100-arcface-scarf_masked')
 SUNGLASSES_MASK_MODEL = os.path.join(MODELS_BASE_LOC, 'r100-arcface-sunglasses_masked')
 
-MODELS_DIRS_LIST = [NOMASK_MODEL_LOC, EYE_MASK_MODEL, CORONA_MASK_MODEL, HAT_MASK_MODEL, SCARF_MASK_MODEL, SUNGLASSES_MASK_MODEL]
+MODELS_DIRS_LIST = [NOMASK_MODEL_LOC, EYE_MASK_MODEL, HAT_MASK_MODEL, CORONA_MASK_MODEL, SCARF_MASK_MODEL, SUNGLASSES_MASK_MODEL]
+
+# Results table
+RESULTS_HEADERS = ['Model', 'Masked LFW', 'Threshold for best accuracy', 'Best accuracy on masked LFW', 'AUC on masked LFW', 'Best accuracy on masked agedb30', 'AUC on masked agedb30']
+RESULTS_TARGET_FILES = ['lfw', 'agedb30']
 
 ##kill
 #ARCFACE_DATSETS_LOC = '/home/or/Downloads/kill2'

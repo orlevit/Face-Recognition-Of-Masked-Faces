@@ -1,9 +1,13 @@
 import os
+import sys
 import time
 import shutil
 import argparse
-import sys
-from scripts.script_config import ARCFACE_DATSETS_LOC, SBATCH, SLEEP_TIME
+import numpy as np
+import pandas as pd
+from glob import iglob
+from scripts.script_config import ARCFACE_DATSETS_LOC, SBATCH, SLEEP_TIME, RESULTS_HEADERS, RESULTS_TARGET_FILES, MODELS_DIRS_LIST, \
+                                  SLURM_LOGS_DIR, ARCFACE_DS_NAMES
 
 
 # def run_multy(func, inputs):
@@ -52,10 +56,11 @@ def idx_rec_output_dir(inputs):
 
 def wait_until_jobs_finished(log_file, line_number):
     print(log_file)
-    finished_jobs_number = len(open(log_file).readlines())
+    finished_jobs_number = 0
     while finished_jobs_number != line_number:
-        print(f'line_number: {finished_jobs_number}/{line_number}, {content: {open(log_file).readlines())}')
-        if 'FAIL\n' in open(log_file).readlines():
+        finished_jobs = open(log_file).readlines()
+        print(f'Processed jobs: {len(finished_jobs)}/{line_number}, content: {finished_jobs}')
+        if 'FAIL\n' in finished_jobs:
             raise ValueError(f'{log_file} - Job failed!')
         time.sleep(SLEEP_TIME)
 
@@ -76,6 +81,52 @@ def delete_create_file(log_file):
 def sbatch(sbatch_file, mem, job_name, jobs_number, input_str):
     os.system(f'{SBATCH.format(mem, job_name, jobs_number)} {sbatch_file} {input_str}')
 
+
+def get_latests_results(prefix_input_files):
+    results_file = [ f  for f in iglob(os.path.join(SLURM_LOGS_DIR, f'{prefix_input_files}-*.out')) ]
+    results_job_num = [ int(os.path.split(f)[-1].split('-')[1])  for f in results_file ] 
+    max_result = max(results_job_num)
+    latest_jobs = [f for f in results_file if max_result == int(os.path.split(f)[-1].split('-')[1]) ] 
+
+    return latest_jobs
+
+def init_results_table_headers(arr):
+    for i in range(len(RESULTS_HEADERS)):
+        arr[0,i] = RESULTS_HEADERS[i] 
+
+    return arr
+
+def fill_table(arr_results, latest_jobs):
+    for f in latest_jobs:
+        results = open(f).readlines()
+        db_name, middle, _, tested_db = results[0].strip().split("_")
+        model_name = middle.split("-")[-1]
+        
+        model_name_idx = [i for i, one_model in enumerate(MODELS_DIRS_LIST) if model_name in one_model ]
+        target_db_idx = [i for i, one_model in enumerate(ARCFACE_DS_NAMES) if tested_db in one_model ]
+        if len(model_name_idx) != 1 or len(target_db_idx) != 1:
+           raise(f'The length is not 1: {model_name_idx} or {target_name_idx}')
+   
+        db_name_idx = RESULTS_TARGET_FILES.index(db_name)
+        threshold = results[1].strip()
+        accuracy = results[2].strip()
+        AUC = results[3].strip()
+        
+        table_row = model_name_idx[0] * len(MODELS_DIRS_LIST) + target_db_idx[0] + 1 # add another 1 becasue of the headers
+        arr_results[table_row, 0] = model_name
+        arr_results[table_row, 1] = tested_db 
+        arr_results[table_row, 2] = threshold
+        db_loc_buff = len(RESULTS_TARGET_FILES) * db_name_idx
+        arr_results[table_row, 3 +  db_loc_buff] = accuracy
+        arr_results[table_row, 4 +  db_loc_buff] = AUC 
+
+def organized_results(prefix_input_files, output_file):
+    arr_results = np.empty([len(MODELS_DIRS_LIST)**2 + 1, 7], dtype = 'O')
+    init_results_table_headers(arr_results)
+
+    latest_jobs = get_latests_results(prefix_input_files)
+    fill_table(arr_results, latest_jobs)
+    pd.DataFrame(arr_results).to_csv(output_file)
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
