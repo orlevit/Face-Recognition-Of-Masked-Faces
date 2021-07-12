@@ -57,6 +57,7 @@ def wait_until_jobs_finished(log_file, line_number):
     finished_jobs_number = 0
     while finished_jobs_number != line_number:
         finished_jobs = open(log_file).readlines()
+        print(f'finished_jobs: {type(finished_jobs)}, & line_number: {line_number}')
         print(f'Processed jobs: {len(finished_jobs)}/{line_number}, content: {finished_jobs}')
         if 'FAIL\n' in finished_jobs:
             raise ValueError(f'{log_file} - Job failed!')
@@ -89,13 +90,6 @@ def get_latests_results(prefix_input_files):
     return latest_jobs
 
 
-def init_results_table_headers(arr):
-    for i in range(len(RESULTS_HEADERS)):
-        arr[0, i] = RESULTS_HEADERS[i]
-
-    return arr
-
-
 def fill_table(arr_results, latest_jobs):
     for f in latest_jobs:
         results = open(f).readlines()
@@ -112,8 +106,7 @@ def fill_table(arr_results, latest_jobs):
         accuracy = results[2].strip()
         auc = results[3].strip()
 
-        # add another 1 because of the headers
-        table_row = model_name_idx[0] * len(MODELS_DIRS_LIST) + target_db_idx[0] + 1
+        table_row = model_name_idx[0] * len(MODELS_DIRS_LIST) + target_db_idx[0]
         arr_results[table_row, 0] = model_name
         arr_results[table_row, 1] = tested_db
         arr_results[table_row, 2] = threshold
@@ -123,17 +116,11 @@ def fill_table(arr_results, latest_jobs):
 
 
 def organized_results(prefix_input_files, output_file):
-    arr_results = np.empty([len(MODELS_DIRS_LIST) ** 2 + 1, 7], dtype='O')
-    # init_results_table_headers(arr_results)
-
+    arr_results = np.empty([len(MODELS_DIRS_LIST) ** 2, 7], dtype='O')
     latest_jobs = get_latests_results(prefix_input_files)
     fill_table(arr_results, latest_jobs)
-    import pdb;
-    pdb.set_trace();
-    np.savetxt(output_file, arr_results, delimiter=',', header=RESULTS_HEADERS)
+    np.savetxt(output_file, arr_results, fmt='%s', delimiter=',', header=RESULTS_HEADERS, comments='') 
 
-
-#    pd.DataFrame(arr_results).to_csv(output_file)
 
 def parse_arguments():
     parser = argparse.ArgumentParser()

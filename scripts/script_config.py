@@ -77,17 +77,6 @@ MODELS_DIRS_LIST = [NOMASK_MODEL_LOC, EYE_MASK_MODEL, HAT_MASK_MODEL, CORONA_MAS
                     SCARF_MASK_MODEL, SUNGLASSES_MASK_MODEL]
 
 # Results table
-#RESULTS_HEADERS = ['Model', 'Masked LFW', 'Threshold for best accuracy', 'Best accuracy on masked LFW', 'AUC on masked LFW', 'Best accuracy on masked agedb30', 'AUC on masked agedb30']
-RESULTS_HEADERS = 'Model, Masked LFW, Threshold for best accuracy, Best accuracy on masked LFW, ' \
+RESULTS_HEADERS = 'Model, Masked Dataset, Threshold for best accuracy, Best accuracy on masked LFW, ' \
                   'AUC on masked LFW, Best accuracy on masked agedb30, AUC on masked agedb30'
 RESULTS_TARGET_FILES = ['lfw', 'agedb30']
-
-##kill
-#ARCFACE_DATSETS_LOC = '/home/or/Downloads/kill2'
-#ARCFACE_DS_NAMES = ['eyemask','hatmask']
-#ARCDACE_VALIDATON_DS = 'casia.bin'
-#TEST_TRACK_FILE = '/home/or/dev/Face-Recognition-Of-Masked-Faces/scripts/logs/finished_logs/run_track.txt'
-#MODELS_BASE_LOC = '/home/or/Downloads/kill2/models'
-#EYE_MASK_MODEL = os.path.join(MODELS_BASE_LOC, 'r100-arcface-eye_masked')
-#HAT_MASK_MODEL = os.path.join(MODELS_BASE_LOC, 'r100-arcface-hat_masked')
-#MODELS_DIRS_LIST = [EYE_MASK_MODEL, HAT_MASK_MODEL]

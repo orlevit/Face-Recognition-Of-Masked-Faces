@@ -76,9 +76,9 @@ def make_test_same():
                 input_str += f'{ARCFACE_ENV} {data_dir} {target_name_only} {model} ' \
                              f'{roc_name} {threshold} {TEST_SAME_COMMANDS_FILE} {TEST_SAME_TRACK_FILE} '
 
-    # sbatch(TEST_SAME_SBATCH_FILE, TEST_SAME_MEM, TEST_SAME_JOBS_NAME, input_number, input_str)
+    sbatch(TEST_SAME_SBATCH_FILE, TEST_SAME_MEM, TEST_SAME_JOBS_NAME, input_number, input_str)
 
-    #    wait_until_jobs_finished(TEST_SAME_TRACK_FILE, input_number)
+    wait_until_jobs_finished(TEST_SAME_TRACK_FILE, input_number)
 
     organized_results(os.path.basename(__file__).rsplit('.')[0], TEST_SAME_RESULTS_FILE)
 
