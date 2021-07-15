@@ -202,14 +202,8 @@ def evaluate(learned_threshold, embeddings, actual_issame, nrof_folds=10, pca=0)
                                        np.asarray(actual_issame),
                                        nrof_folds=nrof_folds,
                                        pca=pca)
-    thresholds = np.arange(0, 4, 0.001)
-    val, val_std, far = calculate_val(thresholds,
-                                      embeddings1,
-                                      embeddings2,
-                                      np.asarray(actual_issame),
-                                      1e-3,
-                                      nrof_folds=nrof_folds)
-    return tpr, fpr, accuracy, val, val_std, far, tpr_graph, fpr_graph 
+
+    return tpr, fpr, accuracy, tpr_graph, fpr_graph 
 
 
 def load_bin(path, image_size):
@@ -339,7 +333,7 @@ def test(data_set,
     embeddings = mask_embeddings
     acc1 = 0.0
     std1 = 0.0
-    tpr, fpr, accuracy, val, val_std, far, tpr_graph, fpr_graph = evaluate(threshold,
+    tpr, fpr, accuracy, tpr_graph, fpr_graph = evaluate(threshold,
                                                  embeddings,
                                                  issame_list,
                                                  nrof_folds=nfolds)
