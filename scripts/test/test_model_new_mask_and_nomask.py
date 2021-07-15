@@ -470,8 +470,8 @@ if __name__ == '__main__':
                 print('The threshold is:', epoch_thresholds)
                 print('[%s]XNorm: %f' % (ver_name_list[i], xnorm))
                 print('[%s]Accuracy: %1.5f+-%1.5f' % (ver_name_list[i], acc1, std1))
-                print('[%s]Accuracy-Flip: %1.5f+-%1.5f' %(ver_name_list[i], acc2, std2))
-                print('[%s]AUC: %1.5f+-%1.5f' %(ver_name_list[i], roc_auc_mean, roc_auc_std))
+                print('%1.5f+-%1.5f' %(acc2, std2))
+                print('%1.5f+-%1.5f' %(roc_auc_mean, roc_auc_std))
                 results.append(acc2)
             print('Max of [%s] is %1.5f' % (ver_name_list[i], np.max(results)))
     elif args.mode == 1:

@@ -54,10 +54,9 @@ def idx_rec_output_dir(inputs):
 
 def wait_until_jobs_finished(log_file, line_number):
     print(log_file)
-    finished_jobs_number = 0
-    while finished_jobs_number != line_number:
+    finished_jobs = []
+    while len(finished_jobs) != line_number:
         finished_jobs = open(log_file).readlines()
-        print(f'finished_jobs: {type(finished_jobs)}, & line_number: {line_number}')
         print(f'Processed jobs: {len(finished_jobs)}/{line_number}, content: {finished_jobs}')
         if 'FAIL\n' in finished_jobs:
             raise ValueError(f'{log_file} - Job failed!')

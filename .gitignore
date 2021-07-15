@@ -3,6 +3,7 @@
 *.npy
 scripts/logs/finished_logs/*
 scripts/logs/slurm_logs/*
+scripts/rec_run/models/*
 images_masked*
 # Byte-compiled / optimized / DLL files
 __pycache__/
