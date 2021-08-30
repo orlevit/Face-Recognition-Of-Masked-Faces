@@ -20,11 +20,11 @@ def render(img, pose, mask_name):
     else:
         mask_x, mask_y = frontal_mask[:, 0], frontal_mask[:, 1]
 
-    rest_x, rest_y = frontal_rest[:, 0], frontal_rest[:, 1]
+    #rest_x, rest_y = frontal_rest[:, 0], frontal_rest[:, 1]
 
     # Perform morphological close
     morph_mask_x, morph_mask_y = morphological_close(mask_x, mask_y, img, mask_name)
-    morph_rest_x, morph_rest_y = morphological_close(rest_x, rest_y, img, mask_name)
+    #morph_rest_x, morph_rest_y = morphological_close(rest_x, rest_y, img, mask_name)
 
     if config[mask_name].mask_add_ind is not None:
         mask_add_trans_vertices = np.round(transform_vertices(img, pose, config[mask_name].mask_add_ind)).astype(int)
@@ -32,31 +32,42 @@ def render(img, pose, mask_name):
         morph_mask_x = np.append(morph_mask_x, mask_add_trans_vertices[:, 0])
         morph_mask_y = np.append(morph_mask_y, mask_add_trans_vertices[:, 1])
 
-    return morph_mask_x, morph_mask_y, morph_rest_x, morph_rest_y
+    return morph_mask_x, morph_mask_y, 0,0#morph_rest_x, morph_rest_y
 
 
 def get_frontal(img, pose, mask_name):
+    
     # Masks projection on the image plane
     mask_trans_vertices = transform_vertices(img, pose, config[mask_name].mask_ind)
-    rest_trans_vertices = transform_vertices(img, pose, config[mask_name].rest_ind)
 
     # turn values from float to integer
     mask_trans_vertices = np.round(mask_trans_vertices).astype(int)
-    rest_trans_vertices = np.round(rest_trans_vertices).astype(int)
 
     # An indication whether it is a mask coordinate or rest of the head and add them to the matrices
     mask_marks = np.ones([mask_trans_vertices.shape[0], 1], dtype=bool)
-    rest_marks = np.zeros([rest_trans_vertices.shape[0], 1], dtype=bool)
     mask_stacked = np.hstack((mask_trans_vertices, mask_marks))
-    rest_stacked = np.hstack((rest_trans_vertices, rest_marks))
-    combined = np.vstack((mask_stacked, rest_stacked))
-    df = pd.DataFrame(combined, columns=['x', 'y', 'z', 'mask'])
+
+    if mask_name != 'all':
+        rest_trans_vertices = transform_vertices(img, pose, config[mask_name].rest_ind)
+        rest_trans_vertices = np.round(rest_trans_vertices).astype(int)
+        rest_trans_vertices = np.round(rest_trans_vertices).astype(int)
+        rest_marks = np.zeros([rest_trans_vertices.shape[0], 1], dtype=bool)
+        rest_stacked = np.hstack((rest_trans_vertices, rest_marks))
+        combined = np.vstack((mask_stacked, rest_stacked))
+        df = pd.DataFrame(combined, columns=['x', 'y', 'z', 'mask'])
+    else:
+        df = pd.DataFrame(mask_stacked, columns=['x', 'y', 'z', 'mask'])
 
     # Order the coordinates by z, remove duplicates x,y values and keep the last occurrence
     # Only the closer z pixels is visible, masks indication are preferable over rest of head
     unique_df = df.sort_values(['z', 'mask'], ascending=False).drop_duplicates(['x', 'y'], keep='last')
+
     frontal_mask = unique_df[unique_df['mask'] == 1][['x', 'y', 'z']].to_numpy()
-    frontal_rest = unique_df[unique_df['mask'] == 0][['x', 'y', 'z']].to_numpy()
+
+    if mask_name != 'all':
+        frontal_rest = unique_df[unique_df['mask'] == 0][['x', 'y', 'z']].to_numpy()
+    else:
+        frontal_rest = 0
 
     return frontal_mask, frontal_rest
 
@@ -171,10 +182,11 @@ def create_masks(masks_name):
     scarf_mask_ind = make_scarf_mask(x, y)
     corona_mask_ind, add_corona_ind = make_corona_mask(x, y, z)
     sunglasses_mask_ind, add_sunglasses_ind = make_sunglasses_mask(x, y)
+    all_mask_ind = list(range(0,len(x)))
 
-    masks_order = [EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, CORONA_MASK_NAME, SUNGLASSES_MASK_NAME]
-    masks_ind = [eye_mask_ind, hat_mask_ind, scarf_mask_ind, corona_mask_ind, sunglasses_mask_ind]
-    masks_add_ind = [None, None, None, add_corona_ind, add_sunglasses_ind]
+    masks_order = [EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, CORONA_MASK_NAME, SUNGLASSES_MASK_NAME,'all']
+    masks_ind = [eye_mask_ind, hat_mask_ind, scarf_mask_ind, corona_mask_ind, sunglasses_mask_ind, all_mask_ind]
+    masks_add_ind = [None, None, None, add_corona_ind, add_sunglasses_ind,None]
 
     masks = [index_on_vertices(maskInd, vertices) for maskInd in masks_ind]
     masks_add = [None if mask_add_ind is None else

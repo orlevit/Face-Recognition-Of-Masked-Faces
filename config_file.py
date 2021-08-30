@@ -86,7 +86,14 @@ config = {
         "draw_rest_mask": False,
         "additional_masks_req": None,
         "filter_size": (5, 5)
+    },
+    'all': {
+        "add_forehead": True,
+        "draw_rest_mask": False,
+        "additional_masks_req": None,
+        "filter_size": (15, 15)
     }
+
 }
 config = edict(config)
 
