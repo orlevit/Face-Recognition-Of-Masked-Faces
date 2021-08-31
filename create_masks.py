@@ -4,8 +4,9 @@ import pandas as pd
 from project_on_image import transform_vertices
 from masks_indices import make_eye_mask, make_hat_mask, make_corona_mask, \
     make_scarf_mask, make_sunglasses_mask
-from config_file import config, VERTICES_PATH, EYE_MASK_NAME, HAT_MASK_NAME, \
-    SCARF_MASK_NAME, CORONA_MASK_NAME, SUNGLASSES_MASK_NAME
+from config_file import config, VERTICES_PATH, EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, CORONA_MASK_NAME, \
+     SUNGLASSES_MASK_NAME, MORPH_OP_IND, NO_MORPH_OP_IND, MIN_MASK_SIZE, FILTER_MASK_RIGHT_POINT_IMAGE_SIZE, \
+     FILTER_SIZE_MASK_RIGHT_POINT, FILTER_SIZE_MASK_ADD_LEFT_POINT, FILTER_SIZE_MASK_ADD_RIGHT_POINT
 
 
 def render(img, pose, mask_name):
@@ -23,14 +24,22 @@ def render(img, pose, mask_name):
     rest_x, rest_y = frontal_rest[:, 0], frontal_rest[:, 1]
 
     # Perform morphological close
-    morph_mask_x, morph_mask_y = morphological_close(mask_x, mask_y, img, mask_name)
-    morph_rest_x, morph_rest_y = morphological_close(rest_x, rest_y, img, mask_name)
+    morph_mask_x, morph_mask_y = morphological_op(mask_x, mask_y, img, config[mask_name].filter_size)
+    if config[mask_name].draw_rest_mask:
+        morph_rest_x, morph_rest_y = morphological_op(rest_x, rest_y, img, config[mask_name].filter_size)
+    else:
+        morph_rest_x, morph_rest_y = None, None
 
     if config[mask_name].mask_add_ind is not None:
         mask_add_trans_vertices = np.round(transform_vertices(img, pose, config[mask_name].mask_add_ind)).astype(int)
+        mask_add_x, mask_add_y = mask_add_trans_vertices[:, 0], mask_add_trans_vertices[:, 1]
+        morph_mask_add_x, morph_mask_add_y = morphological_op(mask_add_x, mask_add_y, img,
+                                                              FILTER_SIZE_MASK_ADD_LEFT_POINT,
+                                                              FILTER_SIZE_MASK_ADD_RIGHT_POINT, cv2.MORPH_DILATE)
+
         # Notice: possible to add changed version of frontal if the additional mask not covered well
-        morph_mask_x = np.append(morph_mask_x, mask_add_trans_vertices[:, 0])
-        morph_mask_y = np.append(morph_mask_y, mask_add_trans_vertices[:, 1])
+        morph_mask_x = np.append(morph_mask_x, morph_mask_add_x)
+        morph_mask_y = np.append(morph_mask_y, morph_mask_add_y)
 
     return morph_mask_x, morph_mask_y, morph_rest_x, morph_rest_y
 
@@ -78,11 +87,10 @@ def index_on_vertices(index_list, vertices):
 
 
 def bg_color(mask_x, mask_y, image):
-    morph_mask_x, morph_mask_y = morphological_close(mask_x, mask_y, image)
     # Get the average color of the whole mask
     image_bg = image.copy()
     image_bg_effective_size = image_bg.shape[0] * image_bg.shape[1] - len(mask_x)
-    image_bg[morph_mask_y.astype(int), morph_mask_x.astype(int), :] = [0, 0, 0]
+    image_bg[mask_y.astype(int), mask_x.astype(int), :] = [0, 0, 0]
     image_bg_blue = image_bg[:, :, 0]
     image_bg_green = image_bg[:, :, 1]
     image_bg_red = image_bg[:, :, 2]
@@ -92,8 +100,35 @@ def bg_color(mask_x, mask_y, image):
 
     return [image_bg_blue_val, image_bg_green_val, image_bg_red_val]
 
+def morph_mask_info(mask_x, mask_y, morph_op):
+    min_x, max_x = np.min(mask_x), np.max(mask_x)
+    min_y, max_y = np.min(mask_y), np.max(mask_y)
+    x_diff, y_diff = max_x - min_x, max_y - min_y
+    mask_size = max(x_diff, y_diff)
+    if morph_op != cv2.MORPH_CLOSE and mask_size <= MIN_MASK_SIZE:
+        return mask_size, NO_MORPH_OP_IND
 
-def morphological_close(mask_x, mask_y, image, mask_name=EYE_MASK_NAME):
+    return mask_size, MORPH_OP_IND
+
+
+def calc_filter_size(mask_size, left_filter_size, right_filter_dim):
+    if mask_size <= MIN_MASK_SIZE:
+        return left_filter_size
+
+    x = [MIN_MASK_SIZE, FILTER_MASK_RIGHT_POINT_IMAGE_SIZE]
+    y = [np.mean(left_filter_size), right_filter_dim]
+
+    a, b = np.polyfit(x, y, 1)
+    filter_dim = int(np.round(a * mask_size + b))
+    filter_size = (filter_dim, filter_dim)
+    return filter_size
+
+def morphological_op(mask_x, mask_y, image, left_filter_size=config[EYE_MASK_NAME].filter_size,
+                     right_filter_dim=FILTER_SIZE_MASK_RIGHT_POINT, morph_op=cv2.MORPH_CLOSE):
+    mask_size, do_morph_ind = morph_mask_info(mask_x, mask_y, morph_op)
+    if do_morph_ind == NO_MORPH_OP_IND:
+        return mask_x, mask_y
+
     mask_on_image = np.zeros_like(image)
     for x, y in zip(mask_x, mask_y):
         if (0 <= x <= mask_on_image.shape[1] - 1) and (0 <= y <= mask_on_image.shape[0] - 1):
@@ -102,8 +137,9 @@ def morphological_close(mask_x, mask_y, image, mask_name=EYE_MASK_NAME):
     # morphology close
     gray_mask = cv2.cvtColor(mask_on_image, cv2.COLOR_BGR2GRAY)
     res, thresh_mask = cv2.threshold(gray_mask, 0, 255, cv2.THRESH_BINARY)
-    kernel = np.ones(config[mask_name].filter_size, np.uint8)  # kernel filter
-    morph_mask = cv2.morphologyEx(thresh_mask, cv2.MORPH_CLOSE, kernel)
+    filter_size = calc_filter_size(mask_size, left_filter_size, right_filter_dim)
+    kernel = np.ones(filter_size, np.uint8) # kernel filter
+    morph_mask = cv2.morphologyEx(thresh_mask, morph_op, kernel)
     yy, xx = np.where(morph_mask == 255)
 
     return xx, yy
@@ -113,8 +149,8 @@ def add_forehead_mask(image, pose):  # , mask_trans_vertices, rest_trans_vertice
     frontal_mask, frontal_rest = get_frontal(image, pose, HAT_MASK_NAME)
 
     # Perform morphological close
-    morph_mask_x, morph_mask_y = morphological_close(frontal_mask[:, 0],
-                                                     frontal_mask[:, 1], image, HAT_MASK_NAME)
+    morph_mask_x, morph_mask_y = morphological_op(frontal_mask[:, 0], frontal_mask[:, 1],
+                                                  image, config[HAT_MASK_NAME].filter_size)
 
     mask_on_img = np.zeros_like(image)
     mask_x_ind, mask_y_ind = morph_mask_x, morph_mask_y
