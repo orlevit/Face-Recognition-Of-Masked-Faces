@@ -21,12 +21,22 @@ LEFT_FACE_PART = 'LEFT'
 RIGHT_FACE_PART = 'RIGHT'
 MORPH_OP_IND = 'morph image'
 NO_MORPH_OP_IND = 'no morph image'
+
+
+#center
+#img_size= [84,250,1888]
+#kernel_size=[2,7.504,67]
+
+#add
+#img_size= [216]
+#kernel_size=[3]
+
 MIN_MASK_SIZE = 250
-FILTER_MASK_RIGHT_POINT_IMAGE_SIZE = 1888#1625
+FILTER_MASK_RIGHT_POINT_IMAGE_SIZE = 1888
 FILTER_SIZE_MASK_RIGHT_POINT = 67
-FILTER_DIM_MASK_ADD_LEFT_POINT = 0
+FILTER_DIM_MASK_ADD_LEFT_POINT = 3.468
 FILTER_SIZE_MASK_ADD_LEFT_POINT = (FILTER_DIM_MASK_ADD_LEFT_POINT, FILTER_DIM_MASK_ADD_LEFT_POINT)
-FILTER_SIZE_MASK_ADD_RIGHT_POINT = 25#14
+FILTER_SIZE_MASK_ADD_RIGHT_POINT = 26
 
 ALL_MASKS = f"{EYE_MASK_NAME},{HAT_MASK_NAME},{SCARF_MASK_NAME},{CORONA_MASK_NAME},{SUNGLASSES_MASK_NAME}"
 
@@ -93,7 +103,7 @@ config = {
         "add_forehead": False,
         "draw_rest_mask": False,
         "additional_masks_req": None,
-        "filter_size": (5, 5)
+        "filter_size": (7.764, 7.764)
     }
 }
 config = edict(config)

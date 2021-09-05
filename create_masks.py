@@ -111,23 +111,30 @@ def morph_mask_info(mask_x, mask_y, morph_op):
     return mask_size, MORPH_OP_IND
 
 
-def calc_filter_size(mask_size, left_filter_size, right_filter_dim):
-    if mask_size <= MIN_MASK_SIZE:
-        return left_filter_size
+def calc_filter_size(mask_x, mask_y, left_filter_size, right_filter_dim):
+    # if mask_size <= MIN_MASK_SIZE:
+    #     return left_filter_size
+    min_x, max_x = np.min(mask_x), np.max(mask_x)
+    min_y, max_y = np.min(mask_y), np.max(mask_y)
+    x_diff, y_diff = max_x - min_x, max_y - min_y
+    mask_size = max(x_diff, y_diff)
 
     x = [MIN_MASK_SIZE, FILTER_MASK_RIGHT_POINT_IMAGE_SIZE]
     y = [np.mean(left_filter_size), right_filter_dim]
 
     a, b = np.polyfit(x, y, 1)
-    filter_dim = int(np.round(a * mask_size + b))
+    filter_dim = int(np.ceil(a * mask_size + b))
+    if filter_dim < 1:
+        filter_dim = 1
     filter_size = (filter_dim, filter_dim)
+
     return filter_size
 
 def morphological_op(mask_x, mask_y, image, left_filter_size=config[EYE_MASK_NAME].filter_size,
                      right_filter_dim=FILTER_SIZE_MASK_RIGHT_POINT, morph_op=cv2.MORPH_CLOSE):
-    mask_size, do_morph_ind = morph_mask_info(mask_x, mask_y, morph_op)
-    if do_morph_ind == NO_MORPH_OP_IND:
-        return mask_x, mask_y
+    # mask_size, do_morph_ind = morph_mask_info(mask_x, mask_y, morph_op)
+    # if do_morph_ind == NO_MORPH_OP_IND:
+    #     return mask_x, mask_y
 
     mask_on_image = np.zeros_like(image)
     for x, y in zip(mask_x, mask_y):
@@ -137,7 +144,7 @@ def morphological_op(mask_x, mask_y, image, left_filter_size=config[EYE_MASK_NAM
     # morphology close
     gray_mask = cv2.cvtColor(mask_on_image, cv2.COLOR_BGR2GRAY)
     res, thresh_mask = cv2.threshold(gray_mask, 0, 255, cv2.THRESH_BINARY)
-    filter_size = calc_filter_size(mask_size, left_filter_size, right_filter_dim)
+    filter_size = calc_filter_size(mask_x, mask_y, left_filter_size, right_filter_dim)
     kernel = np.ones(filter_size, np.uint8) # kernel filter
     morph_mask = cv2.morphologyEx(thresh_mask, morph_op, kernel)
     yy, xx = np.where(morph_mask == 255)
