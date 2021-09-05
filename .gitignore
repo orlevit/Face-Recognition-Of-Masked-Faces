@@ -4,7 +4,7 @@
 scripts/logs/finished_logs/*
 scripts/logs/slurm_logs/*
 scripts/rec_run/models/*
-images_masked*
+masks_images*
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
