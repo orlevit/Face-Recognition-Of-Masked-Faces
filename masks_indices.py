@@ -103,6 +103,7 @@ def make_corona_mask(x, y, z):
     index_list4 = get_mask_string(right_lower_string1, right_lower_string2, RIGHT_FACE_PART, x, y, z)
 
     corona_strings_ind = index_list1 + index_list2 + index_list3 + index_list4
+    corona_strings_ind = np.setdiff1d(corona_strings_ind, corona_mask_ind)
 
     return corona_mask_ind, corona_strings_ind
 
@@ -120,6 +121,7 @@ def make_sunglasses_mask(x, y):
                                    right_ind_right_eye, CENTER_FACE_PART, x, x, y)
     sunglasses_lenses_inds = left_lens_inds + right_lens_inds
     sunglasses_strings_ind = left_string + center_string + right_string
+    sunglasses_strings_ind = np.setdiff1d(sunglasses_strings_ind, sunglasses_lenses_inds)
 
     return sunglasses_lenses_inds, sunglasses_strings_ind
 
