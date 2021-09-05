@@ -24,8 +24,8 @@ NO_MORPH_OP_IND = 'no morph image'
 
 
 #center
-#img_size= [84,250,1888]
-#kernel_size=[2,7.504,67]
+#img_size= [62,84,250,1888]
+#kernel_size=[2,2,7.504,67]
 
 #add
 #img_size= [216]
@@ -103,7 +103,7 @@ config = {
         "add_forehead": False,
         "draw_rest_mask": False,
         "additional_masks_req": None,
-        "filter_size": (7.764, 7.764)
+        "filter_size": (8.095, 8.095)
     }
 }
 config = edict(config)

@@ -53,9 +53,9 @@ def render(img, pose, mask_name):
 
 def get_frontal(img, pose, mask_name):
     # An indication whether it is a mask coordinate, additional  mask or rest of the head and add them to the matrices
-    mask_marks = np.ones([config[mask_name].mask_ind.shape[0], 1], dtype=bool)
-    mask_add_marks = np.zeros([config[mask_name].mask_add_ind.shape[0], 1], dtype=bool)
-    rest_marks = 2 * np.ones([config[mask_name].rest_ind.shape[0], 1], dtype=bool)
+    mask_marks = 2 * np.ones([config[mask_name].mask_ind.shape[0], 1], dtype=bool)
+    mask_add_marks = np.ones([config[mask_name].mask_add_ind.shape[0], 1], dtype=bool)
+    rest_marks = np.zeros([config[mask_name].rest_ind.shape[0], 1], dtype=bool)
     mask_stacked = np.hstack((config[mask_name].mask_ind, mask_marks))
     mask_add_stacked = np.hstack((config[mask_name].mask_add_ind, mask_add_marks))
     rest_stacked = np.hstack((config[mask_name].rest_ind, rest_marks))
@@ -76,9 +76,9 @@ def get_frontal(img, pose, mask_name):
     # Order the coordinates by z, remove duplicates x,y values and keep the last occurrence
     # Only the closer z pixels is visible, masks indication are preferable over rest of head
     unique_df = df.sort_values(['z', 'mask'], ascending=False).drop_duplicates(['x', 'y'], keep='first')
-    frontal_rest = unique_df[unique_df['mask'] == 2][['x', 'y', 'z']].to_numpy()
-    frontal_mask = unique_df[unique_df['mask'] == 1][['x', 'y', 'z']].to_numpy()
-    frontal_add_mask = unique_df[unique_df['mask'] == 0][['x', 'y', 'z']].to_numpy()
+    frontal_mask = unique_df[unique_df['mask'] == 2][['x', 'y', 'z']].to_numpy()
+    frontal_add_mask = unique_df[unique_df['mask'] == 1][['x', 'y', 'z']].to_numpy()
+    frontal_rest = unique_df[unique_df['mask'] == 0][['x', 'y', 'z']].to_numpy()
 
     return frontal_mask, frontal_add_mask, frontal_rest
 
