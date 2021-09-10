@@ -1,12 +1,13 @@
 import cv2
 import numpy as np
 import pandas as pd
+from sklearn.cluster import KMeans
 from project_on_image import transform_vertices
 from masks_indices import make_eye_mask, make_hat_mask, make_corona_mask, \
     make_scarf_mask, make_sunglasses_mask
 from config_file import config, VERTICES_PATH, EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, CORONA_MASK_NAME, \
-     SUNGLASSES_MASK_NAME, MORPH_OP_IND, NO_MORPH_OP_IND, MIN_MASK_SIZE, FILTER_MASK_RIGHT_POINT_IMAGE_SIZE, \
-     FILTER_SIZE_MASK_RIGHT_POINT, FILTER_SIZE_MASK_ADD_LEFT_POINT, FILTER_SIZE_MASK_ADD_RIGHT_POINT
+    SUNGLASSES_MASK_NAME, MORPH_OP_IND, NO_MORPH_OP_IND, MIN_MASK_SIZE, FILTER_MASK_RIGHT_POINT_IMAGE_SIZE, \
+    FILTER_SIZE_MASK_RIGHT_POINT, FILTER_SIZE_MASK_ADD_LEFT_POINT, FILTER_SIZE_MASK_ADD_RIGHT_POINT
 
 
 def render(img, pose, mask_name):
@@ -50,8 +51,74 @@ def render(img, pose, mask_name):
 
     return morph_mask_x, morph_mask_y, morph_rest_x, morph_rest_y
 
+# def cell_neighbors(x_pixel, y_pixel, max_x, max_y):
+#     neighbors = lambda x, y: [(x2, y2) for x2 in range(x - 1, x + 2)
+#                               for y2 in range(y - 1, y + 2)
+#                               if (-1 < x < max_x and
+#                                   -1 < y < max_y and
+#                                   (x != x2 or y != y2) and
+#                                   (0 <= x2 < max_x) and
+#                                   (0 <= y2 < max_y))]
+#     return neighbors(x_pixel, y_pixel)
+
+
+def cell_neighbors(x_pixel, y_pixel, max_x, max_y):
+    neighbors = lambda x, y: [(x2, y2) for x2 in range(x - 2, x + 3)
+                              for y2 in range(y - 2, y + 3)
+                              if (-1 < x < max_x and
+                                  -1 < y < max_y and
+                                  (x != x2 or y != y2) and
+                                  (0 <= x2 < max_x) and
+                                  (0 <= y2 < max_y))]
+
+    return neighbors(x_pixel, y_pixel)
+
+#
+# def threshold_front(img, df):
+#     mask_on_image = np.zeros((img.shape[0], img.shape[1]))
+#     mask_on_image_front = np.zeros((img.shape[0], img.shape[1]))
+#
+#     for x, y, mask in zip(df.x, df.y, df['mask']):
+#         if (0 <= x <= mask_on_image.shape[1] - 1) and (0 <= y <= mask_on_image.shape[0] - 1):
+#             mask_on_image[y, x] = mask
+#
+#     relevant_df = df[(df['mask'] != 0)]
+#     for x_pixel, y_pixel, mask in zip(relevant_df.x, relevant_df.y, relevant_df['mask']):
+#         count_surrounding_mask = 0
+#         for (x_neighbor, y_neighbor) in cell_neighbors(x_pixel, y_pixel, img.shape[0], img.shape[1]):
+#             count_surrounding_mask += mask_on_image[y_neighbor, x_neighbor] == mask
+#         if count_surrounding_mask >= 4:
+#             mask_on_image_front[y_pixel, x_pixel] = mask
+#
+#     return mask_on_image_front
+
+
+def threshold_front(img, df):
+    mask_on_image = np.zeros((img.shape[0], img.shape[1]))
+    mask_on_image_front = np.zeros((img.shape[0], img.shape[1]))
+
+    mask_on_image = np.asarray([[None] * img.shape[0]] * img.shape[1])
+    for x, y, z, mask in zip(df.x, df.y, df.z, df['mask']):
+        if (0 <= x <= mask_on_image.shape[1] - 1) and (0 <= y <= mask_on_image.shape[0] - 1):
+            if mask_on_image[y, x] == None:
+                mask_on_image[y, x] = np.array([z, mask])
+            else:
+                mask_on_image[y, x] = np.append(mask_on_image[y, x], [z, mask], axis=0)
+
+    relevant_df = df[(df['mask'] != 0)]
+    for x_pixel, y_pixel, mask in zip(relevant_df.x, relevant_df.y, relevant_df['mask']):
+        count_surrounding_mask = 0
+        for (x_neighbor, y_neighbor) in cell_neighbors(x_pixel, y_pixel, img.shape[0], img.shape[1]):
+            count_surrounding_mask += mask_on_image[y_neighbor, x_neighbor] == mask
+        if count_surrounding_mask >= 4:
+            mask_on_image_front[y_pixel, x_pixel] = mask
+
+    return mask_on_image_front
+
 
 def get_frontal(img, pose, mask_name):
+    # Not working with "config[mask_name].mask_add_ind = None" !!!
+
     # An indication whether it is a mask coordinate, additional  mask or rest of the head and add them to the matrices
     mask_marks = 2 * np.ones([config[mask_name].mask_ind.shape[0], 1], dtype=bool)
     mask_add_marks = np.ones([config[mask_name].mask_add_ind.shape[0], 1], dtype=bool)
@@ -62,23 +129,22 @@ def get_frontal(img, pose, mask_name):
     combined_float = np.vstack((mask_stacked, mask_add_stacked, rest_stacked))
 
     # Masks projection on the image plane
-    combined_float[:,:3] = transform_vertices(img, pose, combined_float[:,:3])
+    combined_float[:, :3] = transform_vertices(img, pose, combined_float[:, :3])
 
     # turn values from float to integer
     combined = np.round(combined_float).astype(int)
-    # mask_trans_vertices = np.round(mask_trans_vertices).astype(int)
-    # mask_add_trans_vertices = np.round(mask_add_trans_vertices).astype(int)
-    # rest_trans_vertices = np.round(rest_trans_vertices).astype(int)
-
-
     df = pd.DataFrame(combined, columns=['x', 'y', 'z', 'mask'])
 
     # Order the coordinates by z, remove duplicates x,y values and keep the last occurrence
     # Only the closer z pixels is visible, masks indication are preferable over rest of head
     unique_df = df.sort_values(['z', 'mask'], ascending=False).drop_duplicates(['x', 'y'], keep='first')
-    frontal_mask = unique_df[unique_df['mask'] == 2][['x', 'y', 'z']].to_numpy()
-    frontal_add_mask = unique_df[unique_df['mask'] == 1][['x', 'y', 'z']].to_numpy()
-    frontal_rest = unique_df[unique_df['mask'] == 0][['x', 'y', 'z']].to_numpy()
+
+    # Removal of points tht came from the back and slipped through the frontal point
+    mask_on_image = threshold_front(img, unique_df)
+
+    frontal_mask = np.asarray(np.where(mask_on_image == 2))[[1,0], :].T
+    frontal_add_mask = np.asarray(np.where(mask_on_image == 1))[[1,0], :].T
+    frontal_rest = np.asarray(np.where(mask_on_image == 0))[[1,0], :].T
 
     return frontal_mask, frontal_add_mask, frontal_rest
 
@@ -113,6 +179,7 @@ def bg_color(mask_x, mask_y, image):
 
     return [image_bg_blue_val, image_bg_green_val, image_bg_red_val]
 
+
 def morph_mask_info(mask_x, mask_y, morph_op):
     min_x, max_x = np.min(mask_x), np.max(mask_x)
     min_y, max_y = np.min(mask_y), np.max(mask_y)
@@ -143,6 +210,7 @@ def calc_filter_size(mask_x, mask_y, left_filter_size, right_filter_dim):
 
     return filter_size
 
+
 def morphological_op(mask_x, mask_y, image, left_filter_size=config[EYE_MASK_NAME].filter_size,
                      right_filter_dim=FILTER_SIZE_MASK_RIGHT_POINT, morph_op=cv2.MORPH_CLOSE):
     # mask_size, do_morph_ind = morph_mask_info(mask_x, mask_y, morph_op)
@@ -158,7 +226,7 @@ def morphological_op(mask_x, mask_y, image, left_filter_size=config[EYE_MASK_NAM
     gray_mask = cv2.cvtColor(mask_on_image, cv2.COLOR_BGR2GRAY)
     res, thresh_mask = cv2.threshold(gray_mask, 0, 255, cv2.THRESH_BINARY)
     filter_size = calc_filter_size(mask_x, mask_y, left_filter_size, right_filter_dim)
-    kernel = np.ones(filter_size, np.uint8) # kernel filter
+    kernel = np.ones(filter_size, np.uint8)  # kernel filter
     morph_mask = cv2.morphologyEx(thresh_mask, morph_op, kernel)
     yy, xx = np.where(morph_mask == 255)
 
