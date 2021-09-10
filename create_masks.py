@@ -8,8 +8,9 @@ from masks_indices import make_eye_mask, make_hat_mask, make_corona_mask, \
 from config_file import config, VERTICES_PATH, EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, CORONA_MASK_NAME, \
     SUNGLASSES_MASK_NAME, MORPH_OP_IND, NO_MORPH_OP_IND, MIN_MASK_SIZE, FILTER_MASK_RIGHT_POINT_IMAGE_SIZE, \
     FILTER_SIZE_MASK_RIGHT_POINT, FILTER_SIZE_MASK_ADD_LEFT_POINT, FILTER_SIZE_MASK_ADD_RIGHT_POINT
+from line_profiler_pycharm import profile
 
-
+@profile
 def render(img, pose, mask_name):
     # Transform the 3DMM according to the pose and get only frontal face areas
     frontal_mask, frontal_add_mask, frontal_rest = get_frontal(img, pose, mask_name)
@@ -61,7 +62,7 @@ def render(img, pose, mask_name):
 #                                   (0 <= y2 < max_y))]
 #     return neighbors(x_pixel, y_pixel)
 
-
+@profile
 def cell_neighbors(x_pixel, y_pixel, max_x, max_y):
     neighbors = lambda x, y: [(x2, y2) for x2 in range(x - 2, x + 3)
                               for y2 in range(y - 2, y + 3)
@@ -92,30 +93,42 @@ def cell_neighbors(x_pixel, y_pixel, max_x, max_y):
 #
 #     return mask_on_image_front
 
+@profile
+def threshold_front(img, df, frontal_mask_all):
+    img_x_dim, img_y_dim = img.shape[0], img.shape[1]
+    mask_on_img = np.asarray([[None] * img_x_dim] * img_y_dim)
+    mask_on_img_front = np.zeros((img_y_dim, img_x_dim))
 
-def threshold_front(img, df):
-    mask_on_image = np.zeros((img.shape[0], img.shape[1]))
-    mask_on_image_front = np.zeros((img.shape[0], img.shape[1]))
-
-    mask_on_image = np.asarray([[None] * img.shape[0]] * img.shape[1])
-    for x, y, z, mask in zip(df.x, df.y, df.z, df['mask']):
-        if (0 <= x <= mask_on_image.shape[1] - 1) and (0 <= y <= mask_on_image.shape[0] - 1):
-            if mask_on_image[y, x] == None:
-                mask_on_image[y, x] = np.array([z, mask])
+    for x, y, z in zip(df.x, df.y, df.z):
+        if (0 <= x <= img_y_dim - 1) and (0 <= y <= img_x_dim - 1):
+            if type(mask_on_img[y, x]) == type(None):
+                mask_on_img[y, x] = np.expand_dims(np.array([z]), axis=0)
             else:
-                mask_on_image[y, x] = np.append(mask_on_image[y, x], [z, mask], axis=0)
+                mask_on_img[y, x] = np.append(mask_on_img[y, x], np.expand_dims(np.array([z]), axis=0), axis=0)
 
-    relevant_df = df[(df['mask'] != 0)]
-    for x_pixel, y_pixel, mask in zip(relevant_df.x, relevant_df.y, relevant_df['mask']):
-        count_surrounding_mask = 0
-        for (x_neighbor, y_neighbor) in cell_neighbors(x_pixel, y_pixel, img.shape[0], img.shape[1]):
-            count_surrounding_mask += mask_on_image[y_neighbor, x_neighbor] == mask
-        if count_surrounding_mask >= 4:
-            mask_on_image_front[y_pixel, x_pixel] = mask
+    for x, y, z in zip(frontal_mask_all.x, frontal_mask_all.y, frontal_mask_all.z):
+        surrounding_mask = []
+        for (x_neighbor, y_neighbor) in cell_neighbors(x, y, img_x_dim, img_y_dim):
+            if type(mask_on_img[y_neighbor, x_neighbor]) != type(None):
+                surrounding_mask.append(mask_on_img[y_neighbor, x_neighbor])
 
-    return mask_on_image_front
+        stacked_window = np.vstack(surrounding_mask)
+
+        if len(np.unique(stacked_window)) == 1:
+            mask_on_img_front[y, x] = 1
+
+        else:
+            k_means = KMeans(n_clusters=2, random_state=0).fit(np.expand_dims(stacked_window[:, 0], axis=1))
+            if np.abs(np.diff(k_means.cluster_centers_, axis=0)) > 2:
+                closest_center_ind = np.argmin(abs(np.sort(k_means.cluster_centers_, axis=0) - z))
+                mask_on_img_front[y, x] = closest_center_ind
+            else:
+                mask_on_img_front[y, x] = 1
+
+    return mask_on_img_front
 
 
+@profile
 def get_frontal(img, pose, mask_name):
     # Not working with "config[mask_name].mask_add_ind = None" !!!
 
@@ -138,9 +151,13 @@ def get_frontal(img, pose, mask_name):
     # Order the coordinates by z, remove duplicates x,y values and keep the last occurrence
     # Only the closer z pixels is visible, masks indication are preferable over rest of head
     unique_df = df.sort_values(['z', 'mask'], ascending=False).drop_duplicates(['x', 'y'], keep='first')
+    frontal_add_mask_with_bg = unique_df[(unique_df['mask'] == 1)][['x', 'y', 'z']]
+    frontal_mask_with_bg = unique_df[(unique_df['mask'] == 2)][['x', 'y', 'z']]
 
     # Removal of points tht came from the back and slipped through the frontal point
-    mask_on_image = threshold_front(img, unique_df)
+    add_mask_on_image = threshold_front(img, df, frontal_add_mask_with_bg)
+    only_mask_on_image = threshold_front(img, df, frontal_mask_with_bg)
+    mask_on_image = add_mask_on_image + 2 * only_mask_on_image
 
     frontal_mask = np.asarray(np.where(mask_on_image == 2))[[1,0], :].T
     frontal_add_mask = np.asarray(np.where(mask_on_image == 1))[[1,0], :].T

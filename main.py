@@ -8,6 +8,10 @@ from helpers import get_model, save_image, get_1id_pose, read_images, color_face
 # todo add sunglasses mask
 # todo split masks ind to another file & change create masks name
 # todo run the program
+
+from line_profiler_pycharm import profile
+
+@profile
 def main(args):
     # Get the masks and their complement
     masks_to_create = create_masks(args.masks)
