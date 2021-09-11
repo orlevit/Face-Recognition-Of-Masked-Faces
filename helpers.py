@@ -136,6 +136,7 @@ def rest_on_img(rest_mask_x, rest_mask_y, img, img_output):
 
     return img_output
 
+
 def str2bool(v):
     if isinstance(v, bool):
         return v

@@ -156,8 +156,13 @@ def get_frontal(img, pose, mask_name):
 
     # Removal of points tht came from the back and slipped through the frontal point
     add_mask_on_image = threshold_front(img, df, frontal_add_mask_with_bg)
-    only_mask_on_image = threshold_front(img, df, frontal_mask_with_bg)
-    mask_on_image = add_mask_on_image + 2 * only_mask_on_image
+    # only_mask_on_image = threshold_front(img, df, frontal_mask_with_bg)
+    only_mask_on_image = np.zeros((img.shape[1], img.shape[0]))
+    for x, y in zip(frontal_mask_with_bg.x, frontal_mask_with_bg.y):
+        if (0 <= x <= img.shape[1] - 1) and (0 <= y <= img.shape[0] - 1):
+            only_mask_on_image[y, x] = 2
+
+    mask_on_image = add_mask_on_image + only_mask_on_image
 
     frontal_mask = np.asarray(np.where(mask_on_image == 2))[[1,0], :].T
     frontal_add_mask = np.asarray(np.where(mask_on_image == 1))[[1,0], :].T
@@ -236,8 +241,9 @@ def morphological_op(mask_x, mask_y, image, left_filter_size=config[EYE_MASK_NAM
 
     mask_on_image = np.zeros_like(image)
     for x, y in zip(mask_x, mask_y):
-        if (0 <= x <= mask_on_image.shape[1] - 1) and (0 <= y <= mask_on_image.shape[0] - 1):
+        if (0 <= x <= image.shape[1] - 1) and (0 <= y <= image.shape[0] - 1):
             mask_on_image[y, x, :] = [255, 255, 255]
+
 
     # morphology close
     gray_mask = cv2.cvtColor(mask_on_image, cv2.COLOR_BGR2GRAY)
