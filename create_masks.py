@@ -99,6 +99,7 @@ def threshold_front(img, df, frontal_mask_all):
     mask_on_img = np.asarray([[None] * img_x_dim] * img_y_dim)
     mask_on_img_front = np.zeros((img_y_dim, img_x_dim))
 
+    # Make the add to the mask_on_img not expand_dims but add to list
     for x, y, z in zip(df.x, df.y, df.z):
         if (0 <= x <= img_y_dim - 1) and (0 <= y <= img_x_dim - 1):
             if type(mask_on_img[y, x]) == type(None):

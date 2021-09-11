@@ -3,12 +3,6 @@ from tqdm import tqdm
 from config_file import config
 from create_masks import create_masks, bg_color, render
 from helpers import get_model, save_image, get_1id_pose, read_images, color_face_mask, parse_arguments
-
-
-# todo add sunglasses mask
-# todo split masks ind to another file & change create masks name
-# todo run the program
-
 from line_profiler_pycharm import profile
 
 @profile
