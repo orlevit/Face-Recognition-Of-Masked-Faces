@@ -111,7 +111,7 @@ def threshold_front(img, df, frontal_mask_all):
         surrounding_mask = []
         for (x_neighbor, y_neighbor) in cell_neighbors(x, y, img_x_dim, img_y_dim):
             if type(mask_on_img[y_neighbor, x_neighbor]) != type(None):
-                surrounding_mask.append(mask_on_img[y_neighbor, x_neighbor])
+                surrounding_mask.extend(mask_on_img[y_neighbor, x_neighbor])
 
         stacked_window = np.vstack(surrounding_mask)
 
@@ -119,8 +119,8 @@ def threshold_front(img, df, frontal_mask_all):
             mask_on_img_front[y, x] = 1
 
         else:
-            k_means = KMeans(n_clusters=2, random_state=0).fit(np.expand_dims(stacked_window[:, 0], axis=1))
-            if np.abs(np.diff(k_means.cluster_centers_, axis=0)) > 2:
+            k_means = KMeans(n_clusters=2, random_state=0, max_iter=100).fit(stacked_window)
+            if np.abs(np.diff(k_means.cluster_centers_, axis=0)) > 200:
                 closest_center_ind = np.argmin(abs(np.sort(k_means.cluster_centers_, axis=0) - z))
                 mask_on_img_front[y, x] = closest_center_ind
             else:
@@ -151,9 +151,11 @@ def get_frontal(img, pose, mask_name):
 
     # Order the coordinates by z, remove duplicates x,y values and keep the last occurrence
     # Only the closer z pixels is visible, masks indication are preferable over rest of head
-    unique_df = df.sort_values(['z', 'mask'], ascending=False).drop_duplicates(['x', 'y'], keep='first')
-    frontal_add_mask_with_bg = unique_df[(unique_df['mask'] == 1)][['x', 'y', 'z']]
-    frontal_mask_with_bg = unique_df[(unique_df['mask'] == 2)][['x', 'y', 'z']]
+    # unique_df = df.sort_values(['z', 'mask'], ascending=False).drop_duplicates(['x', 'y'], keep='first')
+    # frontal_add_mask_with_bg = unique_df[(unique_df['mask'] == 1)][['x', 'y', 'z']]
+    # frontal_mask_with_bg = unique_df[(unique_df['mask'] == 2)][['x', 'y', 'z']]
+    frontal_add_mask_with_bg = df[(df['mask'] == 1)][['x', 'y', 'z']]
+    frontal_mask_with_bg = df[(df['mask'] == 2)][['x', 'y', 'z']]
 
     # Removal of points tht came from the back and slipped through the frontal point
     add_mask_on_image = threshold_front(img, df, frontal_add_mask_with_bg)
