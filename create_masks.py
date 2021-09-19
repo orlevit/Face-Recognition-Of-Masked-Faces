@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import pandas as pd
+from time import time
 from sklearn.cluster import KMeans
 from project_on_image import transform_vertices
 from masks_indices import make_eye_mask, make_hat_mask, make_corona_mask, \
@@ -103,9 +104,12 @@ def threshold_front(img, df, frontal_mask_all):
     for x, y, z in zip(df.x, df.y, df.z):
         if (0 <= x <= img_y_dim - 1) and (0 <= y <= img_x_dim - 1):
             if type(mask_on_img[y, x]) == type(None):
-                mask_on_img[y, x] = np.expand_dims(np.array([z]), axis=0)
+                mask_on_img[y, x] = [z]
             else:
-                mask_on_img[y, x] = np.append(mask_on_img[y, x], np.expand_dims(np.array([z]), axis=0), axis=0)
+                mask_on_img[y, x].append(z)
+            #     mask_on_img[y, x] = np.expand_dims(np.array([z]), axis=0)
+            # else:
+            #     mask_on_img[y, x] = np.append(mask_on_img[y, x], np.expand_dims(np.array([z]), axis=0), axis=0)
 
     for x, y, z in zip(frontal_mask_all.x, frontal_mask_all.y, frontal_mask_all.z):
         surrounding_mask = []
@@ -113,22 +117,41 @@ def threshold_front(img, df, frontal_mask_all):
             if type(mask_on_img[y_neighbor, x_neighbor]) != type(None):
                 surrounding_mask.extend(mask_on_img[y_neighbor, x_neighbor])
 
-        stacked_window = np.vstack(surrounding_mask)
+        mask_on_img_front[y, x] = 1
+        # txt = "684 686 685 933 931 683 932 682 681 664 679 682 662 667 669 672 677 679 681 666 676 660 664 670 668 670 668 679 666 672 676 675 678 678 677 660 675 674 673 933 931 657 670 672 672 671 674 674 673 673 676 932"
+        # txt= "686 685 933 687 683 932 684 670 684 680 663 679 682 662 667 669 672 677 934 672 676 675 679 681 935 666 678 681 678 677 660 675 674 673 933"
+        # ts = txt.split()
+        # arr = np.asarray([int(i) for i in ts])
+        if len(surrounding_mask) != 0:
+            stacked_window = np.array(surrounding_mask)[:, None]
+            # stacked_window = arr[:,None]
 
-        if len(np.unique(stacked_window)) == 1:
-            mask_on_img_front[y, x] = 1
+            if len(np.unique(stacked_window)) != 1:
+                tic= time()
+                k_means = KMeans(n_clusters=2, random_state=0, max_iter=10, tol=1, n_init=1).fit(stacked_window)
+                toc = time()
+                # c = list()
+                # for x in arr:
+                #     if x in list(np.squeeze(stacked_window)):
+                #         c.append(x)
+                # if len(c) == len(arr) and len(np.squeeze(stacked_window)) == len(arr):
+                #     print(f"{len(stacked_window)}:{np.squeeze(stacked_window)},time:{toc-tic}")
+                #     exit()
+                diff = np.abs(np.diff(k_means.cluster_centers_, axis=0))
 
-        else:
-            k_means = KMeans(n_clusters=2, random_state=0, max_iter=100).fit(stacked_window)
-            if np.abs(np.diff(k_means.cluster_centers_, axis=0)) > 200:
-                closest_center_ind = np.argmin(abs(np.sort(k_means.cluster_centers_, axis=0) - z))
-                mask_on_img_front[y, x] = closest_center_ind
-            else:
-                mask_on_img_front[y, x] = 1
-
+                if diff > 20:
+                    # closest_center_ind = np.argmin(abs(np.sort(k_means.cluster_centers_, axis=0) - z))
+                    cc = np.argmin(k_means.cluster_centers_, axis=0)
+                    threshold_buffer = diff * 1 / 4
+                    threshold = cc + threshold_buffer
+                    frontal_ind = np.where(z < threshold, 0, 1)[0]
+                    mask_on_img_front[y, x] = frontal_ind
+                # toc = time()
+    # print(np.mean(tic_all))
     return mask_on_img_front
 
 
+# TODO: project  images without added strings on image
 @profile
 def get_frontal(img, pose, mask_name):
     # Not working with "config[mask_name].mask_add_ind = None" !!!
@@ -152,10 +175,12 @@ def get_frontal(img, pose, mask_name):
     # Order the coordinates by z, remove duplicates x,y values and keep the last occurrence
     # Only the closer z pixels is visible, masks indication are preferable over rest of head
     # unique_df = df.sort_values(['z', 'mask'], ascending=False).drop_duplicates(['x', 'y'], keep='first')
+    unique_df = df.sort_values(['z', 'mask'], ascending=False).drop_duplicates(['x', 'y', 'mask'], keep='first')
     # frontal_add_mask_with_bg = unique_df[(unique_df['mask'] == 1)][['x', 'y', 'z']]
     # frontal_mask_with_bg = unique_df[(unique_df['mask'] == 2)][['x', 'y', 'z']]
-    frontal_add_mask_with_bg = df[(df['mask'] == 1)][['x', 'y', 'z']]
-    frontal_mask_with_bg = df[(df['mask'] == 2)][['x', 'y', 'z']]
+
+    frontal_add_mask_with_bg = unique_df[(unique_df['mask'] == 1)][['x', 'y', 'z']]
+    frontal_mask_with_bg = unique_df[(unique_df['mask'] == 2)][['x', 'y', 'z']]
 
     # Removal of points tht came from the back and slipped through the frontal point
     add_mask_on_image = threshold_front(img, df, frontal_add_mask_with_bg)
@@ -314,7 +339,7 @@ def load_3dmm():
     return vertices, vertices_rotated
 
 
-def create_masks(masks_name):
+def masks_templates(masks_name):
     vertices, vertices_rotated = load_3dmm()
     x, y, z = vertices_rotated[:, 0], vertices_rotated[:, 1], vertices_rotated[:, 2]
     eye_mask_ind = make_eye_mask(x, y)

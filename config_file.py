@@ -85,7 +85,7 @@ config = {
             "left_upper_string1": 16098,
             "left_upper_string2": 33284,
             "left_lower_string1": 51827,
-            "left_lower_string2": 20567,
+            "left_lower_string2": 20571,#20567,
             "right_upper_string1": 185,
             "right_upper_string2": 21157,
             "right_lower_string1": 44003,

@@ -125,6 +125,30 @@ def make_sunglasses_mask(x, y):
 
     return sunglasses_lenses_inds, sunglasses_strings_ind
 
+# TODO: Remove in final version
+# This is a temp for testing new version of mask
+
+def center_face_ind2(center_middle_ind, right_middle_ind, left_lower_ind, right_lower_ind, y, z):
+    y_middle = y[[right_lower_ind, center_middle_ind, right_middle_ind]]
+    z_middle = z[[right_lower_ind, center_middle_ind, right_middle_ind]]
+    y_twist = y[[31919, 29207, 28040]]
+    z_twist = z[[31919, 29207, 28040]]
+    y_lower = y[[left_lower_ind, 31919]]
+    z_lower = z[[left_lower_ind, 31919]]
+
+    a1, b1, c1 = np.polyfit(y_middle, z_middle, 2)
+    a2, b2, c2 = np.polyfit(y_twist, z_twist, 2)
+    m, n = np.polyfit(y_lower, z_lower, 1)
+
+    index_list = []
+    for ii, y_i in enumerate(y):
+        if (z[ii] >= (a1 * (y_i ** 2) + b1 * y_i + c1)) and (-0.1456907 < y[ii] < y[right_middle_ind]) or \
+                (z[ii] >= (a2 * (y_i ** 2) + b2 * y_i + c2)) and (y[31919] < y[ii] < -0.1456907) or \
+                (z[ii] >= (m * y_i + n)) and (y[left_lower_ind] < y[ii] < y[31919]):
+            index_list.append(ii)
+
+    return index_list
+
 
 def center_face_ind(center_middle_ind, right_middle_ind, left_lower_ind, right_lower_ind, y, z):
     y_middle = y[[right_lower_ind, center_middle_ind, right_middle_ind]]
@@ -142,6 +166,37 @@ def center_face_ind(center_middle_ind, right_middle_ind, left_lower_ind, right_l
             index_list.append(ii)
 
     return index_list
+
+#TODO: Remove in final version
+# This is a temp for testing thinner string
+
+def get_mask_string2(ind1, ind2, face_side, split_face_cord, x, y):
+    if face_side == LEFT_FACE_PART:
+        filtered_ind = [ii for ii, cord in enumerate(split_face_cord) if (cord >= 0)]
+    elif face_side == RIGHT_FACE_PART:
+        filtered_ind = [ii for ii, cord in enumerate(split_face_cord) if (cord < 0)]
+    else:  # CENTER_FACE_PART
+        filtered_ind = [ii for ii, cord in enumerate(split_face_cord)]
+
+    x_pos = x[filtered_ind]
+    y_pos = y[filtered_ind]
+
+    # Draw line
+    received_x_pt = [x[ind1], x[ind2]]
+    received_y_pt = [y[ind1], y[ind2]]
+    m, mb = np.polyfit(received_x_pt, received_y_pt, 1)
+
+    start_x = min(received_x_pt)
+    end_x = max(received_x_pt)
+    line_list = []
+
+    for i in np.arange(start_x, end_x + FACE_MODEL_DENSITY, FACE_MODEL_DENSITY):
+        distances = np.asarray(((y_pos - (m * i + mb)) ** 2 + (x_pos - i) ** 2))
+        string_size_ind = np.argpartition(distances, 1)[:1]
+        cond_ind = list(np.asarray(filtered_ind)[string_size_ind])
+        line_list += cond_ind
+
+    return np.unique(np.asarray(line_list)).tolist()
 
 
 def get_mask_string(ind1, ind2, face_side, split_face_cord, x, y):

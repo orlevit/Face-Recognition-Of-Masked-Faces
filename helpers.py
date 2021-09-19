@@ -36,24 +36,32 @@ def save_image(img_path, mask_name, img_output, output, bbox, bbox_ind, inc_bbox
     full_path, image_name = os.path.split(os.path.normpath(img_path))
     image_org_dir = os.path.basename(full_path)
     image_dst_dir = os.path.join(output, mask_name, image_org_dir)
-    image_dst = os.path.join(image_dst_dir, image_name)
+    image_dst = os.path.join(image_dst_dir, "new_string_1_4_" + image_name)
 
     # Create the directory if it doesn't exists
     if not os.path.exists(image_dst_dir):
         os.makedirs(image_dst_dir)
 
     # Save the image
-    if bbox_ind:
-        img_output = crop_bbox(img_output, bbox, inc_bbox)
+    # if bbox_ind:
+    #     img_output = crop_bbox(img_output, bbox, inc_bbox)
 
     cv2.imwrite(image_dst, img_output)
+
+# TODO: if 2 dimentions are unequal  neede to be changed!
+def resize_image(image, bbox, inc_bbox):
+    scale = crop_equal_bbox(image, bbox, inc_bbox)
+    inc = int(image.shape[0]*500/scale)
+    resized_image = cv2.resize(image, (inc, inc))
+
+    return resized_image
 
 
 def crop_bbox(img, bbox, inc_bbox):
     wbbox = bbox[2] - bbox[0]
     lbbox = bbox[3] - bbox[1]
-    half_w = wbbox // 2
-    half_l = lbbox // 2
+    half_w = wbbox / 2
+    half_l = lbbox / 2
     half_w_inc = half_w * (1 + inc_bbox)
     half_l_inc = half_l * (1 + inc_bbox)
     cx = half_w + bbox[0]
@@ -64,6 +72,24 @@ def crop_bbox(img, bbox, inc_bbox):
     n3 = min(np.round(cy + half_l_inc).astype(int), img.shape[0] - 1)
 
     return img[n1:n3, n0:n2, :]
+
+
+# TODO: the icreace can go byhond the image
+def crop_equal_bbox(img, bbox, inc_bbox):
+    wbbox = bbox[2] - bbox[0]
+    lbbox = bbox[3] - bbox[1]
+    half_w = wbbox
+    half_l = lbbox
+    half_max = max(half_w, half_l)
+    half_max_inc = half_max * (1 + inc_bbox)
+    # cx = half_w + bbox[0]
+    # cy = half_l + bbox[1]
+    # n0 = max(np.round(cx - half_max_inc).astype(int), 0)
+    # n1 = max(np.round(cy - half_max_inc).astype(int), 0)
+    # n2 = min(np.round(cx + half_max_inc).astype(int), img.shape[1] - 1)
+    # n3 = min(np.round(cy + half_max_inc).astype(int), img.shape[0] - 1)
+
+    return half_max_inc
 
 
 def get_1id_pose(results, img, threshold):
