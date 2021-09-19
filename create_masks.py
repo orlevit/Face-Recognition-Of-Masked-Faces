@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from time import time
 from sklearn.cluster import KMeans
+from skimage.filters import threshold_otsu
 from project_on_image import transform_vertices
 from masks_indices import make_eye_mask, make_hat_mask, make_corona_mask, \
     make_scarf_mask, make_sunglasses_mask
@@ -127,9 +128,14 @@ def threshold_front(img, df, frontal_mask_all):
             # stacked_window = arr[:,None]
 
             if len(np.unique(stacked_window)) != 1:
+                arr = np.squeeze(stacked_window)
                 tic= time()
-                k_means = KMeans(n_clusters=2, random_state=0, max_iter=10, tol=1, n_init=1).fit(stacked_window)
+                # k_means = KMeans(n_clusters=2, random_state=0, max_iter=10, tol=1, n_init=1).fit(stacked_window)
+                threshold = threshold_otsu(arr)
+                cluster1 = np.mean(arr[arr < threshold])
+                cluster2 = np.mean(arr[arr > threshold])
                 toc = time()
+                print(f"{len(stacked_window)},time:{toc - tic}")
                 # c = list()
                 # for x in arr:
                 #     if x in list(np.squeeze(stacked_window)):
@@ -137,11 +143,11 @@ def threshold_front(img, df, frontal_mask_all):
                 # if len(c) == len(arr) and len(np.squeeze(stacked_window)) == len(arr):
                 #     print(f"{len(stacked_window)}:{np.squeeze(stacked_window)},time:{toc-tic}")
                 #     exit()
-                diff = np.abs(np.diff(k_means.cluster_centers_, axis=0))
+                diff = np.abs(np.diff([cluster1,cluster2], axis=0))
 
                 if diff > 20:
                     # closest_center_ind = np.argmin(abs(np.sort(k_means.cluster_centers_, axis=0) - z))
-                    cc = np.argmin(k_means.cluster_centers_, axis=0)
+                    cc = np.argmin([cluster1,cluster2], axis=0)
                     threshold_buffer = diff * 1 / 4
                     threshold = cc + threshold_buffer
                     frontal_ind = np.where(z < threshold, 0, 1)[0]
