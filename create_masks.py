@@ -53,7 +53,7 @@ def cell_neighbors(x_pixel, y_pixel, max_x, max_y):
 
     return [(x, y) for x in range(x_left_limit, x_right_limit + 1) for y in range(y_bottom_limit, y_upper_limit + 1)]
 
-
+@profile
 def clustering(elements_list):
     threshold = threshold_otsu(np.array(elements_list))
     cluster1_arr = []
@@ -80,7 +80,7 @@ def clustering(elements_list):
 
 @profile
 def threshold_front(img, df, frontal_mask_all):
-    img_x_dim, img_y_dim = img.shape[0], img.shape[1]
+    img_x_dim, img_y_dim = img.shape[1], img.shape[0]
     mask_on_img = np.asarray([[None] * img_x_dim] * img_y_dim)
     mask_on_img_front = np.zeros((img_y_dim, img_x_dim))
 

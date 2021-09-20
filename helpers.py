@@ -12,6 +12,7 @@ from img2pose import img2poseModel
 from model_loader import load_model
 from config_file import DEPTH, MAX_SIZE, MIN_SIZE, POSE_MEAN, POSE_STDDEV, MODEL_PATH, \
     PATH_3D_POINTS, ALL_MASKS, BBOX_REQUESTED_SIZE
+from line_profiler_pycharm import profile
 
 
 def get_model():
@@ -54,13 +55,14 @@ def resize_image(image, bbox):
     l_bbox = bbox[3] - bbox[1]
     max_dim = max(w_bbox, l_bbox)
     scale_img = BBOX_REQUESTED_SIZE / max_dim
-    w_scaled = int(image.shape[0] * scale_img)
-    l_scaled = int(image.shape[1] * scale_img)
+    l_scaled = int(image.shape[0] * scale_img)
+    w_scaled = int(image.shape[1] * scale_img)
     resized_image = cv2.resize(image, (w_scaled, l_scaled))
 
     return resized_image, scale_img
 
 
+@profile
 def scale_down(img, frontal_mask, frontal_add_mask, frontal_rest, scale):
 
     frontal_mask_scaled = (frontal_mask / scale).astype(int)
@@ -77,6 +79,7 @@ def scale_down(img, frontal_mask, frontal_add_mask, frontal_rest, scale):
     return frontal_mask, frontal_add_mask, frontal_rest
 
 
+@profile
 def separate_masks_type_proj(main_mask_on_image, add_mask_on_image, rest_mask_on_image):
     mask_on_image = 4 * main_mask_on_image + 2 * add_mask_on_image + rest_mask_on_image
 
@@ -162,7 +165,7 @@ def color_face_mask(img, color, mask_x, mask_y, rest_mask_x, rest_mask_y, mask_n
 
 
 def mark_image_with_mask(img, x_coords, y_coords):
-    mask_on_image = np.zeros((img.shape[1], img.shape[0]))
+    mask_on_image = np.zeros((img.shape[0], img.shape[1]))
     for x, y in zip(x_coords, y_coords):
         mask_on_image[y, x] = 1
 
@@ -171,16 +174,14 @@ def mark_image_with_mask(img, x_coords, y_coords):
 
 def mask_on_img(mask_x, mask_y, img, color):
     for x, y in zip(mask_x, mask_y):
-        if 0 <= x < img.shape[1] and 0 <= y < img.shape[0]:
-            img[y, x, :] = [color[0], color[1], color[2]]
+        img[y, x, :] = [color[0], color[1], color[2]]
 
     return img
 
 
 def rest_on_img(rest_mask_x, rest_mask_y, img, img_output):
     for x, y in zip(rest_mask_x, rest_mask_y):
-        if 0 <= x < img.shape[1] and 0 <= y < img.shape[0]:
-            img_output[y, x, :] = img[y, x, :]
+        img_output[y, x, :] = img[y, x, :]
 
     return img_output
 

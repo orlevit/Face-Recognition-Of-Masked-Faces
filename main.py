@@ -10,12 +10,14 @@ from helpers import get_model, save_image, get_1id_pose, read_images, color_face
 from line_profiler_pycharm import profile
 
 # TODO: 1)run small exaples
-# TODO: 2)RESIZE back the the cropped image and take the pixels from the original one # the constand need to be in config
+# TODO: 2) profiling the code
 # TODO: 3)run ALL masks
+# TODO: 4)run in multithreads
+# TODO: 5)add option for run in multithreads
+# TODO: 6)change coronamask to covid19 mask
+# TODO: 7) refactoring the code and profiling
+# TODO: 8) add documentation
 
-# TODO: run in multithreads
-# TODO: add option for run in multithreads
-# TODO: change coronamask to covid19 mask
 
 @profile
 def main(args):
