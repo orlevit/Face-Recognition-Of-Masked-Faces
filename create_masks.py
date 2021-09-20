@@ -4,6 +4,7 @@ import pandas as pd
 from time import time
 from skimage.filters import threshold_otsu
 from project_on_image import transform_vertices
+from helpers import scale_down, mark_image_with_mask, separate_masks_type_proj
 from masks_indices import make_eye_mask, make_hat_mask, make_corona_mask, \
     make_scarf_mask, make_sunglasses_mask
 from config_file import config, VERTICES_PATH, EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, CORONA_MASK_NAME, \
@@ -13,9 +14,9 @@ from line_profiler_pycharm import profile
 
 
 @profile
-def render(img, pose, mask_name):
+def render(img, pose, mask_name, scale_img):
     # Transform the 3DMM according to the pose and get only frontal face areas
-    frontal_mask, frontal_add_mask, frontal_rest = get_frontal(img, pose, mask_name)
+    frontal_mask, frontal_add_mask, frontal_rest = get_frontal(img, pose, mask_name, scale_img)
 
     # Whether to add the forehead to the mask, this is currently only used for eye and hat masks
     if config[mask_name].add_forehead:
@@ -109,12 +110,14 @@ def threshold_front(img, df, frontal_mask_all):
                     frontal_ind = 0 if z < threshold else 1
                     mask_on_img_front[y, x] = frontal_ind
 
-    return mask_on_img_front
+    mask_inds = np.asarray(np.where(mask_on_img_front == 1)).T[:, [1, 0]]
+
+    return mask_inds
 
 
 # TODO: project  images without added strings on image
 @profile
-def get_frontal(img, pose, mask_name):
+def get_frontal(img, pose, mask_name, scale):
     # Not working with "config[mask_name].mask_add_ind = None" !!!
 
     # An indication whether it is a mask coordinate, additional  mask or rest of the head and add them to the matrices
@@ -143,26 +146,20 @@ def get_frontal(img, pose, mask_name):
     frontal_rest_mask_with_bg = unique_df[(unique_df['mask'] == 1)][['x', 'y', 'z']]
 
     # Check each point if it is came from frontal or hidden area of tha face
-    add_mask_on_image = threshold_front(img, df, frontal_add_mask_with_bg)
+    famwb_arr = threshold_front(img, df, frontal_add_mask_with_bg)
     # TODO: Switch comments to take frontal mask center if NOT multithread!
     ############## Switch comments to take frontal mask center if NOT multithread! #######################################
     # main_mask_on_image = threshold_front(img, df, frontal_main_mask_with_bg)
-    main_mask_on_image = np.zeros((img.shape[1], img.shape[0]))
-    for x, y in zip(frontal_main_mask_with_bg.x, frontal_main_mask_with_bg.y):
-        main_mask_on_image[y, x] = 1
+    # main_mask_on_image = mark_image_with_mask(img, frontal_main_mask_with_bg.x, frontal_main_mask_with_bg.y)
+    fmmwb_arr = frontal_main_mask_with_bg[['x', 'y']].to_numpy()
     #####################################################################################################################
+    # rest_mask_on_image = mark_image_with_mask(img, frontal_rest_mask_with_bg.x, frontal_rest_mask_with_bg.y)
+    frmwb_arr = frontal_rest_mask_with_bg[['x', 'y']].to_numpy()
 
-    rest_mask_on_image = np.zeros((img.shape[1], img.shape[0]))
-    for x, y in zip(frontal_rest_mask_with_bg.x, frontal_rest_mask_with_bg.y):
-        rest_mask_on_image[y, x] = 1
+    # frontal_mask, frontal_add_mask, frontal_rest = \
+    #     separate_masks_type_proj(main_mask_on_image, add_mask_on_image, rest_mask_on_image)
 
-    mask_on_image = 4 * main_mask_on_image + 2 * add_mask_on_image + rest_mask_on_image
-
-    # Each pixel is main mask/additional strings or rest of the head, the numers 1/2/4 are arbitrary,
-    # and used to get the relevant type even when there are overlapping
-    frontal_mask = np.asarray(np.where(np.isin(mask_on_image, [4, 5, 6, 7])))[[1, 0], :].T
-    frontal_add_mask = np.asarray(np.where(np.isin(mask_on_image, [2, 3])))[[1, 0], :].T
-    frontal_rest = np.asarray(np.where(mask_on_image == 1))[[1, 0], :].T
+    frontal_mask, frontal_add_mask, frontal_rest = scale_down(img, fmmwb_arr, famwb_arr, frmwb_arr, scale)
 
     return frontal_mask, frontal_add_mask, frontal_rest
 

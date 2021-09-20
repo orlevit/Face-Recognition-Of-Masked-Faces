@@ -11,6 +11,8 @@ from line_profiler_pycharm import profile
 
 # TODO: 1)run small exaples
 # TODO: 2)RESIZE back the the cropped image and take the pixels from the original one # the constand need to be in config
+# TODO: 3)run ALL masks
+
 # TODO: run in multithreads
 # TODO: add option for run in multithreads
 # TODO: change coronamask to covid19 mask
@@ -39,20 +41,20 @@ def main(args):
         pose, bbox = get_1id_pose(results, img, args.threshold)
 
         # TODO: RESIZE back
-        r_img = resize_image(img, bbox, args.inc_bbox)
+        r_img, scale_img = resize_image(img, bbox)
 
         # face detected with img2pose and above the threshold
         if pose.size != 0:
             # for mask, mask_add, rest_of_head, mask_name in zip(masks, masks_add, rest_of_heads, MASKS_NAMES):
             for mask_name in masks_to_create:
                 # Get the location of the masks on the image
-                mask_x, mask_y, rest_mask_x, rest_mask_y = render(r_img, pose, mask_name)
+                mask_x, mask_y, rest_mask_x, rest_mask_y = render(r_img, pose, mask_name, scale_img)
 
                 # The average color of the surrounding of the image
-                color = bg_color(mask_x, mask_y, r_img)
+                color = bg_color(mask_x, mask_y, img)
 
                 # Put the colored mask on the face in the image
-                masked_image = color_face_mask(r_img, color, mask_x, mask_y, rest_mask_x, rest_mask_y, mask_name, config)
+                masked_image = color_face_mask(img, color, mask_x, mask_y, rest_mask_x, rest_mask_y, mask_name, config)
 
                 # Save masked image
                 save_image(img_path, mask_name, masked_image, args.output, bbox, args.bbox_ind, args.inc_bbox)

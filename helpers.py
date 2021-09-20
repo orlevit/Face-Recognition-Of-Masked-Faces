@@ -11,7 +11,7 @@ from torchvision import transforms
 from img2pose import img2poseModel
 from model_loader import load_model
 from config_file import DEPTH, MAX_SIZE, MIN_SIZE, POSE_MEAN, POSE_STDDEV, MODEL_PATH, \
-    PATH_3D_POINTS, ALL_MASKS
+    PATH_3D_POINTS, ALL_MASKS, BBOX_REQUESTED_SIZE
 
 
 def get_model():
@@ -36,7 +36,7 @@ def save_image(img_path, mask_name, img_output, output, bbox, bbox_ind, inc_bbox
     full_path, image_name = os.path.split(os.path.normpath(img_path))
     image_org_dir = os.path.basename(full_path)
     image_dst_dir = os.path.join(output, mask_name, image_org_dir)
-    image_dst = os.path.join(image_dst_dir, "new_string_1_4_" + image_name)
+    image_dst = os.path.join(image_dst_dir, image_name)
 
     # Create the directory if it doesn't exists
     if not os.path.exists(image_dst_dir):
@@ -48,13 +48,45 @@ def save_image(img_path, mask_name, img_output, output, bbox, bbox_ind, inc_bbox
 
     cv2.imwrite(image_dst, img_output)
 
-# TODO: if 2 dimentions are unequal  neede to be changed!
-def resize_image(image, bbox, inc_bbox):
-    scale = crop_equal_bbox(image, bbox, inc_bbox)
-    inc = int(image.shape[0]*500/scale)
-    resized_image = cv2.resize(image, (inc, inc))
 
-    return resized_image
+def resize_image(image, bbox):
+    w_bbox = bbox[2] - bbox[0]
+    l_bbox = bbox[3] - bbox[1]
+    max_dim = max(w_bbox, l_bbox)
+    scale_img = BBOX_REQUESTED_SIZE / max_dim
+    w_scaled = int(image.shape[0] * scale_img)
+    l_scaled = int(image.shape[1] * scale_img)
+    resized_image = cv2.resize(image, (w_scaled, l_scaled))
+
+    return resized_image, scale_img
+
+
+def scale_down(img, frontal_mask, frontal_add_mask, frontal_rest, scale):
+
+    frontal_mask_scaled = (frontal_mask / scale).astype(int)
+    frontal_add_mask_scaled = (frontal_add_mask / scale).astype(int)
+    frontal_rest_scaled = (frontal_rest / scale).astype(int)
+
+    frontal_mask_img = mark_image_with_mask(img, frontal_mask_scaled[:, 0], frontal_mask_scaled[:, 1])
+    frontal_add_mask_img = mark_image_with_mask(img, frontal_add_mask_scaled[:, 0], frontal_add_mask_scaled[:, 1])
+    frontal_rest_img = mark_image_with_mask(img, frontal_rest_scaled[:, 0], frontal_rest_scaled[:, 1])
+
+    frontal_mask, frontal_add_mask, frontal_rest = \
+        separate_masks_type_proj(frontal_mask_img, frontal_add_mask_img, frontal_rest_img)
+
+    return frontal_mask, frontal_add_mask, frontal_rest
+
+
+def separate_masks_type_proj(main_mask_on_image, add_mask_on_image, rest_mask_on_image):
+    mask_on_image = 4 * main_mask_on_image + 2 * add_mask_on_image + rest_mask_on_image
+
+    # Each pixel is main mask/additional strings or rest of the head, the numbers 1/2/4 are arbitrary,
+    # and used to get the relevant type even when there are overlapping
+    frontal_mask = np.asarray(np.where(np.isin(mask_on_image, [4, 5, 6, 7])))[[1, 0], :].T
+    frontal_add_mask = np.asarray(np.where(np.isin(mask_on_image, [2, 3])))[[1, 0], :].T
+    frontal_rest = np.asarray(np.where(mask_on_image == 1))[[1, 0], :].T
+
+    return frontal_mask, frontal_add_mask, frontal_rest
 
 
 def crop_bbox(img, bbox, inc_bbox):
@@ -72,24 +104,6 @@ def crop_bbox(img, bbox, inc_bbox):
     n3 = min(np.round(cy + half_l_inc).astype(int), img.shape[0] - 1)
 
     return img[n1:n3, n0:n2, :]
-
-
-# TODO: the icreace can go byhond the image
-def crop_equal_bbox(img, bbox, inc_bbox):
-    wbbox = bbox[2] - bbox[0]
-    lbbox = bbox[3] - bbox[1]
-    half_w = wbbox
-    half_l = lbbox
-    half_max = max(half_w, half_l)
-    half_max_inc = half_max * (1 + inc_bbox)
-    # cx = half_w + bbox[0]
-    # cy = half_l + bbox[1]
-    # n0 = max(np.round(cx - half_max_inc).astype(int), 0)
-    # n1 = max(np.round(cy - half_max_inc).astype(int), 0)
-    # n2 = min(np.round(cx + half_max_inc).astype(int), img.shape[1] - 1)
-    # n3 = min(np.round(cy + half_max_inc).astype(int), img.shape[0] - 1)
-
-    return half_max_inc
 
 
 def get_1id_pose(results, img, threshold):
@@ -119,8 +133,8 @@ def get_1id_pose(results, img, threshold):
         bounding_box_size = (bboxes[:, 2] - bboxes[:, 0]) * (bboxes[:, 3] - bboxes[:, 1])
         center_x = (bboxes[:, 0] + bboxes[:, 2]) / 2
         center_y = (bboxes[:, 1] + bboxes[:, 3]) / 2
-        dist_x = np.min(np.vstack((center_x, abs(center_x-img.shape[1]))), axis=0)
-        dist_y = np.min(np.vstack((center_y, abs(center_y-img.shape[0]))), axis=0)
+        dist_x = np.min(np.vstack((center_x, abs(center_x - img.shape[1]))), axis=0)
+        dist_y = np.min(np.vstack((center_y, abs(center_y - img.shape[0]))), axis=0)
         offsets = np.vstack([dist_x, dist_y])
         offset_dist_squared = np.sum(np.power(offsets, 2.0), 0)
         bbox_idx = np.argmax(scores * (bounding_box_size + offset_dist_squared))
@@ -145,6 +159,14 @@ def color_face_mask(img, color, mask_x, mask_y, rest_mask_x, rest_mask_y, mask_n
         img_output = rest_on_img(rest_mask_x, rest_mask_y, img, img_output)
 
     return img_output
+
+
+def mark_image_with_mask(img, x_coords, y_coords):
+    mask_on_image = np.zeros((img.shape[1], img.shape[0]))
+    for x, y in zip(x_coords, y_coords):
+        mask_on_image[y, x] = 1
+
+    return mask_on_image
 
 
 def mask_on_img(mask_x, mask_y, img, color):
@@ -173,6 +195,7 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
+
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input', type=str, help='Directory with input images or csv file with paths.')
@@ -183,7 +206,7 @@ def parse_arguments():
     parser.add_argument('-t', '--threshold', default=0.0, type=float,
                         help='The minimum confidence score for img2pose for face detection')
     parser.add_argument('-b', '--bbox-ind', default=True, type=str2bool, help='Return the original or cropped'
-                                                                          'bounding box image with mask')
+                                                                              'bounding box image with mask')
     parser.add_argument('-inc', '--inc-bbox', default=0.25, type=float,
                         help='The increase of the bbox in percent')
 
