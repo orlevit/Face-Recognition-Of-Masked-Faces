@@ -168,7 +168,7 @@ def mark_image_with_mask(img, x_coords, y_coords, scale):
     img_y_dim, img_x_dim = int(img.shape[0]/scale), int(img.shape[1]/scale)
     mask_on_image = np.zeros((img_y_dim, img_x_dim))
     for x, y in zip(x_coords, y_coords):
-        mask_on_image[y, x] = 1
+        mask_on_image[min(y, img_y_dim -1), min(x, img_x_dim -1)] = 1
 
     return mask_on_image
 
