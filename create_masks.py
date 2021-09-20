@@ -132,10 +132,26 @@ def threshold_front(img, df, frontal_mask_all):
                 tic= time()
                 # k_means = KMeans(n_clusters=2, random_state=0, max_iter=10, tol=1, n_init=1).fit(stacked_window)
                 threshold = threshold_otsu(arr)
-                cluster1 = np.mean(arr[arr < threshold])
-                cluster2 = np.mean(arr[arr > threshold])
+                cluster1_arr = []
+                cluster2_arr = []
+                equal_threshold = []
+                for i in arr:
+                    if i < threshold:
+                        cluster1_arr.append(i)
+                    elif i > threshold:
+                        cluster2_arr.append(i)
+                    else:
+                        equal_threshold.append(i)
+
+                if not cluster1_arr:
+                    cluster1_arr.extend(equal_threshold)
+                else:
+                    cluster2_arr.extend(equal_threshold)
+
+                cluster1 = np.mean(cluster1_arr)
+                cluster2 = np.mean(cluster2_arr)
                 toc = time()
-                print(f"{len(stacked_window)},time:{toc - tic}")
+                # print(f"{len(stacked_window)},time:{toc - tic}")
                 # c = list()
                 # for x in arr:
                 #     if x in list(np.squeeze(stacked_window)):
