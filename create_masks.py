@@ -4,7 +4,7 @@ import pandas as pd
 from time import time
 from skimage.filters import threshold_otsu
 from project_on_image import transform_vertices
-from helpers import scale_down, mark_image_with_mask, separate_masks_type_proj
+from helpers import scale, mark_image_with_mask, separate_masks_type_proj
 from masks_indices import make_eye_mask, make_hat_mask, make_corona_mask, \
     make_scarf_mask, make_sunglasses_mask
 from config_file import config, VERTICES_PATH, EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, CORONA_MASK_NAME, \
@@ -14,9 +14,9 @@ from line_profiler_pycharm import profile
 
 
 @profile
-def render(img, pose, mask_name, scale_img):
+def render(img, r_img, pose, mask_name, scale_factor):
     # Transform the 3DMM according to the pose and get only frontal face areas
-    frontal_mask, frontal_add_mask, frontal_rest = get_frontal(img, pose, mask_name, scale_img)
+    frontal_mask, frontal_add_mask, frontal_rest = get_frontal(r_img, pose, mask_name, scale_factor)
 
     # Whether to add the forehead to the mask, this is currently only used for eye and hat masks
     if config[mask_name].add_forehead:
@@ -117,7 +117,7 @@ def threshold_front(img, df, frontal_mask_all):
 
 # TODO: project  images without added strings on image
 @profile
-def get_frontal(img, pose, mask_name, scale):
+def get_frontal(img, pose, mask_name, scale_factor):
     # Not working with "config[mask_name].mask_add_ind = None" !!!
 
     # An indication whether it is a mask coordinate, additional  mask or rest of the head and add them to the matrices
@@ -159,7 +159,7 @@ def get_frontal(img, pose, mask_name, scale):
     # frontal_mask, frontal_add_mask, frontal_rest = \
     #     separate_masks_type_proj(main_mask_on_image, add_mask_on_image, rest_mask_on_image)
 
-    frontal_mask, frontal_add_mask, frontal_rest = scale_down(img, fmmwb_arr, famwb_arr, frmwb_arr, scale)
+    frontal_mask, frontal_add_mask, frontal_rest = scale(img, fmmwb_arr, famwb_arr, frmwb_arr, scale_factor)
 
     return frontal_mask, frontal_add_mask, frontal_rest
 

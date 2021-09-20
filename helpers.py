@@ -52,26 +52,26 @@ def save_image(img_path, mask_name, img_output, output, bbox, bbox_ind, inc_bbox
 
 def resize_image(image, bbox):
     w_bbox = bbox[2] - bbox[0]
-    l_bbox = bbox[3] - bbox[1]
-    max_dim = max(w_bbox, l_bbox)
+    h_bbox = bbox[3] - bbox[1]
+    max_dim = max(w_bbox, h_bbox)
     scale_img = BBOX_REQUESTED_SIZE / max_dim
-    l_scaled = int(image.shape[0] * scale_img)
+    h_scaled = int(image.shape[0] * scale_img)
     w_scaled = int(image.shape[1] * scale_img)
-    resized_image = cv2.resize(image, (w_scaled, l_scaled))
+    resized_image = cv2.resize(image, (w_scaled, h_scaled))
 
     return resized_image, scale_img
 
 
 @profile
-def scale_down(img, frontal_mask, frontal_add_mask, frontal_rest, scale):
+def scale(img, frontal_mask, frontal_add_mask, frontal_rest, scale_factor):
 
-    frontal_mask_scaled = (frontal_mask / scale).astype(int)
-    frontal_add_mask_scaled = (frontal_add_mask / scale).astype(int)
-    frontal_rest_scaled = (frontal_rest / scale).astype(int)
+    frontal_mask_scaled = (frontal_mask / scale_factor).astype(int)
+    frontal_add_mask_scaled = (frontal_add_mask / scale_factor).astype(int)
+    frontal_rest_scaled = (frontal_rest / scale_factor).astype(int)
 
-    frontal_mask_img = mark_image_with_mask(img, frontal_mask_scaled[:, 0], frontal_mask_scaled[:, 1])
-    frontal_add_mask_img = mark_image_with_mask(img, frontal_add_mask_scaled[:, 0], frontal_add_mask_scaled[:, 1])
-    frontal_rest_img = mark_image_with_mask(img, frontal_rest_scaled[:, 0], frontal_rest_scaled[:, 1])
+    frontal_mask_img = mark_image_with_mask(img, frontal_mask_scaled[:, 0], frontal_mask_scaled[:, 1], scale_factor)
+    frontal_add_mask_img = mark_image_with_mask(img, frontal_add_mask_scaled[:, 0], frontal_add_mask_scaled[:, 1], scale_factor)
+    frontal_rest_img = mark_image_with_mask(img, frontal_rest_scaled[:, 0], frontal_rest_scaled[:, 1], scale_factor)
 
     frontal_mask, frontal_add_mask, frontal_rest = \
         separate_masks_type_proj(frontal_mask_img, frontal_add_mask_img, frontal_rest_img)
@@ -164,8 +164,9 @@ def color_face_mask(img, color, mask_x, mask_y, rest_mask_x, rest_mask_y, mask_n
     return img_output
 
 
-def mark_image_with_mask(img, x_coords, y_coords):
-    mask_on_image = np.zeros((img.shape[0], img.shape[1]))
+def mark_image_with_mask(img, x_coords, y_coords, scale):
+    img_y_dim, img_x_dim = int(img.shape[0]/scale), int(img.shape[1]/scale)
+    mask_on_image = np.zeros((img_y_dim, img_x_dim))
     for x, y in zip(x_coords, y_coords):
         mask_on_image[y, x] = 1
 

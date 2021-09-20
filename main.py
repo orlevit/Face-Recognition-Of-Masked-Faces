@@ -43,14 +43,14 @@ def main(args):
         pose, bbox = get_1id_pose(results, img, args.threshold)
 
         # TODO: RESIZE back
-        r_img, scale_img = resize_image(img, bbox)
+        r_img, scale_factor = resize_image(img, bbox)
 
         # face detected with img2pose and above the threshold
         if pose.size != 0:
             # for mask, mask_add, rest_of_head, mask_name in zip(masks, masks_add, rest_of_heads, MASKS_NAMES):
             for mask_name in masks_to_create:
                 # Get the location of the masks on the image
-                mask_x, mask_y, rest_mask_x, rest_mask_y = render(r_img, pose, mask_name, scale_img)
+                mask_x, mask_y, rest_mask_x, rest_mask_y = render(img, r_img, pose, mask_name, scale_factor)
 
                 # The average color of the surrounding of the image
                 color = bg_color(mask_x, mask_y, img)
