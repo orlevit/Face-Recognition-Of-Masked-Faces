@@ -9,9 +9,8 @@ from create_masks import masks_templates, bg_color, render
 from helpers import get_model, save_image, get_1id_pose, read_images, color_face_mask, parse_arguments, resize_image
 from line_profiler_pycharm import profile
 
-
-# TODO: RESIZE back the the cropped image and take the
-#  pixels from theoriginal one
+# TODO: 1)run small exaples
+# TODO: 2)RESIZE back the the cropped image and take the pixels from the original one # the constand need to be in config
 # TODO: run in multithreads
 # TODO: add option for run in multithreads
 # TODO: change coronamask to covid19 mask
@@ -53,7 +52,6 @@ def main(args):
                 color = bg_color(mask_x, mask_y, r_img)
 
                 # Put the colored mask on the face in the image
-                #TODO: problem with the bg it is not on all the image
                 masked_image = color_face_mask(r_img, color, mask_x, mask_y, rest_mask_x, rest_mask_y, mask_name, config)
 
                 # Save masked image
