@@ -51,7 +51,6 @@ def make_eye_mask(x, y):
     a2, b2, c2 = np.polyfit(x_3points, y_3points1, 2)
 
     index_list = get_eyes_mask_index(a1, b1, c1, a2, b2, c2, x_left, x_right, x, y)
-
     return index_list
 
 

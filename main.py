@@ -9,6 +9,8 @@ from create_masks import masks_templates, bg_color, render
 from helpers import get_model, save_image, get_1id_pose, read_images, color_face_mask, parse_arguments, resize_image
 from line_profiler_pycharm import profile
 
+# TODO: 0.1) what to do with more than 3 cluters
+# TODO: 0.2) check again the sunglasses, if the back glass is shown
 # TODO: 1)run small exaples
 # TODO: 2) profiling the code
 # TODO: 3)run ALL masks

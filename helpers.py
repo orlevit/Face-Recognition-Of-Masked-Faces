@@ -10,8 +10,9 @@ sys.path.append('./img2pose')
 from torchvision import transforms
 from img2pose import img2poseModel
 from model_loader import load_model
-from config_file import DEPTH, MAX_SIZE, MIN_SIZE, POSE_MEAN, POSE_STDDEV, MODEL_PATH, \
-    PATH_3D_POINTS, ALL_MASKS, BBOX_REQUESTED_SIZE
+from project_on_image import transform_vertices
+from config_file import config, DEPTH, MAX_SIZE, MIN_SIZE, POSE_MEAN, POSE_STDDEV, MODEL_PATH, \
+    PATH_3D_POINTS, ALL_MASKS, BBOX_REQUESTED_SIZE, EYE_MASK_NAME
 from line_profiler_pycharm import profile
 
 
@@ -62,39 +63,48 @@ def resize_image(image, bbox):
     return resized_image, scale_img
 
 
-@profile
-def scale(img, frontal_mask, frontal_add_mask, frontal_rest, scale_factor):
+def masks_parts_dataframe(r_img, pose, mask_name):
+    # An indication whether it is a mask coordinate, additional  mask or rest of the head and add them to the matrices
+    mask_marks = 3 * np.ones([config[mask_name].mask_ind.shape[0], 1], dtype=bool)
+    mask_stacked = np.hstack((config[mask_name].mask_ind, mask_marks))
+    rest_marks = np.ones([config[mask_name].rest_ind.shape[0], 1], dtype=bool)
+    rest_stacked = np.hstack((config[mask_name].rest_ind, rest_marks))
 
-    frontal_mask_scaled = (frontal_mask / scale_factor).astype(int)
-    frontal_add_mask_scaled = (frontal_add_mask / scale_factor).astype(int)
-
-    frontal_mask_img = mark_image_with_mask(img, frontal_mask_scaled[:, 0], frontal_mask_scaled[:, 1], scale_factor)
-    frontal_add_mask_img = mark_image_with_mask(img, frontal_add_mask_scaled[:, 0], frontal_add_mask_scaled[:, 1], scale_factor)
-
-    if frontal_rest:
-        frontal_rest_scaled = (frontal_rest / scale_factor).astype(int)
-        frontal_rest_img = mark_image_with_mask(img, frontal_rest_scaled[:, 0], frontal_rest_scaled[:, 1], scale_factor)
-
+    if isinstance(config[mask_name].mask_add_ind, type(None)):
+        combined_float = np.vstack((mask_stacked, rest_stacked))
     else:
-        frontal_rest_img = [0]
+        mask_add_marks = 2 * np.ones([config[mask_name].mask_add_ind.shape[0], 1], dtype=bool)
+        mask_add_stacked = np.hstack((config[mask_name].mask_add_ind, mask_add_marks))
+        combined_float = np.vstack((mask_stacked, mask_add_stacked, rest_stacked))
 
-    frontal_mask, frontal_add_mask, frontal_rest = \
-        separate_masks_type_proj(frontal_mask_img, frontal_add_mask_img, frontal_rest_img)
+    # Masks projection on the image plane
+    combined_float[:, :3] = transform_vertices(r_img, pose, combined_float[:, :3])
 
-    return frontal_mask, frontal_add_mask, frontal_rest
+    # turn values from float to integer
+    combined = np.round(combined_float).astype(int)
+    df = pd.DataFrame(combined, columns=['x', 'y', 'z', 'mask'])
+    df_in_range = df[((0 <= df.x) & (df.x <= r_img.shape[1] - 1)) & ((0 <= df.y) & (df.y <= r_img.shape[0] - 1))]
+
+    return df_in_range
 
 
 @profile
-def separate_masks_type_proj(main_mask_on_image, add_mask_on_image, rest_mask_on_image):
-    mask_on_image = 4 * main_mask_on_image + 2 * add_mask_on_image + rest_mask_on_image
+def scale(img, most_important_mask, second_important_mask, third_important_mask, scale_factor):
+    most_mask_img = mark_image_with_mask(most_important_mask, img, scale_factor)
+    second_mask_img = mark_image_with_mask(second_important_mask, img, scale_factor)
+    third_img = mark_image_with_mask(third_important_mask, img, scale_factor)
+
+    mask_on_image = np.multiply(4, most_mask_img) + \
+                    np.multiply(2, second_mask_img) +\
+                    np.multiply(1, third_img)
 
     # Each pixel is main mask/additional strings or rest of the head, the numbers 1/2/4 are arbitrary,
     # and used to get the relevant type even when there are overlapping
-    frontal_mask = np.asarray(np.where(np.isin(mask_on_image, [4, 5, 6, 7])))[[1, 0], :].T
-    frontal_add_mask = np.asarray(np.where(np.isin(mask_on_image, [2, 3])))[[1, 0], :].T
-    frontal_rest = np.asarray(np.where(mask_on_image == 1))[[1, 0], :].T
+    most_mask = np.asarray(np.where(np.isin(mask_on_image, [4, 5, 6, 7])))[[1, 0], :].T
+    second_mask = np.asarray(np.where(np.isin(mask_on_image, [2, 3])))[[1, 0], :].T
+    third_rest = np.asarray(np.where(mask_on_image == 1))[[1, 0], :].T
 
-    return frontal_mask, frontal_add_mask, frontal_rest
+    return most_mask, second_mask, third_rest
 
 
 def crop_bbox(img, bbox, inc_bbox):
@@ -169,11 +179,15 @@ def color_face_mask(img, color, mask_x, mask_y, rest_mask_x, rest_mask_y, mask_n
     return img_output
 
 
-def mark_image_with_mask(img, x_coords, y_coords, scale):
-    img_y_dim, img_x_dim = int(img.shape[0]/scale), int(img.shape[1]/scale)
-    mask_on_image = np.zeros((img_y_dim, img_x_dim))
-    for x, y in zip(x_coords, y_coords):
-        mask_on_image[min(y, img_y_dim -1), min(x, img_x_dim -1)] = 1
+def mark_image_with_mask(frontal_coords, img, scale_factor):
+    mask_on_image = [0]
+
+    if len(frontal_coords):
+        frontal_coords_scaled = (frontal_coords / scale_factor).astype(int)
+        img_y_dim, img_x_dim = int(img.shape[0] / scale_factor), int(img.shape[1] / scale_factor)
+        mask_on_image = np.zeros((img_y_dim, img_x_dim))
+        for x, y in zip(frontal_coords_scaled[:, 0], frontal_coords_scaled[:, 1]):
+            mask_on_image[min(y, img_y_dim - 1), min(x, img_x_dim - 1)] = 1
 
     return mask_on_image
 

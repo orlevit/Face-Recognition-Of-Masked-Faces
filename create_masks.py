@@ -3,8 +3,7 @@ import numpy as np
 import pandas as pd
 from time import time
 from skimage.filters import threshold_otsu
-from project_on_image import transform_vertices
-from helpers import scale
+from helpers import scale, masks_parts_dataframe
 from masks_indices import make_eye_mask, make_hat_mask, make_corona_mask, \
     make_scarf_mask, make_sunglasses_mask
 from config_file import config, VERTICES_PATH, EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, CORONA_MASK_NAME, \
@@ -20,20 +19,20 @@ def render(img, r_img, pose, mask_name, scale_factor):
 
     # Whether to add the forehead to the mask, this is currently only used for eye and hat masks
     if config[mask_name].add_forehead:
-        mask_x, mask_y = add_forehead_mask(img, pose)
+        mask_x, mask_y = add_forehead_mask(img, r_img, pose, scale_factor)
         mask_x, mask_y = np.append(mask_x, frontal_mask[:, 0]), np.append(mask_y, frontal_mask[:, 1])
     else:
         mask_x, mask_y = frontal_mask[:, 0], frontal_mask[:, 1]
 
-    mask_add_x, mask_add_y = frontal_add_mask[:, 0], frontal_add_mask[:, 1]
+    morph_mask_x, morph_mask_y = morphological_op(mask_x, mask_y, img, config[mask_name].filter_size)
 
-    # Perform morphological close
-    morph_mask_main_x, morph_mask_main_y = morphological_op(mask_x, mask_y, img, config[mask_name].filter_size)
-    morph_mask_add_x, morph_mask_add_y = morphological_op(mask_add_x, mask_add_y, img,
-                                                          FILTER_SIZE_MASK_ADD_LEFT_POINT,
-                                                          FILTER_SIZE_MASK_ADD_RIGHT_POINT, cv2.MORPH_DILATE)
-    morph_mask_x = np.append(morph_mask_main_x, morph_mask_add_x)
-    morph_mask_y = np.append(morph_mask_main_y, morph_mask_add_y)
+    if not isinstance(config[mask_name].mask_add_ind, type(None)):
+        mask_add_x, mask_add_y = frontal_add_mask[:, 0], frontal_add_mask[:, 1]
+        morph_mask_add_x, morph_mask_add_y = morphological_op(mask_add_x, mask_add_y, img,
+                                                              FILTER_SIZE_MASK_ADD_LEFT_POINT,
+                                                              FILTER_SIZE_MASK_ADD_RIGHT_POINT, cv2.MORPH_DILATE)
+        morph_mask_x = np.append(morph_mask_x, morph_mask_add_x)
+        morph_mask_y = np.append(morph_mask_y, morph_mask_add_y)
 
     if config[mask_name].draw_rest_mask:
         rest_x, rest_y = frontal_rest[:, 0], frontal_rest[:, 1]
@@ -120,24 +119,7 @@ def threshold_front(r_img, df, frontal_mask_all):
 # TODO: project  images without added strings on image
 @profile
 def get_frontal(r_img, pose, mask_name, scale_factor):
-    # Not working with "config[mask_name].mask_add_ind = None" !!!
-
-    # An indication whether it is a mask coordinate, additional  mask or rest of the head and add them to the matrices
-    mask_marks = 3 * np.ones([config[mask_name].mask_ind.shape[0], 1], dtype=bool)
-    mask_add_marks = 2 * np.ones([config[mask_name].mask_add_ind.shape[0], 1], dtype=bool)
-    rest_marks = np.ones([config[mask_name].rest_ind.shape[0], 1], dtype=bool)
-    mask_stacked = np.hstack((config[mask_name].mask_ind, mask_marks))
-    mask_add_stacked = np.hstack((config[mask_name].mask_add_ind, mask_add_marks))
-    rest_stacked = np.hstack((config[mask_name].rest_ind, rest_marks))
-    combined_float = np.vstack((mask_stacked, mask_add_stacked, rest_stacked))
-
-    # Masks projection on the image plane
-    combined_float[:, :3] = transform_vertices(r_img, pose, combined_float[:, :3])
-
-    # turn values from float to integer
-    combined = np.round(combined_float).astype(int)
-    df = pd.DataFrame(combined, columns=['x', 'y', 'z', 'mask'])
-    df = df[((0 <= df.x) & (df.x <= r_img.shape[1] - 1)) & ((0 <= df.y) & (df.y <= r_img.shape[0] - 1))]
+    df = masks_parts_dataframe(r_img, pose, mask_name)
 
     # Order the coordinates by z, remove duplicates x,y,mask values and keep the first occurrence
     # Only the closer z pixels is consider as a candidate for appearing in that pixel
@@ -151,18 +133,21 @@ def get_frontal(r_img, pose, mask_name, scale_factor):
     famwb_arr = threshold_front(r_img, df, frontal_add_mask_with_bg)
     # TODO: Switch comments to take frontal mask center if NOT multithread!
     ############## Switch comments to take frontal mask center if NOT multithread! #######################################
-    # main_mask_on_image = threshold_front(img, df, frontal_main_mask_with_bg)
-    # main_mask_on_image = mark_image_with_mask(img, frontal_main_mask_with_bg.x, frontal_main_mask_with_bg.y)
-    fmmwb_arr = frontal_main_mask_with_bg[['x', 'y']].to_numpy()
+    fmmwb_arr = threshold_front(r_img, df, frontal_main_mask_with_bg)
+    # fmmwb_arr = frontal_main_mask_with_bg[['x', 'y']].to_numpy()
     #####################################################################################################################
     # rest_mask_on_image = mark_image_with_mask(img, frontal_rest_mask_with_bg.x, frontal_rest_mask_with_bg.y)
+
 
     if config[mask_name].draw_rest_mask:
         frmwb_arr = frontal_rest_mask_with_bg[['x', 'y']].to_numpy()
     else:
         frmwb_arr = []
 
-    frontal_mask, frontal_add_mask, frontal_rest = scale(r_img, fmmwb_arr, famwb_arr, frmwb_arr, scale_factor)
+    if mask_name == EYE_MASK_NAME:
+        frontal_rest, frontal_add_mask, frontal_mask = scale(r_img, frmwb_arr, famwb_arr, fmmwb_arr, scale_factor)
+    else:
+        frontal_mask, frontal_add_mask, frontal_rest = scale(r_img, fmmwb_arr, famwb_arr, frmwb_arr, scale_factor)
 
     return frontal_mask, frontal_add_mask, frontal_rest
 
@@ -233,8 +218,8 @@ def morphological_op(mask_x, mask_y, image, left_filter_size=config[EYE_MASK_NAM
     return xx, yy
 
 
-def add_forehead_mask(image, pose):  # , mask_trans_vertices, rest_trans_vertices):
-    frontal_mask, frontal_add_mask, frontal_rest = get_frontal(image, pose, HAT_MASK_NAME)
+def add_forehead_mask(image, r_image, pose, scale_factor):  # , mask_trans_vertices, rest_trans_vertices):
+    frontal_mask, frontal_add_mask, frontal_rest = get_frontal(r_image, pose, HAT_MASK_NAME, scale_factor)
 
     # Perform morphological close
     morph_mask_x, morph_mask_y = morphological_op(frontal_mask[:, 0], frontal_mask[:, 1],
