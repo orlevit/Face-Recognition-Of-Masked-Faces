@@ -4,7 +4,7 @@ import pandas as pd
 from time import time
 from skimage.filters import threshold_otsu
 from project_on_image import transform_vertices
-from helpers import scale, mark_image_with_mask, separate_masks_type_proj
+from helpers import scale
 from masks_indices import make_eye_mask, make_hat_mask, make_corona_mask, \
     make_scarf_mask, make_sunglasses_mask
 from config_file import config, VERTICES_PATH, EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, CORONA_MASK_NAME, \
@@ -26,7 +26,6 @@ def render(img, r_img, pose, mask_name, scale_factor):
         mask_x, mask_y = frontal_mask[:, 0], frontal_mask[:, 1]
 
     mask_add_x, mask_add_y = frontal_add_mask[:, 0], frontal_add_mask[:, 1]
-    rest_x, rest_y = frontal_rest[:, 0], frontal_rest[:, 1]
 
     # Perform morphological close
     morph_mask_main_x, morph_mask_main_y = morphological_op(mask_x, mask_y, img, config[mask_name].filter_size)
@@ -37,6 +36,7 @@ def render(img, r_img, pose, mask_name, scale_factor):
     morph_mask_y = np.append(morph_mask_main_y, morph_mask_add_y)
 
     if config[mask_name].draw_rest_mask:
+        rest_x, rest_y = frontal_rest[:, 0], frontal_rest[:, 1]
         morph_rest_x, morph_rest_y = morphological_op(rest_x, rest_y, img, config[mask_name].filter_size)
     else:
         morph_rest_x, morph_rest_y = None, None
@@ -45,13 +45,21 @@ def render(img, r_img, pose, mask_name, scale_factor):
 
 
 @profile
-def cell_neighbors(x_pixel, y_pixel, max_x, max_y):
+def neighbors_cells_z(mask_on_img, x_pixel, y_pixel, max_x, max_y):
     x_right_limit = min(x_pixel + NEAR_NEIGHBOUR_STRIDE, max_x)
     y_upper_limit = min(y_pixel + NEAR_NEIGHBOUR_STRIDE, max_y)
     x_left_limit = max(x_pixel - NEAR_NEIGHBOUR_STRIDE, 0)
     y_bottom_limit = max(y_pixel - NEAR_NEIGHBOUR_STRIDE, 0)
 
-    return [(x, y) for x in range(x_left_limit, x_right_limit + 1) for y in range(y_bottom_limit, y_upper_limit + 1)]
+    z_neighbors = []
+
+    for x in range(x_left_limit, x_right_limit + 1):
+        for y in range(y_bottom_limit, y_upper_limit + 1):
+            if not isinstance(mask_on_img[y, x], type(None)):
+                z_neighbors.extend(mask_on_img[y, x])
+
+    return z_neighbors
+
 
 @profile
 def clustering(elements_list):
@@ -79,45 +87,39 @@ def clustering(elements_list):
 
 
 @profile
-def threshold_front(img, df, frontal_mask_all):
-    img_x_dim, img_y_dim = img.shape[1], img.shape[0]
+def threshold_front(r_img, df, frontal_mask_all):
+    img_x_dim, img_y_dim = r_img.shape[1], r_img.shape[0]
     mask_on_img = np.asarray([[None] * img_x_dim] * img_y_dim)
     mask_on_img_front = np.zeros((img_y_dim, img_x_dim))
 
     # Each pixel contains a list of all the Z coordinates from the 3D model
     for x, y, z in zip(df.x, df.y, df.z):
-        if type(mask_on_img[y, x]) == type(None):
+        if isinstance(mask_on_img[y, x], type(None)):
             mask_on_img[y, x] = [z]
         else:
             mask_on_img[y, x].append(z)
 
     for x, y, z in zip(frontal_mask_all.x, frontal_mask_all.y, frontal_mask_all.z):
-        surrounding_mask = []
-        for (x_neighbor, y_neighbor) in cell_neighbors(x, y, img_x_dim, img_y_dim):
-            if type(mask_on_img[y_neighbor, x_neighbor]) != type(None):
-                surrounding_mask.extend(mask_on_img[y_neighbor, x_neighbor])
-
+        surrounding_mask = neighbors_cells_z(mask_on_img, x, y, img_x_dim - 1, img_y_dim - 1)
         mask_on_img_front[y, x] = 1
 
-        if len(surrounding_mask) != 0:
-            if len(np.unique(surrounding_mask)) != 1:
-                cluster1, cluster2 = clustering(surrounding_mask)
-                diff = abs(cluster1 - cluster2)
-                if SAME_AREA_DIST < diff:
-                    min_cluster = min(cluster1, cluster2)
-                    threshold_buffer = diff * THRESHOLD_BUFFER
-                    threshold = min_cluster + threshold_buffer
-                    frontal_ind = 0 if z < threshold else 1
-                    mask_on_img_front[y, x] = frontal_ind
+        if len(np.unique(surrounding_mask)) not in [0, 1]:
+            cluster1, cluster2 = clustering(surrounding_mask)
+            diff = abs(cluster1 - cluster2)
+            if SAME_AREA_DIST < diff:
+                min_cluster = min(cluster1, cluster2)
+                threshold_buffer = diff * THRESHOLD_BUFFER
+                threshold = min_cluster + threshold_buffer
+                mask_on_img_front[y, x] = 0 if z < threshold else 1
 
-    mask_inds = np.asarray(np.where(mask_on_img_front == 1)).T[:, [1, 0]]
+    mask_marks = np.asarray(np.where(mask_on_img_front == 1)).T[:, [1, 0]]
 
-    return mask_inds
+    return mask_marks
 
 
 # TODO: project  images without added strings on image
 @profile
-def get_frontal(img, pose, mask_name, scale_factor):
+def get_frontal(r_img, pose, mask_name, scale_factor):
     # Not working with "config[mask_name].mask_add_ind = None" !!!
 
     # An indication whether it is a mask coordinate, additional  mask or rest of the head and add them to the matrices
@@ -130,12 +132,12 @@ def get_frontal(img, pose, mask_name, scale_factor):
     combined_float = np.vstack((mask_stacked, mask_add_stacked, rest_stacked))
 
     # Masks projection on the image plane
-    combined_float[:, :3] = transform_vertices(img, pose, combined_float[:, :3])
+    combined_float[:, :3] = transform_vertices(r_img, pose, combined_float[:, :3])
 
     # turn values from float to integer
     combined = np.round(combined_float).astype(int)
     df = pd.DataFrame(combined, columns=['x', 'y', 'z', 'mask'])
-    df = df[((0 <= df.x) & (df.x <= img.shape[1] - 1)) & ((0 <= df.y) & (df.y <= img.shape[0] - 1))]
+    df = df[((0 <= df.x) & (df.x <= r_img.shape[1] - 1)) & ((0 <= df.y) & (df.y <= r_img.shape[0] - 1))]
 
     # Order the coordinates by z, remove duplicates x,y,mask values and keep the first occurrence
     # Only the closer z pixels is consider as a candidate for appearing in that pixel
@@ -146,7 +148,7 @@ def get_frontal(img, pose, mask_name, scale_factor):
     frontal_rest_mask_with_bg = unique_df[(unique_df['mask'] == 1)][['x', 'y', 'z']]
 
     # Check each point if it is came from frontal or hidden area of tha face
-    famwb_arr = threshold_front(img, df, frontal_add_mask_with_bg)
+    famwb_arr = threshold_front(r_img, df, frontal_add_mask_with_bg)
     # TODO: Switch comments to take frontal mask center if NOT multithread!
     ############## Switch comments to take frontal mask center if NOT multithread! #######################################
     # main_mask_on_image = threshold_front(img, df, frontal_main_mask_with_bg)
@@ -154,12 +156,13 @@ def get_frontal(img, pose, mask_name, scale_factor):
     fmmwb_arr = frontal_main_mask_with_bg[['x', 'y']].to_numpy()
     #####################################################################################################################
     # rest_mask_on_image = mark_image_with_mask(img, frontal_rest_mask_with_bg.x, frontal_rest_mask_with_bg.y)
-    frmwb_arr = frontal_rest_mask_with_bg[['x', 'y']].to_numpy()
 
-    # frontal_mask, frontal_add_mask, frontal_rest = \
-    #     separate_masks_type_proj(main_mask_on_image, add_mask_on_image, rest_mask_on_image)
+    if config[mask_name].draw_rest_mask:
+        frmwb_arr = frontal_rest_mask_with_bg[['x', 'y']].to_numpy()
+    else:
+        frmwb_arr = []
 
-    frontal_mask, frontal_add_mask, frontal_rest = scale(img, fmmwb_arr, famwb_arr, frmwb_arr, scale_factor)
+    frontal_mask, frontal_add_mask, frontal_rest = scale(r_img, fmmwb_arr, famwb_arr, frmwb_arr, scale_factor)
 
     return frontal_mask, frontal_add_mask, frontal_rest
 
@@ -215,7 +218,6 @@ def calc_filter_size(mask_x, mask_y, left_filter_size, right_filter_dim):
 
 def morphological_op(mask_x, mask_y, image, left_filter_size=config[EYE_MASK_NAME].filter_size,
                      right_filter_dim=FILTER_SIZE_MASK_RIGHT_POINT, morph_op=cv2.MORPH_CLOSE):
-
     mask_on_image = np.zeros_like(image)
     for x, y in zip(mask_x, mask_y):
         mask_on_image[y, x, :] = [255, 255, 255]

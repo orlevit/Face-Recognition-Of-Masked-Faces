@@ -44,8 +44,8 @@ def save_image(img_path, mask_name, img_output, output, bbox, bbox_ind, inc_bbox
         os.makedirs(image_dst_dir)
 
     # Save the image
-    # if bbox_ind:
-    #     img_output = crop_bbox(img_output, bbox, inc_bbox)
+    if bbox_ind:
+        img_output = crop_bbox(img_output, bbox, inc_bbox)
 
     cv2.imwrite(image_dst, img_output)
 
@@ -67,11 +67,16 @@ def scale(img, frontal_mask, frontal_add_mask, frontal_rest, scale_factor):
 
     frontal_mask_scaled = (frontal_mask / scale_factor).astype(int)
     frontal_add_mask_scaled = (frontal_add_mask / scale_factor).astype(int)
-    frontal_rest_scaled = (frontal_rest / scale_factor).astype(int)
 
     frontal_mask_img = mark_image_with_mask(img, frontal_mask_scaled[:, 0], frontal_mask_scaled[:, 1], scale_factor)
     frontal_add_mask_img = mark_image_with_mask(img, frontal_add_mask_scaled[:, 0], frontal_add_mask_scaled[:, 1], scale_factor)
-    frontal_rest_img = mark_image_with_mask(img, frontal_rest_scaled[:, 0], frontal_rest_scaled[:, 1], scale_factor)
+
+    if frontal_rest:
+        frontal_rest_scaled = (frontal_rest / scale_factor).astype(int)
+        frontal_rest_img = mark_image_with_mask(img, frontal_rest_scaled[:, 0], frontal_rest_scaled[:, 1], scale_factor)
+
+    else:
+        frontal_rest_img = [0]
 
     frontal_mask, frontal_add_mask, frontal_rest = \
         separate_masks_type_proj(frontal_mask_img, frontal_add_mask_img, frontal_rest_img)

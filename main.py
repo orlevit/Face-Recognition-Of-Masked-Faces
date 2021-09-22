@@ -42,11 +42,11 @@ def main(args):
         # Get only one 6DOF from all the 6DFs that img2pose found
         pose, bbox = get_1id_pose(results, img, args.threshold)
 
-        # TODO: RESIZE back
-        r_img, scale_factor = resize_image(img, bbox)
-
         # face detected with img2pose and above the threshold
         if pose.size != 0:
+            # Resize image that ROI will be in a fix size
+            r_img, scale_factor = resize_image(img, bbox)
+
             # for mask, mask_add, rest_of_head, mask_name in zip(masks, masks_add, rest_of_heads, MASKS_NAMES):
             for mask_name in masks_to_create:
                 # Get the location of the masks on the image
