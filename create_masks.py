@@ -2,13 +2,15 @@ import cv2
 import numpy as np
 import pandas as pd
 from time import time
+from sklearn.cluster import KMeans
 from skimage.filters import threshold_otsu
 from helpers import scale, masks_parts_dataframe
 from masks_indices import make_eye_mask, make_hat_mask, make_corona_mask, \
     make_scarf_mask, make_sunglasses_mask
 from config_file import config, VERTICES_PATH, EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, CORONA_MASK_NAME, \
     SUNGLASSES_MASK_NAME, NEAR_NEIGHBOUR_STRIDE, MIN_MASK_SIZE, FILTER_MASK_RIGHT_POINT_IMAGE_SIZE, SAME_AREA_DIST, \
-    FILTER_SIZE_MASK_RIGHT_POINT, FILTER_SIZE_MASK_ADD_LEFT_POINT, FILTER_SIZE_MASK_ADD_RIGHT_POINT, THRESHOLD_BUFFER
+    FILTER_SIZE_MASK_RIGHT_POINT, FILTER_SIZE_MASK_ADD_LEFT_POINT, FILTER_SIZE_MASK_ADD_RIGHT_POINT, THRESHOLD_BUFFER, \
+    STD_CHECK
 from line_profiler_pycharm import profile
 
 
@@ -60,13 +62,28 @@ def neighbors_cells_z(mask_on_img, x_pixel, y_pixel, max_x, max_y):
     return z_neighbors
 
 
+def kmean_clustring(elements, clusters_std):
+    cluster_number = 3
+
+    while (clusters_std >= STD_CHECK).any():
+        kmeans = KMeans(n_clusters=cluster_number, random_state=0).fit(np.asarray(elements)[:, None])
+        clusters_std = np.asarray([np.std(elements[kmeans.labels_ == i]) for i in range(cluster_number)])
+        cluster_number += 1
+
+    highest_clusters = np.argpartition(kmeans.cluster_centers_, -2, axis=0)[-2:]
+    cluster1 = kmeans.cluster_centers_[highest_clusters[0]]
+    cluster2 = kmeans.cluster_centers_[highest_clusters[1]]
+
+    return cluster1, cluster2
+
+
 @profile
-def clustering(elements_list):
-    threshold = threshold_otsu(np.array(elements_list))
+def otsu_clustering(elements):
+    threshold = threshold_otsu(elements)
     cluster1_arr = []
     cluster2_arr = []
     equal_threshold = []
-    for i in elements_list:
+    for i in elements:
         if i < threshold:
             cluster1_arr.append(i)
         elif i > threshold:
@@ -81,6 +98,19 @@ def clustering(elements_list):
 
     cluster1 = np.mean(cluster1_arr)
     cluster2 = np.mean(cluster2_arr)
+    cluster1_std = int(round(np.std(cluster1_arr), 0))
+    cluster2_std = int(round(np.std(cluster2_arr), 0))
+
+    return cluster1, cluster2, cluster1_std, cluster2_std
+
+
+def clustering(elements_list):
+    elements = np.asarray(elements_list)
+    cluster1, cluster2, otsu_cluster1_std, otsu_cluster2_std = otsu_clustering(elements)
+    clusters_std = np.array([otsu_cluster1_std, otsu_cluster2_std])
+
+    if (clusters_std >= STD_CHECK).any():
+        cluster1, cluster2 = kmean_clustring(elements, clusters_std)
 
     return cluster1, cluster2
 
@@ -137,7 +167,6 @@ def get_frontal(r_img, pose, mask_name, scale_factor):
     # fmmwb_arr = frontal_main_mask_with_bg[['x', 'y']].to_numpy()
     #####################################################################################################################
     # rest_mask_on_image = mark_image_with_mask(img, frontal_rest_mask_with_bg.x, frontal_rest_mask_with_bg.y)
-
 
     if config[mask_name].draw_rest_mask:
         frmwb_arr = frontal_rest_mask_with_bg[['x', 'y']].to_numpy()
