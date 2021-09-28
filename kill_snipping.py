@@ -8,6 +8,70 @@ import matplotlib.pyplot as plt
 from helpers import mark_image_with_mask
 import heapq
 
+###################################### calculate clusterings ################################
+
+def otsu_clustering(elements):
+    threshold = threshold_otsu(elements)
+    cluster1_arr = []
+    cluster2_arr = []
+    equal_threshold = []
+    for i in elements:
+        if i < threshold:
+            cluster1_arr.append(i)
+        elif i > threshold:
+            cluster2_arr.append(i)
+        else:
+            equal_threshold.append(i)
+
+    if not cluster1_arr:
+        cluster1_arr.extend(equal_threshold)
+    else:
+        cluster2_arr.extend(equal_threshold)
+
+    cluster1 = np.mean(cluster1_arr)
+    cluster2 = np.mean(cluster2_arr)
+    cluster1_std = int(round(np.std(cluster1_arr), 0))
+    cluster2_std = int(round(np.std(cluster2_arr), 0))
+
+    return cluster1, cluster2, cluster1_std, cluster2_std
+
+
+def clustering(elements_list):
+    a=0
+    b=0
+    elements = np.asarray(elements_list)
+    cluster1, cluster2, otsu_cluster1_std, otsu_cluster2_std = otsu_clustering(elements)
+    clusters_std = np.array([otsu_cluster1_std, otsu_cluster2_std])
+
+    if (clusters_std >= STD_CHECK).any():
+        a+=1
+        cluster1, cluster2 = kmean_clustering(elements, clusters_std)
+    else:
+        b+=1
+    return cluster1, cluster2,a,b
+
+
+def kmean_clustering(elements, clusters_std):
+    cluster_number = 3
+
+    while (clusters_std >= STD_CHECK).any():
+        if cluster_number == 4:
+            aaa=1
+            pass
+        # kmeans = KMeans(n_clusters=cluster_number, random_state=0).fit(elements[:, None])
+        kmeans = KMeans(n_clusters=cluster_number, n_init=1, max_iter=100, random_state=0, tol=0.5).fit(elements[:, None])
+        clusters_std = np.asarray([np.std(elements[kmeans.labels_ == i]) for i in range(cluster_number)])
+        cluster_number += 1
+
+    if cluster_number - 1 != 3 and cluster_number - 1 != 2:
+        print("cluster_number: ",cluster_number-1)
+    highest_clusters = np.argpartition(kmeans.cluster_centers_, -2, axis=0)[-2:]
+    cluster1 = kmeans.cluster_centers_[highest_clusters[0]]
+    cluster2 = kmeans.cluster_centers_[highest_clusters[1]]
+
+    return cluster1, cluster2
+################################################################################################
+###################### points stds on the images
 def dist(r_img, df,X_VALUE,Y_VALUE):
     unique_df = df.sort_values(['z', 'mask'], ascending=False).drop_duplicates(['x', 'y', 'mask'], keep='first')
     frontal_mask_all = unique_df[(unique_df['mask'] == 2)][['x', 'y', 'z']]

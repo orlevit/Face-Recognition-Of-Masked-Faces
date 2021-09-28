@@ -1,9 +1,7 @@
 import cv2
+import math
 import numpy as np
-import pandas as pd
-from time import time
-from sklearn.cluster import KMeans
-from skimage.filters import threshold_otsu
+from skimage.filters import threshold_multiotsu
 from helpers import scale, masks_parts_dataframe
 from masks_indices import make_eye_mask, make_hat_mask, make_corona_mask, \
     make_scarf_mask, make_sunglasses_mask
@@ -59,64 +57,61 @@ def neighbors_cells_z(mask_on_img, x_pixel, y_pixel, max_x, max_y):
             if not isinstance(mask_on_img[y, x], type(None)):
                 z_neighbors.extend(mask_on_img[y, x])
 
-    return z_neighbors
-
-
-def kmean_clustring(elements, clusters_std):
-    cluster_number = 3
-
-    while (clusters_std >= STD_CHECK).any():
-        kmeans = KMeans(n_clusters=cluster_number, random_state=0).fit(np.asarray(elements)[:, None])
-        clusters_std = np.asarray([np.std(elements[kmeans.labels_ == i]) for i in range(cluster_number)])
-        cluster_number += 1
-
-    highest_clusters = np.argpartition(kmeans.cluster_centers_, -2, axis=0)[-2:]
-    cluster1 = kmeans.cluster_centers_[highest_clusters[0]]
-    cluster2 = kmeans.cluster_centers_[highest_clusters[1]]
-
-    return cluster1, cluster2
+    return np.asarray(z_neighbors, dtype=np.float)
 
 
 @profile
-def otsu_clustering(elements):
-    threshold = threshold_otsu(elements)
-    cluster1_arr = []
-    cluster2_arr = []
-    equal_threshold = []
-    for i in elements:
-        if i < threshold:
-            cluster1_arr.append(i)
-        elif i > threshold:
-            cluster2_arr.append(i)
-        else:
-            equal_threshold.append(i)
+def clusters_means_stds(elements, thresholds):
+    means = []
+    big_std_ind = False
+    thresholds_with_inf =np.array([-math.inf])
+    thresholds_with_inf = np.append(thresholds_with_inf, thresholds)
+    thresholds_with_inf = np.append(thresholds_with_inf, math.inf)
 
-    if not cluster1_arr:
-        cluster1_arr.extend(equal_threshold)
-    else:
-        cluster2_arr.extend(equal_threshold)
+    for index in range(1, len(thresholds_with_inf)):
+        prev_threshold = thresholds_with_inf[index - 1]
+        current_threshold = thresholds_with_inf[index]
+        group_indices = np.where((prev_threshold < elements) & (elements <= current_threshold))
+        group_elements = elements[group_indices]
+        if group_elements.size:
+            means.append(np.mean(group_elements))
+            if not big_std_ind:
+                group_std = np.std(group_elements)
+                if STD_CHECK <= group_std:
+                    big_std_ind = True
 
-    cluster1 = np.mean(cluster1_arr)
-    cluster2 = np.mean(cluster2_arr)
-    cluster1_std = int(round(np.std(cluster1_arr), 0))
-    cluster2_std = int(round(np.std(cluster2_arr), 0))
+    if len(means) < 2:
+        raise("whyyyyy")
+        print("printtttttttttttttttt")
+        exit()
 
-    return cluster1, cluster2, cluster1_std, cluster2_std
+    return np.array(means), big_std_ind
 
+@profile
+def otsu_clustering(elements, bins_number=100):
+    condition = True
+    cluster_number = 2
 
-def clustering(elements_list):
-    elements = np.asarray(elements_list)
-    cluster1, cluster2, otsu_cluster1_std, otsu_cluster2_std = otsu_clustering(elements)
-    clusters_std = np.array([otsu_cluster1_std, otsu_cluster2_std])
+    while condition:
+        try:
+            thresholds = threshold_multiotsu(elements, classes=cluster_number, nbins=bins_number)
+            clusters, big_std_ind = clusters_means_stds(elements, thresholds)
+            condition = big_std_ind and (cluster_number < 3)
+            cluster_number += 1
 
-    if (clusters_std >= STD_CHECK).any():
-        cluster1, cluster2 = kmean_clustring(elements, clusters_std)
+        except ValueError:
+            condition = False
+
+    highest_clusters = np.argpartition(clusters, -2, axis=0)[-2:]
+    cluster1 = clusters[highest_clusters[0]]
+    cluster2 = clusters[highest_clusters[1]]
 
     return cluster1, cluster2
 
 
 @profile
 def threshold_front(r_img, df, frontal_mask_all):
+
     img_x_dim, img_y_dim = r_img.shape[1], r_img.shape[0]
     mask_on_img = np.asarray([[None] * img_x_dim] * img_y_dim)
     mask_on_img_front = np.zeros((img_y_dim, img_x_dim))
@@ -133,7 +128,7 @@ def threshold_front(r_img, df, frontal_mask_all):
         mask_on_img_front[y, x] = 1
 
         if len(np.unique(surrounding_mask)) not in [0, 1]:
-            cluster1, cluster2 = clustering(surrounding_mask)
+            cluster1, cluster2 = otsu_clustering(surrounding_mask)
             diff = abs(cluster1 - cluster2)
             if SAME_AREA_DIST < diff:
                 min_cluster = min(cluster1, cluster2)
@@ -142,7 +137,6 @@ def threshold_front(r_img, df, frontal_mask_all):
                 mask_on_img_front[y, x] = 0 if z < threshold else 1
 
     mask_marks = np.asarray(np.where(mask_on_img_front == 1)).T[:, [1, 0]]
-
     return mask_marks
 
 
