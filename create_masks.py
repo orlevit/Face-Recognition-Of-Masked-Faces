@@ -2,6 +2,8 @@ import cv2
 import math
 import numpy as np
 from skimage.filters import threshold_multiotsu
+from sklearn.cluster import KMeans
+
 from helpers import scale, masks_parts_dataframe
 from masks_indices import make_eye_mask, make_hat_mask, make_corona_mask, \
     make_scarf_mask, make_sunglasses_mask
@@ -87,6 +89,26 @@ def clusters_means_stds(elements, thresholds):
 
     return np.array(means), big_std_ind
 
+def kmean_clustering(elements):
+    big_std_ind = True
+    cluster_number = 2
+
+    while (cluster_number <=3) and big_std_ind :
+        i = 0
+        big_std_ind = False
+        kmeans = KMeans(n_clusters=cluster_number, random_state=0).fit(np.asarray(elements)[:,None])
+        while not big_std_ind and i < len(cluster_number):
+            cluster_std = np.std(elements[kmeans.labels_ == i])
+            if cluster_std >= STD_CHECK:
+                big_std_ind = True
+            i += 1
+
+    highest_clusters = np.argpartition(kmeans.cluster_centers_, -2, axis=0)[-2:]
+    cluster1 = kmeans.cluster_centers_[highest_clusters[0]]
+    cluster2 = kmeans.cluster_centers_[highest_clusters[1]]
+
+    return cluster1, cluster2
+
 @profile
 def otsu_clustering(elements, bins_number=100):
     condition = True
@@ -128,7 +150,7 @@ def threshold_front(r_img, df, frontal_mask_all):
         mask_on_img_front[y, x] = 1
 
         if len(np.unique(surrounding_mask)) not in [0, 1]:
-            cluster1, cluster2 = otsu_clustering(surrounding_mask)
+            cluster1, cluster2 = kmean_clustering(surrounding_mask)#otsu_clustering(surrounding_mask)
             diff = abs(cluster1 - cluster2)
             if SAME_AREA_DIST < diff:
                 min_cluster = min(cluster1, cluster2)
@@ -157,6 +179,8 @@ def get_frontal(r_img, pose, mask_name, scale_factor):
     famwb_arr = threshold_front(r_img, df, frontal_add_mask_with_bg)
     # TODO: Switch comments to take frontal mask center if NOT multithread!
     ############## Switch comments to take frontal mask center if NOT multithread! #######################################
+    from kill_snipping import plt_stds
+    plt_stds(r_img, df,STD_CHECK)
     fmmwb_arr = threshold_front(r_img, df, frontal_main_mask_with_bg)
     # fmmwb_arr = frontal_main_mask_with_bg[['x', 'y']].to_numpy()
     #####################################################################################################################
