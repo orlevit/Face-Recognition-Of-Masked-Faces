@@ -23,7 +23,7 @@ LEFT_FACE_PART = 'LEFT'
 RIGHT_FACE_PART = 'RIGHT'
 NEAR_NEIGHBOUR_STRIDE = 2
 BBOX_REQUESTED_SIZE = 500
-STD_CHECK = 30
+STD_CHECK = 20
 
 #center
 #img_size= [62,84,250,1888]
@@ -40,7 +40,8 @@ FILTER_DIM_MASK_ADD_LEFT_POINT = 4.021
 FILTER_SIZE_MASK_ADD_LEFT_POINT = (FILTER_DIM_MASK_ADD_LEFT_POINT, FILTER_DIM_MASK_ADD_LEFT_POINT)
 FILTER_SIZE_MASK_ADD_RIGHT_POINT = 26
 
-ALL_MASKS = f"{EYE_MASK_NAME},{HAT_MASK_NAME},{SCARF_MASK_NAME},{CORONA_MASK_NAME},{SUNGLASSES_MASK_NAME}"
+# Hat needs to be before the eyemask
+ALL_MASKS = f"{HAT_MASK_NAME},{EYE_MASK_NAME},{CORONA_MASK_NAME},{SUNGLASSES_MASK_NAME}"
 
 # ------------------------------------------------ masks configuration ------------------------------------------------
 config = {
@@ -54,7 +55,8 @@ config = {
         "add_forehead": True,
         "draw_rest_mask": True,
         "additional_masks_req": HAT_MASK_NAME,
-        "filter_size": (15, 15)
+        "filter_size": (15, 15),
+        "mask_front_points_calc": False
     },
     HAT_MASK_NAME: {
         "inds": {
@@ -65,7 +67,9 @@ config = {
         "add_forehead": True,
         "draw_rest_mask": False,
         "additional_masks_req": None,
-        "filter_size": (15, 15)
+        "filter_size": (15, 15),
+        "mask_front_points_calc": True,
+        "mask_exists": False
     },
     SCARF_MASK_NAME: {
         "inds": {
@@ -76,7 +80,8 @@ config = {
         "add_forehead": False,
         "draw_rest_mask": False,
         "additional_masks_req": None,
-        "filter_size": (15, 15)
+        "filter_size": (15, 15),
+        "mask_front_points_calc": True
     },
     CORONA_MASK_NAME: {
         "inds": {
@@ -96,7 +101,8 @@ config = {
         "add_forehead": False,
         "draw_rest_mask": False,
         "additional_masks_req": None,
-        "filter_size": (15, 15)
+        "filter_size": (15, 15),
+        "mask_front_points_calc": True
     },
     SUNGLASSES_MASK_NAME: {
         "inds": {
@@ -105,7 +111,8 @@ config = {
         "add_forehead": False,
         "draw_rest_mask": False,
         "additional_masks_req": None,
-        "filter_size": (8.095, 8.095)
+        "filter_size": (9.355, 9.355),
+        "mask_front_points_calc": True
     }
 }
 config = edict(config)

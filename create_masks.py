@@ -3,7 +3,7 @@ import math
 import numpy as np
 from skimage.filters import threshold_multiotsu
 from sklearn.cluster import KMeans
-
+from time import  time
 from helpers import scale, masks_parts_dataframe
 from masks_indices import make_eye_mask, make_hat_mask, make_corona_mask, \
     make_scarf_mask, make_sunglasses_mask
@@ -21,11 +21,16 @@ def render(img, r_img, pose, mask_name, scale_factor):
 
     # Whether to add the forehead to the mask, this is currently only used for eye and hat masks
     if config[mask_name].add_forehead:
-        mask_x, mask_y = add_forehead_mask(img, r_img, pose, scale_factor)
-        mask_x, mask_y = np.append(mask_x, frontal_mask[:, 0]), np.append(mask_y, frontal_mask[:, 1])
+        if mask_name == HAT_MASK_NAME:
+            forehead_x, forehead_y = add_forehead_mask(frontal_mask, frontal_rest, img)
+            config[HAT_MASK_NAME].forehead_x, config[HAT_MASK_NAME].forehead_y = forehead_x, forehead_y
+        else:
+            forehead_x, forehead_y = config[HAT_MASK_NAME].forehead_x, config[HAT_MASK_NAME].forehead_y
     else:
-        mask_x, mask_y = frontal_mask[:, 0], frontal_mask[:, 1]
+        forehead_x, forehead_y = [], []
 
+    mask_x = np.append(forehead_x, frontal_mask[:, 0]).astype(int)
+    mask_y = np.append(forehead_y, frontal_mask[:, 1]).astype(int)
     morph_mask_x, morph_mask_y = morphological_op(mask_x, mask_y, img, config[mask_name].filter_size)
 
     if not isinstance(config[mask_name].mask_add_ind, type(None)):
@@ -61,48 +66,37 @@ def neighbors_cells_z(mask_on_img, x_pixel, y_pixel, max_x, max_y):
 
     return np.asarray(z_neighbors, dtype=np.float)
 
+########### remove this below
+@profile
+def otsu_clustering3(elements):
+    threshold = threshold_multiotsu(elements, 3, nbins=max(len(elements)*10,500))
+    # cluster1_arr = elements[np.where(elements < threshold[0])]
+    cluster1_arr = elements[np.where((threshold[0] < elements) & (elements <= threshold[1]))]
+    cluster2_arr = elements[np.where(threshold[1] < elements)]
+
+    cluster1 = np.mean(cluster1_arr)
+    cluster2 = np.mean(cluster2_arr)
+
+    return cluster1, cluster2
 
 @profile
-def clusters_means_stds(elements, thresholds):
-    means = []
+def otsu_clustering(elements):
     big_std_ind = False
-    thresholds_with_inf =np.array([-math.inf])
-    thresholds_with_inf = np.append(thresholds_with_inf, thresholds)
-    thresholds_with_inf = np.append(thresholds_with_inf, math.inf)
+    threshold = threshold_multiotsu(elements, 2, nbins=200)
+    cluster1_arr = elements[np.where(elements < threshold)]
+    cluster2_arr = elements[np.where(threshold <= elements)]
+    if STD_CHECK <= np.std(cluster2_arr) or STD_CHECK <= np.std(cluster1_arr):
+        big_std_ind = True
+        return 0, 0, big_std_ind
 
-    for index in range(1, len(thresholds_with_inf)):
-        prev_threshold = thresholds_with_inf[index - 1]
-        current_threshold = thresholds_with_inf[index]
-        group_indices = np.where((prev_threshold < elements) & (elements <= current_threshold))
-        group_elements = elements[group_indices]
-        if group_elements.size:
-            means.append(np.mean(group_elements))
-            if not big_std_ind:
-                group_std = np.std(group_elements)
-                if STD_CHECK <= group_std:
-                    big_std_ind = True
+    cluster1 = np.mean(cluster1_arr)
+    cluster2 = np.mean(cluster2_arr)
 
-    if len(means) < 2:
-        raise("whyyyyy")
-        print("printtttttttttttttttt")
-        exit()
+    return cluster1, cluster2, big_std_ind
 
-    return np.array(means), big_std_ind
-
-def kmean_clustering(elements):
-    big_std_ind = True
-    cluster_number = 2
-
-    while (cluster_number <=3) and big_std_ind :
-        i = 0
-        big_std_ind = False
-        kmeans = KMeans(n_clusters=cluster_number, random_state=0).fit(np.asarray(elements)[:,None])
-        while not big_std_ind and i < len(cluster_number):
-            cluster_std = np.std(elements[kmeans.labels_ == i])
-            if cluster_std >= STD_CHECK:
-                big_std_ind = True
-            i += 1
-
+@profile
+def kmeans_clustering(elements):
+    kmeans = KMeans(n_clusters=3, n_init=1, max_iter=2, random_state=0, tol=2).fit(elements[:, None])
     highest_clusters = np.argpartition(kmeans.cluster_centers_, -2, axis=0)[-2:]
     cluster1 = kmeans.cluster_centers_[highest_clusters[0]]
     cluster2 = kmeans.cluster_centers_[highest_clusters[1]]
@@ -110,37 +104,33 @@ def kmean_clustering(elements):
     return cluster1, cluster2
 
 @profile
-def otsu_clustering(elements, bins_number=100):
-    condition = True
-    cluster_number = 2
+def clustering(elements_list):
+    a=0
+    b=0
+    elements = np.asarray(elements_list)
+    cluster1, cluster2, big_std_ind = otsu_clustering(elements)
+    a+=1
+    if big_std_ind:
+        a-=1
+        b+=1
+        cluster1, cluster2 = kmeans_clustering(elements)
 
-    while condition:
-        try:
-            thresholds = threshold_multiotsu(elements, classes=cluster_number, nbins=bins_number)
-            clusters, big_std_ind = clusters_means_stds(elements, thresholds)
-            condition = big_std_ind and (cluster_number < 3)
-            cluster_number += 1
-
-        except ValueError:
-            condition = False
-
-    highest_clusters = np.argpartition(clusters, -2, axis=0)[-2:]
-    cluster1 = clusters[highest_clusters[0]]
-    cluster2 = clusters[highest_clusters[1]]
-
-    return cluster1, cluster2
+    return cluster1, cluster2,a,b
 
 
 @profile
 def threshold_front(r_img, df, frontal_mask_all):
-
+    aa=0
+    bb=0
+    cc=0
     img_x_dim, img_y_dim = r_img.shape[1], r_img.shape[0]
     mask_on_img = np.asarray([[None] * img_x_dim] * img_y_dim)
     mask_on_img_front = np.zeros((img_y_dim, img_x_dim))
 
     # Each pixel contains a list of all the Z coordinates from the 3D model
     for x, y, z in zip(df.x, df.y, df.z):
-        if isinstance(mask_on_img[y, x], type(None)):
+        # if isinstance(mask_on_img[y, x], type(None)):
+        if mask_on_img[y, x] is None:
             mask_on_img[y, x] = [z]
         else:
             mask_on_img[y, x].append(z)
@@ -150,14 +140,24 @@ def threshold_front(r_img, df, frontal_mask_all):
         mask_on_img_front[y, x] = 1
 
         if len(np.unique(surrounding_mask)) not in [0, 1]:
-            cluster1, cluster2 = kmean_clustering(surrounding_mask)#otsu_clustering(surrounding_mask)
-            diff = abs(cluster1 - cluster2)
-            if SAME_AREA_DIST < diff:
-                min_cluster = min(cluster1, cluster2)
-                threshold_buffer = diff * THRESHOLD_BUFFER
-                threshold = min_cluster + threshold_buffer
-                mask_on_img_front[y, x] = 0 if z < threshold else 1
+            cc+=1
+            cluster1, cluster2,a,b = clustering(surrounding_mask)# otsu_clustering(surrounding_mask)#kmean_clustering(surrounding_mask)#otsu_clustering(surrounding_mask)
 
+            aa+=a;bb+=b;
+            diff = abs(cluster1 - cluster2)
+            min_cluster = min(cluster1, cluster2)
+            threshold_buffer = diff * THRESHOLD_BUFFER
+            threshold = min_cluster + threshold_buffer
+            mask_on_img_front[y, x] = 0 if z < threshold else 1
+
+            # diff = abs(cluster1 - cluster2)
+            # if SAME_AREA_DIST < diff:
+            #     min_cluster = min(cluster1, cluster2)
+            #     threshold_buffer = diff * THRESHOLD_BUFFER
+            #     threshold = min_cluster + threshold_buffer
+            #     mask_on_img_front[y, x] = 0 if z < threshold else 1
+
+    print(cc,aa,bb)
     mask_marks = np.asarray(np.where(mask_on_img_front == 1)).T[:, [1, 0]]
     return mask_marks
 
@@ -165,6 +165,7 @@ def threshold_front(r_img, df, frontal_mask_all):
 # TODO: project  images without added strings on image
 @profile
 def get_frontal(r_img, pose, mask_name, scale_factor):
+    print('frontal: ',mask_name)
     df = masks_parts_dataframe(r_img, pose, mask_name)
 
     # Order the coordinates by z, remove duplicates x,y,mask values and keep the first occurrence
@@ -176,18 +177,25 @@ def get_frontal(r_img, pose, mask_name, scale_factor):
     frontal_rest_mask_with_bg = unique_df[(unique_df['mask'] == 1)][['x', 'y', 'z']]
 
     # Check each point if it is came from frontal or hidden area of tha face
-    famwb_arr = threshold_front(r_img, df, frontal_add_mask_with_bg)
+    if not isinstance(config[mask_name].mask_add_ind, type(None)):
+        famwb_arr = threshold_front(r_img, df, frontal_add_mask_with_bg)
+    else:
+        famwb_arr = frontal_add_mask_with_bg[['x', 'y']].to_numpy()
+
+    if config[mask_name].mask_front_points_calc:
+        fmmwb_arr = threshold_front(r_img, df, frontal_main_mask_with_bg)
+    else:
+        fmmwb_arr = frontal_main_mask_with_bg[['x', 'y']].to_numpy()
+
     # TODO: Switch comments to take frontal mask center if NOT multithread!
     ############## Switch comments to take frontal mask center if NOT multithread! #######################################
-    from kill_snipping import plt_stds
-    plt_stds(r_img, df,STD_CHECK)
-    fmmwb_arr = threshold_front(r_img, df, frontal_main_mask_with_bg)
+    # fmmwb_arr = threshold_front(r_img, df, frontal_main_mask_with_bg)
     # fmmwb_arr = frontal_main_mask_with_bg[['x', 'y']].to_numpy()
     #####################################################################################################################
     # rest_mask_on_image = mark_image_with_mask(img, frontal_rest_mask_with_bg.x, frontal_rest_mask_with_bg.y)
 
     if config[mask_name].draw_rest_mask:
-        frmwb_arr = frontal_rest_mask_with_bg[['x', 'y']].to_numpy()
+        frmwb_arr = threshold_front(r_img, df, frontal_rest_mask_with_bg)
     else:
         frmwb_arr = []
 
@@ -250,24 +258,20 @@ def calc_filter_size(mask_x, mask_y, left_filter_size, right_filter_dim):
 
 def morphological_op(mask_x, mask_y, image, left_filter_size=config[EYE_MASK_NAME].filter_size,
                      right_filter_dim=FILTER_SIZE_MASK_RIGHT_POINT, morph_op=cv2.MORPH_CLOSE):
-    mask_on_image = np.zeros_like(image)
+    mask_on_image = np.zeros((image.shape[0], image.shape[1]))
     for x, y in zip(mask_x, mask_y):
-        mask_on_image[y, x, :] = [255, 255, 255]
+        mask_on_image[y, x] = 1
 
     # morphology close
-    gray_mask = cv2.cvtColor(mask_on_image, cv2.COLOR_BGR2GRAY)
-    res, thresh_mask = cv2.threshold(gray_mask, 0, 255, cv2.THRESH_BINARY)
     filter_size = calc_filter_size(mask_x, mask_y, left_filter_size, right_filter_dim)
     kernel = np.ones(filter_size, np.uint8)  # kernel filter
-    morph_mask = cv2.morphologyEx(thresh_mask, morph_op, kernel)
-    yy, xx = np.where(morph_mask == 255)
+    morph_mask = cv2.morphologyEx(mask_on_image, morph_op, kernel)
+    yy, xx = np.where(morph_mask == 1)
 
     return xx, yy
 
 
-def add_forehead_mask(image, r_image, pose, scale_factor):  # , mask_trans_vertices, rest_trans_vertices):
-    frontal_mask, frontal_add_mask, frontal_rest = get_frontal(r_image, pose, HAT_MASK_NAME, scale_factor)
-
+def add_forehead_mask(frontal_mask, frontal_rest, image):
     # Perform morphological close
     morph_mask_x, morph_mask_y = morphological_op(frontal_mask[:, 0], frontal_mask[:, 1],
                                                   image, config[HAT_MASK_NAME].filter_size)
@@ -337,19 +341,10 @@ def masks_templates(masks_name):
     masks_add = [None if mask_add_ind is None else
                  index_on_vertices(mask_add_ind, vertices) for mask_add_ind in masks_add_ind]
     rest_of_heads = [get_rest_mask(maskInd, maskAInd, vertices) for maskInd, maskAInd in zip(masks_ind, masks_add_ind)]
-    masks_to_create = parse_masks_name(masks_name)
+    masks_to_create = masks_name.split(',')
     add_mask_to_config(masks, masks_add, rest_of_heads, masks_order, masks_to_create)
 
     return masks_to_create
-
-
-def parse_masks_name(masks_name):
-    masks_names_parsed = masks_name.split(',')
-    additional_mask = [config[name].additional_masks_req for name in masks_names_parsed
-                       if config[name].additional_masks_req is not None]
-    masks_names_parsed += additional_mask
-
-    return np.unique(np.asarray(masks_names_parsed)).tolist()
 
 
 def add_mask_to_config(masks, masks_add, rest_of_heads, masks_order, masks_to_create):

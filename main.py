@@ -4,7 +4,7 @@ import numpy as np
 #############
 import cv2
 from tqdm import tqdm
-from config_file import config
+from config_file import config, HAT_MASK_NAME
 from create_masks import masks_templates, bg_color, render
 from helpers import get_model, save_image, get_1id_pose, read_images, color_face_mask, parse_arguments, resize_image
 from line_profiler_pycharm import profile
@@ -51,6 +51,8 @@ def main(args):
 
             # for mask, mask_add, rest_of_head, mask_name in zip(masks, masks_add, rest_of_heads, MASKS_NAMES):
             for mask_name in masks_to_create:
+                print('start: ',mask_name)
+
                 # Get the location of the masks on the image
                 mask_x, mask_y, rest_mask_x, rest_mask_y = render(img, r_img, pose, mask_name, scale_factor)
 
@@ -64,6 +66,8 @@ def main(args):
                 save_image(img_path, mask_name, masked_image, args.output, bbox, args.bbox_ind, args.inc_bbox)
         else:
             print(f'No face detected for: {img_path}')
+        config[HAT_MASK_NAME].mask_exists = False
+
         toc =time()
         time_total.append(toc-tic)
     print(np.mean(time_total))

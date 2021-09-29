@@ -51,26 +51,27 @@ def clustering(elements_list):
         b+=1
     return cluster1, cluster2,a,b
 
+def kmean_clustering(elements):
+    big_std_ind = True
+    cluster_number = 2
 
-def kmean_clustering(elements, clusters_std):
-    cluster_number = 3
-
-    while (clusters_std >= STD_CHECK).any():
-        if cluster_number == 4:
-            aaa=1
-            pass
-        # kmeans = KMeans(n_clusters=cluster_number, random_state=0).fit(elements[:, None])
-        kmeans = KMeans(n_clusters=cluster_number, n_init=1, max_iter=100, random_state=0, tol=0.5).fit(elements[:, None])
-        clusters_std = np.asarray([np.std(elements[kmeans.labels_ == i]) for i in range(cluster_number)])
+    while (cluster_number <=3) and big_std_ind :
+        i = 0
+        big_std_ind = False
+        kmeans = KMeans(n_clusters=cluster_number, n_init=1, max_iter=10, random_state=0, tol=0.5).fit(np.asarray(elements)[:,None])
+        while not big_std_ind and i < cluster_number:
+            cluster_std = np.std(elements[kmeans.labels_ == i])
+            if cluster_std >= STD_CHECK:
+                big_std_ind = True
+            i += 1
         cluster_number += 1
 
-    if cluster_number - 1 != 3 and cluster_number - 1 != 2:
-        print("cluster_number: ",cluster_number-1)
     highest_clusters = np.argpartition(kmeans.cluster_centers_, -2, axis=0)[-2:]
     cluster1 = kmeans.cluster_centers_[highest_clusters[0]]
     cluster2 = kmeans.cluster_centers_[highest_clusters[1]]
 
     return cluster1, cluster2
+
 
 def clusters_means_stds_current(elements, thresholds):
     means = []
@@ -416,8 +417,8 @@ def threshold_front_with_std2(r_img, df, frontal_mask_all, STD_CHECK=-99999999, 
     return mask_on_img_front, mask_on_img_back, mask_on_img_less_diff, std_front_threshold, std_back_threshold, std_less_diff, above_std_check
 
 
-t1 = time()
-plt_stds2(r_img, df, 9)
-t2 = time()
-print(t2 - t1)
+# t1 = time()
+# plt_stds2(r_img, df, 9)
+# t2 = time()
+# print(t2 - t1)
 ##############################################################################################################
