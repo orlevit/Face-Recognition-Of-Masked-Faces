@@ -14,9 +14,8 @@ from line_profiler_pycharm import profile
 # TODO: 1)run small exaples
 # TODO: 2) profiling the code
 # TODO: 3)run ALL masks
-# TODO: 4)run in multithreads
+# TODO: 4)run in multithreads + check outputs to stdout of the main program
 # TODO: 5)add option for run in multithreads
-# TODO: 6)change coronamask to covid19 mask
 # TODO: 7) refactoring the code and profiling
 # TODO: 8) add documentation
 

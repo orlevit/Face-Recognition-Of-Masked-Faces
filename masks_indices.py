@@ -1,6 +1,6 @@
 import numpy as np
 from config_file import config, FACE_MODEL_DENSITY, STRING_SIZE, SUNGLASSES_MASK_NAME, \
-    CORONA_MASK_NAME, CENTER_FACE_PART, LEFT_FACE_PART, RIGHT_FACE_PART, LENS_RADIUS
+    COVID19_MASK_NAME, CENTER_FACE_PART, LEFT_FACE_PART, RIGHT_FACE_PART, LENS_RADIUS
 
 
 # This is the opposite of the function in expression-net-old
@@ -81,30 +81,30 @@ def make_hat_mask(x, y):
     return index_list
 
 
-def make_corona_mask(x, y, z):
-    center_middle = config.coronamask.inds.center_middle
-    right_middle = config.coronamask.inds.right_middle
-    left_lower = config.coronamask.inds.left_lower
-    right_lower = config.coronamask.inds.right_lower
-    left_upper_string1 = config.coronamask.inds.left_upper_string1
-    left_upper_string2 = config.coronamask.inds.left_upper_string2
-    left_lower_string1 = config.coronamask.inds.left_lower_string1
-    left_lower_string2 = config.coronamask.inds.left_lower_string2
-    right_upper_string1 = config.coronamask.inds.right_upper_string1
-    right_upper_string2 = config.coronamask.inds.right_upper_string2
-    right_lower_string1 = config.coronamask.inds.right_lower_string1
-    right_lower_string2 = config.coronamask.inds.right_lower_string2
+def make_covid19_mask(x, y, z):
+    center_middle = config.covid19mask.inds.center_middle
+    right_middle = config.covid19mask.inds.right_middle
+    left_lower = config.covid19mask.inds.left_lower
+    right_lower = config.covid19mask.inds.right_lower
+    left_upper_string1 = config.covid19mask.inds.left_upper_string1
+    left_upper_string2 = config.covid19mask.inds.left_upper_string2
+    left_lower_string1 = config.covid19mask.inds.left_lower_string1
+    left_lower_string2 = config.covid19mask.inds.left_lower_string2
+    right_upper_string1 = config.covid19mask.inds.right_upper_string1
+    right_upper_string2 = config.covid19mask.inds.right_upper_string2
+    right_lower_string1 = config.covid19mask.inds.right_lower_string1
+    right_lower_string2 = config.covid19mask.inds.right_lower_string2
 
-    corona_mask_ind = center_face_ind(center_middle, right_middle, left_lower, right_lower, y, z)
+    covid19_mask_ind = center_face_ind(center_middle, right_middle, left_lower, right_lower, y, z)
     index_list1 = get_mask_string(left_upper_string1, left_upper_string2, LEFT_FACE_PART, x, y, z)
     index_list2 = get_mask_string(left_lower_string1, left_lower_string2, LEFT_FACE_PART, x, y, z)
     index_list3 = get_mask_string(right_upper_string1, right_upper_string2, RIGHT_FACE_PART, x, y, z)
     index_list4 = get_mask_string(right_lower_string1, right_lower_string2, RIGHT_FACE_PART, x, y, z)
 
-    corona_strings_ind = index_list1 + index_list2 + index_list3 + index_list4
-    corona_strings_ind = np.setdiff1d(corona_strings_ind, corona_mask_ind)
+    covid19_strings_ind = index_list1 + index_list2 + index_list3 + index_list4
+    covid19_strings_ind = np.setdiff1d(covid19_strings_ind, covid19_mask_ind)
 
-    return corona_mask_ind, corona_strings_ind
+    return covid19_mask_ind, covid19_strings_ind
 
 
 def make_sunglasses_mask(x, y):
@@ -113,10 +113,10 @@ def make_sunglasses_mask(x, y):
     right_lens_inds, right_ind_right_eye, left_ind_right_eye = get_lens(right_eye_ind, x, y)
     left_lens_inds, right_ind_left_eye, left_ind_left_eye = get_lens(left_eye_ind, x, y)
     left_string = get_mask_string(left_ind_left_eye,
-                                  config[CORONA_MASK_NAME].inds.left_upper_string2,
+                                  config[COVID19_MASK_NAME].inds.left_upper_string2,
                                   CENTER_FACE_PART, x, x, y)
     center_string = get_mask_string(right_eye_ind, left_eye_ind, CENTER_FACE_PART, x, x, y)
-    right_string = get_mask_string(config[CORONA_MASK_NAME].inds.right_upper_string2,
+    right_string = get_mask_string(config[COVID19_MASK_NAME].inds.right_upper_string2,
                                    right_ind_right_eye, CENTER_FACE_PART, x, x, y)
     sunglasses_lenses_inds = left_lens_inds + right_lens_inds
     sunglasses_strings_ind = left_string + center_string + right_string

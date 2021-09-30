@@ -5,12 +5,13 @@ from skimage.filters import threshold_multiotsu
 from sklearn.cluster import KMeans
 from time import  time
 from helpers import scale, masks_parts_dataframe
-from masks_indices import make_eye_mask, make_hat_mask, make_corona_mask, \
+from masks_indices import make_eye_mask, make_hat_mask, make_covid19_mask, \
     make_scarf_mask, make_sunglasses_mask
-from config_file import config, VERTICES_PATH, EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, CORONA_MASK_NAME, \
+from config_file import config, VERTICES_PATH, EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, COVID19_MASK_NAME, \
     SUNGLASSES_MASK_NAME, NEAR_NEIGHBOUR_STRIDE, MIN_MASK_SIZE, FILTER_MASK_RIGHT_POINT_IMAGE_SIZE, SAME_AREA_DIST, \
     FILTER_SIZE_MASK_RIGHT_POINT, FILTER_SIZE_MASK_ADD_LEFT_POINT, FILTER_SIZE_MASK_ADD_RIGHT_POINT, THRESHOLD_BUFFER, \
     STD_CHECK
+from functools import lru_cache
 from line_profiler_pycharm import profile
 
 
@@ -67,7 +68,6 @@ def neighbors_cells_z(mask_on_img, x_pixel, y_pixel, max_x, max_y):
     return np.asarray(z_neighbors, dtype=np.float)
 
 ########### remove this below
-@profile
 def otsu_clustering3(elements):
     threshold = threshold_multiotsu(elements, 3, nbins=max(len(elements)*10,500))
     # cluster1_arr = elements[np.where(elements < threshold[0])]
@@ -104,10 +104,9 @@ def kmeans_clustering(elements):
     return cluster1, cluster2
 
 @profile
-def clustering(elements_list):
+def clustering(elements):
     a=0
     b=0
-    elements = np.asarray(elements_list)
     cluster1, cluster2, big_std_ind = otsu_clustering(elements)
     a+=1
     if big_std_ind:
@@ -119,21 +118,12 @@ def clustering(elements_list):
 
 
 @profile
-def threshold_front(r_img, df, frontal_mask_all):
+def threshold_front(r_img, mask_on_img, frontal_mask_all):
     aa=0
     bb=0
     cc=0
     img_x_dim, img_y_dim = r_img.shape[1], r_img.shape[0]
-    mask_on_img = np.asarray([[None] * img_x_dim] * img_y_dim)
     mask_on_img_front = np.zeros((img_y_dim, img_x_dim))
-
-    # Each pixel contains a list of all the Z coordinates from the 3D model
-    for x, y, z in zip(df.x, df.y, df.z):
-        # if isinstance(mask_on_img[y, x], type(None)):
-        if mask_on_img[y, x] is None:
-            mask_on_img[y, x] = [z]
-        else:
-            mask_on_img[y, x].append(z)
 
     for x, y, z in zip(frontal_mask_all.x, frontal_mask_all.y, frontal_mask_all.z):
         surrounding_mask = neighbors_cells_z(mask_on_img, x, y, img_x_dim - 1, img_y_dim - 1)
@@ -161,13 +151,26 @@ def threshold_front(r_img, df, frontal_mask_all):
     mask_marks = np.asarray(np.where(mask_on_img_front == 1)).T[:, [1, 0]]
     return mask_marks
 
+def mask_z_dist(r_img, df):
+    img_x_dim, img_y_dim = r_img.shape[1], r_img.shape[0]
+    mask_on_img = np.asarray([[None] * img_x_dim] * img_y_dim)
+
+    # Each pixel contains a list of all the Z coordinates from the 3D model
+    for x, y, z in zip(df.x, df.y, df.z):
+        # if isinstance(mask_on_img[y, x], type(None)):
+        if mask_on_img[y, x] is None:
+            mask_on_img[y, x] = [z]
+        else:
+            mask_on_img[y, x].append(z)
+
+    return mask_on_img
 
 # TODO: project  images without added strings on image
 @profile
 def get_frontal(r_img, pose, mask_name, scale_factor):
     print('frontal: ',mask_name)
     df = masks_parts_dataframe(r_img, pose, mask_name)
-
+    mask_on_img = mask_z_dist(r_img, df)
     # Order the coordinates by z, remove duplicates x,y,mask values and keep the first occurrence
     # Only the closer z pixels is consider as a candidate for appearing in that pixel
     unique_df = df.sort_values(['z'], ascending=False).drop_duplicates(['x', 'y', 'mask'], keep='first')
@@ -178,12 +181,12 @@ def get_frontal(r_img, pose, mask_name, scale_factor):
 
     # Check each point if it is came from frontal or hidden area of tha face
     if not isinstance(config[mask_name].mask_add_ind, type(None)):
-        famwb_arr = threshold_front(r_img, df, frontal_add_mask_with_bg)
+        famwb_arr = threshold_front(r_img, mask_on_img, frontal_add_mask_with_bg)
     else:
         famwb_arr = frontal_add_mask_with_bg[['x', 'y']].to_numpy()
 
     if config[mask_name].mask_front_points_calc:
-        fmmwb_arr = threshold_front(r_img, df, frontal_main_mask_with_bg)
+        fmmwb_arr = threshold_front(r_img, mask_on_img, frontal_main_mask_with_bg)
     else:
         fmmwb_arr = frontal_main_mask_with_bg[['x', 'y']].to_numpy()
 
@@ -195,7 +198,7 @@ def get_frontal(r_img, pose, mask_name, scale_factor):
     # rest_mask_on_image = mark_image_with_mask(img, frontal_rest_mask_with_bg.x, frontal_rest_mask_with_bg.y)
 
     if config[mask_name].draw_rest_mask:
-        frmwb_arr = threshold_front(r_img, df, frontal_rest_mask_with_bg)
+        frmwb_arr = threshold_front(r_img, mask_on_img, frontal_rest_mask_with_bg)
     else:
         frmwb_arr = []
 
@@ -330,12 +333,12 @@ def masks_templates(masks_name):
     eye_mask_ind = make_eye_mask(x, y)
     hat_mask_ind = make_hat_mask(x, y)
     scarf_mask_ind = make_scarf_mask(x, y)
-    corona_mask_ind, add_corona_ind = make_corona_mask(x, y, z)
+    covid19_mask_ind, add_covid19_ind = make_covid19_mask(x, y, z)
     sunglasses_mask_ind, add_sunglasses_ind = make_sunglasses_mask(x, y)
 
-    masks_order = [EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, CORONA_MASK_NAME, SUNGLASSES_MASK_NAME]
-    masks_ind = [eye_mask_ind, hat_mask_ind, scarf_mask_ind, corona_mask_ind, sunglasses_mask_ind]
-    masks_add_ind = [None, None, None, add_corona_ind, add_sunglasses_ind]
+    masks_order = [EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, COVID19_MASK_NAME, SUNGLASSES_MASK_NAME]
+    masks_ind = [eye_mask_ind, hat_mask_ind, scarf_mask_ind, covid19_mask_ind, sunglasses_mask_ind]
+    masks_add_ind = [None, None, None, add_covid19_ind, add_sunglasses_ind]
 
     masks = [index_on_vertices(maskInd, vertices) for maskInd in masks_ind]
     masks_add = [None if mask_add_ind is None else

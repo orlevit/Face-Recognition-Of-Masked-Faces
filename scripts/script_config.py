@@ -68,12 +68,12 @@ MODELS_BASE_LOC = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/rec
 NOMASK_DATA_LOC = os.path.join(ARCFACE_DATSETS_LOC, 'nomask')
 NOMASK_MODEL_LOC = os.path.join(MODELS_BASE_LOC, 'r100-arcface-nomask_masked')
 EYE_MASK_MODEL = os.path.join(MODELS_BASE_LOC, 'r100-arcface-eye_masked')
-CORONA_MASK_MODEL = os.path.join(MODELS_BASE_LOC, 'r100-arcface-corona_masked')
+COVID19_MASK_MODEL = os.path.join(MODELS_BASE_LOC, 'r100-arcface-corona_masked')
 HAT_MASK_MODEL = os.path.join(MODELS_BASE_LOC, 'r100-arcface-hat_masked')
 SCARF_MASK_MODEL = os.path.join(MODELS_BASE_LOC, 'r100-arcface-scarf_masked')
 SUNGLASSES_MASK_MODEL = os.path.join(MODELS_BASE_LOC, 'r100-arcface-sunglasses_masked')
 
-MODELS_DIRS_LIST = [NOMASK_MODEL_LOC, EYE_MASK_MODEL, HAT_MASK_MODEL, CORONA_MASK_MODEL,
+MODELS_DIRS_LIST = [NOMASK_MODEL_LOC, EYE_MASK_MODEL, HAT_MASK_MODEL, COVID19_MASK_MODEL,
                     SCARF_MASK_MODEL, SUNGLASSES_MASK_MODEL]
 
 # Results table

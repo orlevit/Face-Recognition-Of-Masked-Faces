@@ -16,7 +16,7 @@ SAME_AREA_DIST = 20
 EYE_MASK_NAME = "eyemask"
 HAT_MASK_NAME = "hatmask"
 SCARF_MASK_NAME = "scarfmask"
-CORONA_MASK_NAME = "coronamask"
+COVID19_MASK_NAME = "covid19mask"
 SUNGLASSES_MASK_NAME = "sunglassesmask"
 CENTER_FACE_PART = 'CENTER'
 LEFT_FACE_PART = 'LEFT'
@@ -41,7 +41,7 @@ FILTER_SIZE_MASK_ADD_LEFT_POINT = (FILTER_DIM_MASK_ADD_LEFT_POINT, FILTER_DIM_MA
 FILTER_SIZE_MASK_ADD_RIGHT_POINT = 26
 
 # Hat needs to be before the eyemask
-ALL_MASKS = f"{HAT_MASK_NAME},{EYE_MASK_NAME},{CORONA_MASK_NAME},{SUNGLASSES_MASK_NAME}"
+ALL_MASKS = f"{HAT_MASK_NAME},{EYE_MASK_NAME},{COVID19_MASK_NAME},{SUNGLASSES_MASK_NAME}"
 
 # ------------------------------------------------ masks configuration ------------------------------------------------
 config = {
@@ -83,7 +83,7 @@ config = {
         "filter_size": (15, 15),
         "mask_front_points_calc": True
     },
-    CORONA_MASK_NAME: {
+    COVID19_MASK_NAME: {
         "inds": {
             "center_middle": 25733,
             "right_middle": 178,

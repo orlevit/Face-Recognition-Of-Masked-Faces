@@ -228,7 +228,8 @@ def parse_arguments():
                         help='The minimum confidence score for img2pose for face detection')
     parser.add_argument('-b', '--bbox-ind', default=True, type=str2bool, help='Return the original or cropped'
                                                                               'bounding box image with mask')
-    parser.add_argument('-inc', '--inc-bbox', default=0.25, type=float,
-                        help='The increase of the bbox in percent')
+    parser.add_argument('-inc', '--inc-bbox', default=0.25, type=float, help='The increase of the bbox in percent')
+    parser.add_argument('-ch', '--chunk-size', default=100, type=int, help='The chunk size per worker')
+    parser.add_argument('-cpu', '--cpu-num', default=os.cpu_count(), type=int, help='Number of CPUs in multiprocessing')
 
     return parser.parse_args()
