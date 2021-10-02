@@ -8,7 +8,20 @@ from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 from helpers import mark_image_with_mask
 from time import  time
+from mpl_toolkits.mplot3d import Axes3D
 
+# plot the 3D face with the mask
+def plotMask(SEP):
+    fig = plt.figure()
+    ax = Axes3D(fig)
+    x = SEP[:, 0];
+    y = SEP[:, 1];
+    z = SEP[:, 2];
+    ax.scatter(x, y, z , c='r', marker="*", s=10 ** 2)
+    ax.view_init(-90, 90)
+    plt.axis([-50, 50, -50, 50])
+    plt.gca().invert_xaxis()
+    plt.show()
 ###################################### calculate clusterings ################################
 
 def otsu_clustering(elements):
@@ -37,21 +50,23 @@ def otsu_clustering(elements):
     return cluster1, cluster2, cluster1_std, cluster2_std
 
 
-def clustering(elements_list):
+def clustering(elements_list,STD_CHECK):
     a=0
     b=0
+    last_cluster_number = 2
     elements = np.asarray(elements_list)
     cluster1, cluster2, otsu_cluster1_std, otsu_cluster2_std = otsu_clustering(elements)
     clusters_std = np.array([otsu_cluster1_std, otsu_cluster2_std])
 
     if (clusters_std >= STD_CHECK).any():
+        last_cluster_number +=1
         a+=1
-        cluster1, cluster2 = kmean_clustering(elements, clusters_std)
+        cluster1, cluster2, std1,std2 = kmean_clustering(elements, clusters_std)
     else:
         b+=1
-    return cluster1, cluster2,a,b
+    return cluster1, cluster2, std1,std2, 000, True ,last_cluster_number
 
-def kmean_clustering(elements):
+def kmean_clustering(elements,STD_CHECK):
     big_std_ind = True
     cluster_number = 2
 
@@ -70,7 +85,10 @@ def kmean_clustering(elements):
     cluster1 = kmeans.cluster_centers_[highest_clusters[0]]
     cluster2 = kmeans.cluster_centers_[highest_clusters[1]]
 
-    return cluster1, cluster2
+    clusters_std = np.asarray([np.std(elements[kmeans.labels_ == i]) for i in range(cluster_number)])
+    stds = [np.std(elements[kmeans.labels_ == i]) for i in highest_clusters]
+
+    return cluster1, cluster2, int(np.round(stds[0])), int(np.round(stds[1]))
 
 
 def clusters_means_stds_current(elements, thresholds):
@@ -96,7 +114,7 @@ def clusters_means_stds_current(elements, thresholds):
 
     return np.array(means), np.array(stds)
 
-def otsu_clustering_current(elements, STD_CHECK, bins_number=200):
+def otsu_clustering_current(elements, STD_CHECK, bins_number=100):
     big_std_ind = False
     condition = True
     cluster_number = 2
@@ -233,7 +251,7 @@ def in_out(surrounding_mask, STD_CHECK):
     # clusters_std = np.array([cluster1_std,cluster2_std])
     surrounding_mask = np.asarray(surrounding_mask)
     while (clusters_std>=STD_CHECK).any():
-        kmeans = KMeans(n_clusters=cluster_number, random_state=0).fit(np.asarray(surrounding_mask)[:,None])
+        kmeans = KMeans(n_clusters=cluster_number, n_init=1, max_iter=2, random_state=0, tol=0.5).fit(np.asarray(surrounding_mask)[:,None])
         clusters_std = np.asarray([np.std(surrounding_mask[kmeans.labels_ == i]) for i in range(cluster_number)])
         cluster_number += 1
         kmeans_iters += 1
@@ -310,31 +328,6 @@ from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 
 
-def in_out2(surrounding_mask, STD_CHECK):
-    # cluster1, cluster2, cluster1_std, cluster2_std, thr = clustering2(surrounding_mask)
-    # if (cluster1_std < STD_CHECK) and (cluster2_std <STD_CHECK):
-    #     return cluster1, cluster2, cluster1_std, cluster2_std, thr,  False, 0
-    cluster_number = 2
-    clusters_std = np.array([100])
-
-    kmeans_iters = 1
-    # cluster_number = 3
-    # clusters_std = np.array([cluster1_std,cluster2_std])
-    surrounding_mask = np.asarray(surrounding_mask)
-    while (clusters_std >= STD_CHECK).any():
-        kmeans = KMeans(n_clusters=cluster_number, n_init=1, max_iter=10, random_state=0, tol=0.5).fit(
-            np.asarray(surrounding_mask)[:, None])
-        clusters_std = np.asarray([np.std(surrounding_mask[kmeans.labels_ == i]) for i in range(cluster_number)])
-        cluster_number += 1
-        kmeans_iters += 1
-
-    hci = np.argpartition(kmeans.cluster_centers_, -2, axis=0)[-2:]
-    stds = [np.std(surrounding_mask[kmeans.labels_ == i]) for i in hci]
-
-    return kmeans.cluster_centers_[hci[0]], kmeans.cluster_centers_[hci[1]], int(np.round(stds[0])), int(
-        np.round(stds[1])), 000, True, cluster_number - 1
-
-
 def plt_stds2(r_img, df, STD_CHECK):
     unique_df = df.sort_values(['z', 'mask'], ascending=False).drop_duplicates(['x', 'y', 'mask'], keep='first')
     frontal_add_mask_with_bg = unique_df[(unique_df['mask'] == 3)][['x', 'y', 'z']]
@@ -380,7 +373,7 @@ def threshold_front_with_std2(r_img, df, frontal_mask_all, STD_CHECK=-99999999, 
 
         if len(np.unique(surrounding_mask)) not in [0, 1]:
             if KMEANS_IND:
-                cluster1, cluster2, cluster1_std, cluster2_std, thr, SAME_AREA_IND, clusters_number = in_out2(
+                cluster1, cluster2, cluster1_std, cluster2_std, thr, SAME_AREA_IND, clusters_number = in_out(
                     surrounding_mask,
                     STD_CHECK)  # otsu_clustering_current(surrounding_mask,STD_CHECK) # clustering2(surrounding_mask)
                 max_cluster_std = f'{str(max(cluster1_std, cluster2_std))}-{clusters_number}'

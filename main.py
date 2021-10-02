@@ -11,7 +11,7 @@ from line_profiler_pycharm import profile
 
 # TODO: 0.1) what to do with more than 3 cluters
 # TODO: 0.2) check again the sunglasses, if the back glass is shown
-# TODO: 1)run small exaples
+# TODO: 1)run small examples
 # TODO: 2) profiling the code
 # TODO: 3)run ALL masks
 # TODO: 4)run in multithreads + check outputs to stdout of the main program

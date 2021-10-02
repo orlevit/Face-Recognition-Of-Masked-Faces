@@ -3,8 +3,19 @@ from config_file import config, FACE_MODEL_DENSITY, STRING_SIZE, SUNGLASSES_MASK
     COVID19_MASK_NAME, CENTER_FACE_PART, LEFT_FACE_PART, RIGHT_FACE_PART, LENS_RADIUS
 
 
-# This is the opposite of the function in expression-net-old
 def get_hat_mask_index(a1, b1, c1, x_left, x_right, x, y):
+    """
+    Extracting the indices for creating the hat mask.
+    It is achieved by taking all the indices above parabolic line drawn between two points.
+    :param a1: First coefficient of the parabolic equation.
+    :param b1: Second coefficient of the parabolic equation.
+    :param c1: Third coefficient of the parabolic equation.
+    :param x_left: Left point.
+    :param x_right: Right point.
+    :param x: All the x of the points in the 3D model.
+    :param y: All the y of the points in the 3D model.
+    :return: Hat mask indices.
+    """
     index_list = []
     for i in range(len(x)):
         if (y[i] > (a1 * (x[i] ** 2) + b1 * x[i] + c1)) and (x[i] > x_left) and (x[i] < x_right):
@@ -13,9 +24,19 @@ def get_hat_mask_index(a1, b1, c1, x_left, x_right, x, y):
     return index_list
 
 
-# This is the opposite of the function in expression-net-old
-# get the scarf mask indexes on the model
 def get_scarf_mask_index(a1, b1, c1, x_left, x_right, x, y):
+    """
+    Extracting the indices for creating the scarf mask.
+    It is achieved by taking all the indices below parabolic line drawn between two points.
+    :param a1: First coefficient of the parabolic equation.
+    :param b1: Second coefficient of the parabolic equation.
+    :param c1: Third coefficient of the parabolic equation.
+    :param x_left: Left point.
+    :param x_right: Right point.
+    :param x: All the x of the points in the 3D model.
+    :param y: All the y of the points in the 3D model.
+    :return: Scarf mask indices.
+    """
     index_list = []
     for i in range(len(x)):
         if (y[i] < (a1 * x[i] ** 2 + b1 * x[i] + c1)) and (x[i] > x_left) and (x[i] < x_right):
@@ -24,8 +45,24 @@ def get_scarf_mask_index(a1, b1, c1, x_left, x_right, x, y):
     return index_list
 
 
-# This is the opposite of the function in expression-net-old
-def get_eyes_mask_index(a1, b1, c1, a2, b2, c2, x_left, x_right, x, y):
+def get_eye_mask_index(a1, b1, c1, a2, b2, c2, x_left, x_right, x, y):
+    """
+    Extracting the indices for creating the eye mask.
+    It is achieved by taking all the indices between two parabolic lines drawn between two points,
+    and then taking the complement.
+
+    :param a1: First coefficient of the first parabolic equation.
+    :param b1: Second coefficient of the first parabolic equation.
+    :param c1: Third coefficient of the first parabolic equation.
+    :param a2: First coefficient of the second parabolic equation.
+    :param b2: Second coefficient of the second parabolic equation.
+    :param c2: Third coefficient of the second parabolic equation.
+    :param x_left: Left point.
+    :param x_right: Right point.
+    :param x: All the x of the points in the 3D model.
+    :param y: All the y of the points in the 3D model.
+    :return: Eye mask indices.
+    """
     index_list = []
     for i in range(len(x)):
         if ((y[i] < (a1 * (x[i] ** 2) + b1 * x[i] + c1)) and
@@ -38,6 +75,12 @@ def get_eyes_mask_index(a1, b1, c1, a2, b2, c2, x_left, x_right, x, y):
 
 
 def make_eye_mask(x, y):
+    """
+    Getting the eye mask indices.
+    :param x: All the x of the points in the 3D model.
+    :param y: All the y of the points in the 3D model.
+    :return: Eyes mask indices
+    """
     x_left, y_left = x[config.eyemask.inds.left], y[config.eyemask.inds.left]
     x_right, y_right = x[config.eyemask.inds.right], y[config.eyemask.inds.right]
     x_middle, y_chosen_top = x[config.eyemask.inds.top], y[config.eyemask.inds.top]
@@ -50,11 +93,17 @@ def make_eye_mask(x, y):
     a1, b1, c1 = np.polyfit(x_3points, y_3points2, 2)
     a2, b2, c2 = np.polyfit(x_3points, y_3points1, 2)
 
-    index_list = get_eyes_mask_index(a1, b1, c1, a2, b2, c2, x_left, x_right, x, y)
+    index_list = get_eye_mask_index(a1, b1, c1, a2, b2, c2, x_left, x_right, x, y)
     return index_list
 
 
 def make_scarf_mask(x, y):
+    """
+    Getting the scarf mask indices.
+    :param x: All the x of the points in the 3D model.
+    :param y: All the y of the points in the 3D model.
+    :return: Scarf mask indices
+    """
     x_left, y_left = x[config.scarfmask.inds.left], y[config.scarfmask.inds.left]
     x_right, y_right = x[config.scarfmask.inds.right], y[config.scarfmask.inds.right]
     x_middle, y_chosen_top = x[config.scarfmask.inds.middle_top], y[config.scarfmask.inds.middle_top]
@@ -67,8 +116,13 @@ def make_scarf_mask(x, y):
     return index_list
 
 
-# create hat mask
 def make_hat_mask(x, y):
+    """
+    Getting the hat mask indices.
+    :param x: All the x of the points in the 3D model.
+    :param y: All the y of the points in the 3D model.
+    :return: Hat mask indices
+    """
     x_left, y_left = x[config.hatmask.inds.left], y[config.hatmask.inds.left]
     x_right, y_right = x[config.hatmask.inds.right], y[config.hatmask.inds.right]
     x_middle, y_chosen_down = x[config.hatmask.inds.middle_bottom], y[config.hatmask.inds.middle_bottom]
@@ -82,6 +136,13 @@ def make_hat_mask(x, y):
 
 
 def make_covid19_mask(x, y, z):
+    """
+    Getting the covid19 mask indices.
+    :param x: All the x of the points in the 3D model.
+    :param y: All the y of the points in the 3D model.
+    :param z: All the z of the points in the 3D model.
+    :return: Covid19 mask indices
+    """
     center_middle = config.covid19mask.inds.center_middle
     right_middle = config.covid19mask.inds.right_middle
     left_lower = config.covid19mask.inds.left_lower
@@ -108,6 +169,12 @@ def make_covid19_mask(x, y, z):
 
 
 def make_sunglasses_mask(x, y):
+    """
+    Getting the sunglasses mask indices.
+    :param x: All the x of the points in the 3D model.
+    :param y: All the y of the points in the 3D model.
+    :return: Sunglasses mask indices
+    """
     right_eye_ind = config[SUNGLASSES_MASK_NAME].inds.right
     left_eye_ind = get_sunglasses_left_eye(right_eye_ind, x, y)
     right_lens_inds, right_ind_right_eye, left_ind_right_eye = get_lens(right_eye_ind, x, y)
@@ -123,6 +190,7 @@ def make_sunglasses_mask(x, y):
     sunglasses_strings_ind = np.setdiff1d(sunglasses_strings_ind, sunglasses_lenses_inds)
 
     return sunglasses_lenses_inds, sunglasses_strings_ind
+
 
 # TODO: Remove in final version
 # This is a temp for testing new version of mask
@@ -150,6 +218,18 @@ def center_face_ind2(center_middle_ind, right_middle_ind, left_lower_ind, right_
 
 
 def center_face_ind(center_middle_ind, right_middle_ind, left_lower_ind, right_lower_ind, y, z):
+    """
+    Extracting the middle part of the covid19 mask(the part without the strings).
+    It is achieved by creating a parabolic line from 3 known points on the mask and taking all the
+    points above it and between a range, In addition the part below the chin is taken.
+    :param center_middle_ind: Center point(First point for the parabola).
+    :param right_middle_ind: Center point(Second point for the parabola).
+    :param left_lower_ind: Left point(The end of the mask on lead - below the chin).
+    :param right_lower_ind: Center point(Third point for the parabola).
+    :param y: All the y of the points in the 3D model.
+    :param z: All the z of the points in the 3D model.
+    :return: The indices of the center part of the covid19 mask.
+    """
     y_middle = y[[right_lower_ind, center_middle_ind, right_middle_ind]]
     z_middle = z[[right_lower_ind, center_middle_ind, right_middle_ind]]
     y_lower = y[[left_lower_ind, right_lower_ind]]
@@ -166,7 +246,8 @@ def center_face_ind(center_middle_ind, right_middle_ind, left_lower_ind, right_l
 
     return index_list
 
-#TODO: Remove in final version
+
+# TODO: Remove in final version
 # This is a temp for testing thinner string
 
 def get_mask_string2(ind1, ind2, face_side, split_face_cord, x, y):
@@ -199,6 +280,16 @@ def get_mask_string2(ind1, ind2, face_side, split_face_cord, x, y):
 
 
 def get_mask_string(ind1, ind2, face_side, split_face_cord, x, y):
+    """
+    Extracting the string part of the covid19 mask.
+    :param ind1: First point of the string.
+    :param ind2: Second point of the string.
+    :param face_side: Whether it is the left or right side.
+    :param split_face_cord: An enumerator for points indices.
+    :param x: All the y of the points in the 3D model.
+    :param y: All the z of the points in the 3D model.
+    :return: The indices of the string part of the covid19 mask.
+    """
     if face_side == LEFT_FACE_PART:
         filtered_ind = [ii for ii, cord in enumerate(split_face_cord) if (cord >= 0)]
     elif face_side == RIGHT_FACE_PART:
@@ -228,6 +319,14 @@ def get_mask_string(ind1, ind2, face_side, split_face_cord, x, y):
 
 
 def get_sunglasses_left_eye(eye_ind, x, y):
+    """
+    Getting the center point on the left eye out of the first selected point in the middle of the eye.
+    This is done in order to get symmetry.
+    :param eye_ind: The center of the lens - This is selected in advance.
+    :param x: All the x of the points in the 3D model.
+    :param y: All the y of the points in the 3D model.
+    :return: The indices of center of the left lens mask.
+    """
     distances = []
     indices = []
 
@@ -243,6 +342,14 @@ def get_sunglasses_left_eye(eye_ind, x, y):
 
 
 def get_lens(center_eye_ind, x, y):
+    """
+    Getting one lens of the sunglasses mak.
+    This is done by taking all points that are in certain radius from the center point.
+    :param center_eye_ind: Whether this is the left or right lens
+    :param x: All the x of the points in the 3D model.
+    :param y: All the y of the points in the 3D model.
+    :return: The indices of lens of the sunglasses mak.
+    """
     distances = []
     indices = []
 
