@@ -36,7 +36,7 @@ def render(img, r_img, pose, mask_name, scale_factor):
     mask_y = np.append(forehead_y, frontal_mask[:, 1]).astype(int)
     morph_mask_x, morph_mask_y = morphological_op(mask_x, mask_y, img, config[mask_name].filter_size)
 
-    if not isinstance(config[mask_name].mask_add_ind, type(None)):
+    if config[mask_name].mask_add_ind is not None:
         mask_add_x, mask_add_y = frontal_add_mask[:, 0], frontal_add_mask[:, 1]
         morph_mask_add_x, morph_mask_add_y = morphological_op(mask_add_x, mask_add_y, img,
                                                               FILTER_SIZE_MASK_ADD_LEFT_POINT,
@@ -64,7 +64,7 @@ def neighbors_cells_z(mask_on_img, x_pixel, y_pixel, max_x, max_y):
 
     for x in range(x_left_limit, x_right_limit + 1):
         for y in range(y_bottom_limit, y_upper_limit + 1):
-            if not isinstance(mask_on_img[y, x], type(None)):
+            if mask_on_img[y, x] is not None:
                 z_neighbors.extend(mask_on_img[y, x])
 
     return np.asarray(z_neighbors, dtype=np.float)
@@ -126,7 +126,6 @@ def two_clusters_inds(elements, threshold, bin_half_size):
                        (elements <= threshold + bin_half_size))[0]
     cluster1_arr_ind = np.where(elements < threshold - bin_half_size)[0]
     cluster2_arr_ind = np.where(threshold + bin_half_size < elements)[0]
-
 
     if not cluster1_arr_ind.size:
         cluster1_arr_ind = np.append(cluster1_arr_ind, bin_ind)
@@ -207,10 +206,8 @@ def clustering_only_otsu(elements, bins_number = 100):
     if big_std_ind:
         a-=1
         b+=1
-        try:
-            cluster1, cluster2 = otsu_clustering3(elements, bins_number, bin_half_size)
-        except:
-            only_2+=1
+        cluster1, cluster2 = otsu_clustering3(elements, bins_number, bin_half_size)
+
 
     return cluster1, cluster2,a,b,only_2
 
@@ -233,11 +230,12 @@ def clustering(elements):
 def more_than_zero_or_one(surrounding_mask):
     index = 0
     sm_len = len(surrounding_mask)
-    previous_num = None
     more_ind = False
-    while index < sm_len and not more_ind:
+    previous_num = surrounding_mask[index]
+
+    while not more_ind and index < sm_len:
         current_number = surrounding_mask[index]
-        if previous_num is not None and current_number != previous_num:
+        if current_number != previous_num:
             more_ind = True
 
         previous_num = current_number
@@ -289,7 +287,6 @@ def mask_z_dist(r_img, df):
 
     # Each pixel contains a list of all the Z coordinates from the 3D model
     for x, y, z in zip(df.x, df.y, df.z):
-        # if isinstance(mask_on_img[y, x], type(None)):
         if mask_on_img[y, x] is None:
             mask_on_img[y, x] = [z]
         else:
@@ -312,7 +309,7 @@ def get_frontal(r_img, pose, mask_name, scale_factor):
     frontal_rest_mask_with_bg = unique_df[(unique_df['mask'] == 1)][['x', 'y', 'z']]
 
     # Check each point if it is came from frontal or hidden area of tha face
-    if not isinstance(config[mask_name].mask_add_ind, type(None)):
+    if config[mask_name].mask_add_ind is not None:
         famwb_arr = threshold_front(r_img, mask_on_img, frontal_add_mask_with_bg)
     else:
         famwb_arr = frontal_add_mask_with_bg[['x', 'y']].to_numpy()

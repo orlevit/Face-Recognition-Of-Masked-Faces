@@ -178,7 +178,7 @@ def color_face_mask(img, color, mask_x, mask_y, rest_mask_x, rest_mask_y, mask_n
 
     return img_output
 
-
+@profile
 def mark_image_with_mask(frontal_coords, img, scale_factor):
     mask_on_image = [0]
 

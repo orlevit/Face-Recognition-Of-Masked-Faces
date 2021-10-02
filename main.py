@@ -9,10 +9,8 @@ from create_masks import masks_templates, bg_color, render
 from helpers import get_model, save_image, get_1id_pose, read_images, color_face_mask, parse_arguments, resize_image
 from line_profiler_pycharm import profile
 
-# TODO: 0.1) what to do with more than 3 cluters
-# TODO: 0.2) check again the sunglasses, if the back glass is shown
-# TODO: 1)run small examples
-# TODO: 2) profiling the code
+# TODO: 1)run big examples
+# TODO: 2) profiling the code + refactoring
 # TODO: 3)run ALL masks
 # TODO: 4)run in multithreads + check outputs to stdout of the main program
 # TODO: 5)add option for run in multithreads
