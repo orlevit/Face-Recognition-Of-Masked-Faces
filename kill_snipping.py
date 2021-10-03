@@ -4,7 +4,7 @@ import numpy  as np
 import math
 from create_masks import  neighbors_cells_z, threshold_front
 from skimage.filters import threshold_otsu, threshold_multiotsu
-from sklearn.cluster import KMeans
+# from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 from helpers import mark_image_with_mask
 from time import  time

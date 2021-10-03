@@ -20,6 +20,7 @@ from multiprocessing import Pool
 
 @profile
 def main_parallel(img_path):
+    cv2.setNumThreads(0)
     time_total = []
     print('aaaa')
 
