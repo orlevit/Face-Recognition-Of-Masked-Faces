@@ -202,6 +202,9 @@ def mask_z_dist(r_img, df):
 @profile
 def get_frontal(r_img, pose, mask_name, scale_factor):
     print('frontal: ', mask_name)
+    #TODO: can project the pose only once and take the mask_z_dist once!
+    #   It can be done by change the creation of the masks to to stor indicis and not coord, and add stor coord for *all* the face once
+    #   split this function so the projection is out side (including limit detection) and only the extraction of the relevant indicis is here.
     df = masks_parts_dataframe(r_img, pose, mask_name)
     mask_on_img = mask_z_dist(r_img, df)
     # Order the coordinates by z, remove duplicates x,y,mask values and keep the first occurrence

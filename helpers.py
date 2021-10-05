@@ -62,7 +62,7 @@ def resize_image(image, bbox):
 
     return resized_image, scale_img
 
-
+@profile
 def masks_parts_dataframe(r_img, pose, mask_name):
     # An indication whether it is a mask coordinate, additional  mask or rest of the head and add them to the matrices
     mask_marks = 3 * np.ones([config[mask_name].mask_ind.shape[0], 1], dtype=bool)
