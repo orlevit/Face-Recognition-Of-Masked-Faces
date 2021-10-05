@@ -46,7 +46,8 @@ def render(img, r_img, pose, mask_name, scale_factor):
 
     if config[mask_name].draw_rest_mask:
         rest_x, rest_y = frontal_rest[:, 0], frontal_rest[:, 1]
-        morph_rest_x, morph_rest_y = morphological_op(rest_x, rest_y, img, config[mask_name].filter_size)
+        morph_rest_x, morph_rest_y = morphological_op(rest_x, rest_y, img,
+                                                      config[mask_name].filter_size, morph_op=cv2.MORPH_DILATE)
     else:
         morph_rest_x, morph_rest_y = None, None
 
@@ -70,7 +71,6 @@ def neighbors_cells_z(mask_on_img, x_pixel, y_pixel, max_x, max_y):
     return np.asarray(z_neighbors, dtype=np.float)
 
 
-########### remove this below
 @profile
 def three_clusters_inds(elements, thresholds, bin_half_size):
     is_bin2_free = True
@@ -89,10 +89,10 @@ def three_clusters_inds(elements, thresholds, bin_half_size):
             cluster1_arr_ind = np.append(cluster1_arr_ind, bin1_ind)
 
     if not cluster1_arr_ind.size:
-        if bin1_ind.size and is_bin2_free:
-            cluster1_arr_ind = np.append(cluster1_arr_ind, bin1_ind)
-        else:
+        if bin2_ind.size and is_bin2_free:
             cluster1_arr_ind = np.append(cluster1_arr_ind, bin2_ind)
+        else:
+            cluster1_arr_ind = np.append(cluster1_arr_ind, bin1_ind)
 
     return cluster1_arr_ind, cluster2_arr_ind
 
@@ -115,6 +115,7 @@ def two_clusters_inds(elements, threshold, bin_half_size):
 @profile
 def otsu_clustering(elements, cluster_number, bins_number, bin_half_size):
     thresholds = threshold_multiotsu(elements, cluster_number, nbins=bins_number)
+    # print(thresholds)
     if cluster_number == 2:
         cluster1_arr_ind, cluster2_arr_ind = two_clusters_inds(elements, thresholds, bin_half_size)
     else:  # cluster_number == 3
@@ -126,61 +127,17 @@ def otsu_clustering(elements, cluster_number, bins_number, bin_half_size):
     return cluster1_arr, cluster2_arr
 
 
-@profile
-def otsu2_clustering(elements, bins_number, bin_half_size):
-    big_std_ind = False
-    thresholds = threshold_multiotsu(elements, 2, nbins=bins_number)
-    cluster1_arr_ind, cluster2_arr_ind = two_clusters_inds(elements, thresholds, bin_half_size)
-    cluster1_arr = elements[cluster1_arr_ind]
-    cluster2_arr = elements[cluster2_arr_ind]
-    if STD_CHECK <= np.std(cluster1_arr) or STD_CHECK <= np.std(cluster2_arr):
-        big_std_ind = True
-
-    cluster1 = np.mean(cluster1_arr)
-    cluster2 = np.mean(cluster2_arr)
-
-    return cluster1, cluster2, big_std_ind
-
-
-def only_kmean_clustering(elements):
-    big_std_ind = True
-    cluster_number = 2
-
-    while (cluster_number <= 3) and big_std_ind:
-        i = 0
-        big_std_ind = False
-        kmeans = KMeans(n_clusters=cluster_number, n_init=1, max_iter=10, random_state=0, tol=0.5).fit(
-            np.asarray(elements)[:, None])
-        while not big_std_ind and i < cluster_number:
-            cluster_std = np.std(elements[kmeans.labels_ == i])
-            if cluster_std >= STD_CHECK:
-                big_std_ind = True
-            i += 1
-        cluster_number += 1
-
-    highest_clusters = np.argpartition(kmeans.cluster_centers_, -2, axis=0)[-2:]
-    cluster1 = kmeans.cluster_centers_[highest_clusters[0]]
-    cluster2 = kmeans.cluster_centers_[highest_clusters[1]]
-
-    if cluster_number - 1 == 2:
-        a = 1;
-        b = 0;
-    else:
-        a = 0;
-        b = 1;
-    return cluster1, cluster2, a, b
-
 
 @profile
 def clustering(elements, bins_number=100):
     bin_half_size = (max(elements) - min(elements)) / (2 * bins_number)
-
     cluster1_arr, cluster2_arr = otsu_clustering(elements, 2, bins_number, bin_half_size)
-    if STD_CHECK <= np.std(cluster1_arr) or STD_CHECK <= np.std(cluster2_arr):
-        cluster1_arr, cluster2_arr = otsu_clustering(elements, 3, bins_number, bin_half_size)
-    # try:
-    #     with warnings.catch_warnings():
-    #         warnings.simplefilter("error")
+    range_arr1 = max(cluster1_arr) - min(cluster1_arr)
+    range_arr2 = max(cluster2_arr) - min(cluster2_arr)
+
+    if STD_CHECK <= range_arr1  or STD_CHECK <= range_arr2:
+            cluster1_arr, cluster2_arr = otsu_clustering(elements, 3, bins_number, bin_half_size)
+
     cluster1 = np.mean(cluster1_arr)
     cluster2 = np.mean(cluster2_arr)
 
@@ -188,7 +145,7 @@ def clustering(elements, bins_number=100):
 
 
 @profile
-def more_than_zero_or_one(surrounding_mask):
+def more_than_one(surrounding_mask):
     index = 0
     sm_len = len(surrounding_mask)
     more_ind = False
@@ -212,7 +169,7 @@ def threshold_front(r_img, mask_on_img, frontal_mask_all):
 
     for x, y, z in zip(frontal_mask_all.x, frontal_mask_all.y, frontal_mask_all.z):
         surrounding_mask = neighbors_cells_z(mask_on_img, x, y, img_x_dim - 1, img_y_dim - 1)
-        more_indication = more_than_zero_or_one(surrounding_mask)
+        more_indication = more_than_one(surrounding_mask)
         mask_on_img_front[y, x] = 1
 
         if more_indication:
@@ -324,7 +281,7 @@ def calc_filter_size(mask_x, mask_y, left_filter_size, right_filter_dim):
     mask_size = max(x_diff, y_diff)
 
     x = [MIN_MASK_SIZE, FILTER_MASK_RIGHT_POINT_IMAGE_SIZE]
-    y = [np.mean(left_filter_size), right_filter_dim]
+    y = [left_filter_size, right_filter_dim]
 
     a, b = np.polyfit(x, y, 1)
     filter_dim = int(np.ceil(a * mask_size + b))

@@ -23,7 +23,7 @@ LEFT_FACE_PART = 'LEFT'
 RIGHT_FACE_PART = 'RIGHT'
 NEAR_NEIGHBOUR_STRIDE = 2
 BBOX_REQUESTED_SIZE = 500
-STD_CHECK = 20
+STD_CHECK = 30#20
 
 #center
 #img_size= [62,84,250,1888]
@@ -36,11 +36,10 @@ STD_CHECK = 20
 MIN_MASK_SIZE = 250
 FILTER_MASK_RIGHT_POINT_IMAGE_SIZE = 1888
 FILTER_SIZE_MASK_RIGHT_POINT = 67
-FILTER_DIM_MASK_ADD_LEFT_POINT = 4.021
-FILTER_SIZE_MASK_ADD_LEFT_POINT = (FILTER_DIM_MASK_ADD_LEFT_POINT, FILTER_DIM_MASK_ADD_LEFT_POINT)
+FILTER_SIZE_MASK_ADD_LEFT_POINT = 4.021#(FILTER_DIM_MASK_ADD_LEFT_POINT, FILTER_DIM_MASK_ADD_LEFT_POINT)
 FILTER_SIZE_MASK_ADD_RIGHT_POINT = 26
 
-# Hat needs to be before the eyemask
+# Hat needs to be before the eyemask(even if only eyemask is needed, hat mask need to be included).
 ALL_MASKS = f"{HAT_MASK_NAME},{EYE_MASK_NAME},{COVID19_MASK_NAME},{SUNGLASSES_MASK_NAME}"
 
 # ------------------------------------------------ masks configuration ------------------------------------------------
@@ -55,7 +54,7 @@ config = {
         "add_forehead": True,
         "draw_rest_mask": True,
         "additional_masks_req": HAT_MASK_NAME,
-        "filter_size": (15, 15),
+        "filter_size": 9,
         "mask_front_points_calc": False
     },
     HAT_MASK_NAME: {
@@ -67,7 +66,7 @@ config = {
         "add_forehead": True,
         "draw_rest_mask": False,
         "additional_masks_req": None,
-        "filter_size": (15, 15),
+        "filter_size": 15,
         "mask_front_points_calc": True,
         "mask_exists": False
     },
@@ -80,7 +79,7 @@ config = {
         "add_forehead": False,
         "draw_rest_mask": False,
         "additional_masks_req": None,
-        "filter_size": (15, 15),
+        "filter_size": 15,
         "mask_front_points_calc": True
     },
     COVID19_MASK_NAME: {
@@ -101,7 +100,7 @@ config = {
         "add_forehead": False,
         "draw_rest_mask": False,
         "additional_masks_req": None,
-        "filter_size": (15, 15),
+        "filter_size": 15,
         "mask_front_points_calc": True
     },
     SUNGLASSES_MASK_NAME: {
@@ -111,7 +110,7 @@ config = {
         "add_forehead": False,
         "draw_rest_mask": False,
         "additional_masks_req": None,
-        "filter_size": (9.355, 9.355),
+        "filter_size": 9.355,
         "mask_front_points_calc": True
     }
 }

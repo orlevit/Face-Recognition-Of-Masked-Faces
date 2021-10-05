@@ -9,6 +9,7 @@ from create_masks import masks_templates, bg_color, render
 from helpers import get_model, save_image, get_1id_pose, read_images, color_face_mask, parse_arguments, resize_image
 from line_profiler_pycharm import profile
 
+# TODO: 0) check morphologicals sunglasses and eye mask
 # TODO: 1)run big examples
 # TODO: 2) profiling the code + refactoring
 # TODO: 3)run ALL masks
@@ -31,6 +32,7 @@ def main(args):
     # Paths of all the images to create masks for
     img_paths = read_images(args.input, args.image_extensions)
     for img_path in tqdm(img_paths):
+        print(img_path)
         # Read an image
         img = cv2.imread(img_path, 1)
 

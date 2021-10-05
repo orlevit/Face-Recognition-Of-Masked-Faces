@@ -141,9 +141,9 @@ def otsu_clustering_current(elements, STD_CHECK, bins_number=100):
     return cluster1, cluster2, int(round(std1)), int(round(std2)), 000, True ,last_cluster_number
 ################################################################################################
 ###################### points stds on the images
-def dist(r_img, df,X_VALUE,Y_VALUE):
+def dist(r_img, df,X_VALUE,Y_VALUE,the_type=2):
     unique_df = df.sort_values(['z', 'mask'], ascending=False).drop_duplicates(['x', 'y', 'mask'], keep='first')
-    frontal_mask_all = unique_df[(unique_df['mask'] == 2)][['x', 'y', 'z']]
+    frontal_mask_all = unique_df[(unique_df['mask'] == the_type)][['x', 'y', 'z']]
 
     img_x_dim, img_y_dim = r_img.shape[1], r_img.shape[0]
     mask_on_img = np.asarray([[None] * img_x_dim] * img_y_dim)
