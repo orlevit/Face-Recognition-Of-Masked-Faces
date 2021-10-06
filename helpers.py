@@ -5,6 +5,8 @@ import argparse
 import numpy as np
 import pandas as pd
 from glob import glob
+from time import time
+
 
 sys.path.append('./img2pose')
 from torchvision import transforms
@@ -62,57 +64,28 @@ def resize_image(image, bbox):
 
     return resized_image, scale_img
 
+
 @profile
-def split_head_mask_parts(df_3Dh, mask_name):
-    # # An indication whether it is a mask coordinate, additional  mask or rest of the head and add them to the matrices
-    # mask_marks = 3 * np.ones([config[mask_name].mask_ind.shape[0], 1], dtype=bool)
-    # mask_stacked = np.hstack((config[mask_name].mask_ind, mask_marks))
-    # rest_marks = np.ones([config[mask_name].rest_ind.shape[0], 1], dtype=bool)
-    # rest_stacked = np.hstack((config[mask_name].rest_ind, rest_marks))
-    #
-    # if isinstance(config[mask_name].mask_add_ind, type(None)):
-    #     combined_float = np.vstack((mask_stacked, rest_stacked))
-    # else:
-    #     mask_add_marks = 2 * np.ones([config[mask_name].mask_add_ind.shape[0], 1], dtype=bool)
-    #     mask_add_stacked = np.hstack((config[mask_name].mask_add_ind, mask_add_marks))
-    #     combined_float = np.vstack((mask_stacked, mask_add_stacked, rest_stacked))
-    #
-    # # Masks projection on the image plane
-    # combined_float[:, :3] = transform_vertices(r_img, pose, combined_float[:, :3])
-
-
-    # Order the coordinates by z, remove duplicates x,y values and keep the first occurrence
-    # Only the closer z pixels is consider as a candidate for appearing in that pixel
-
-    # df_mask_with_nulls = df_3Dh.iloc[config[mask_name].mask_ind]
-    # df_mask = df_mask_with_nulls[~df_mask_with_nulls.isnull()['x']].astype(int)
-    # frontal_main_mask_with_bg = df_mask.drop_duplicates(['x', 'y'], keep='first')
-    #
-    # df_rest_with_nulls = df_3Dh.iloc[config[mask_name].rest_ind]
-    # df_rest = df_rest_with_nulls[~df_rest_with_nulls.isnull()['x']].astype(int)
-    # frontal_rest_mask_with_bg = df_rest.drop_duplicates(['x', 'y'], keep='first')
-    frontal_main_mask_with_bg = head3d_to_mask(df_3Dh, mask_name, "mask_ind")
-    frontal_rest_mask_with_bg = head3d_to_mask(df_3Dh, mask_name, "rest_ind")
-
+def split_head_mask_parts(df_3dh, mask_name):
+    frontal_main_mask_with_bg = head3d_to_mask(df_3dh, mask_name, "mask_ind")
+    frontal_rest_mask_with_bg = head3d_to_mask(df_3dh, mask_name, "rest_ind")
 
     if config[mask_name].mask_add_ind is not None:
-        frontal_add_mask_with_bg = head3d_to_mask(df_3Dh, mask_name, "mask_add_ind")
-
-        # df_add_mask_with_nulls = df_3Dh.iloc[config[mask_name].mask_add_ind]
-        # df_add_mask = df_add_mask_with_nulls[~df_add_mask_with_nulls.isnull()['x']].astype(int)
-        # frontal_add_mask_with_bg = df_add_mask.drop_duplicates(['x', 'y'], keep='first')
+        frontal_add_mask_with_bg = head3d_to_mask(df_3dh, mask_name, "mask_add_ind")
     else:
         frontal_add_mask_with_bg = None
 
     return frontal_main_mask_with_bg, frontal_add_mask_with_bg, frontal_rest_mask_with_bg
 
+
 @profile
-def head3d_to_mask(df_3Dh, mask_name, mask_ind):
-    df_mask_with_nulls = df_3Dh.iloc[config[mask_name][mask_ind]]
+def head3d_to_mask(df_3dh, mask_name, mask_ind):
+    df_mask_with_nulls = df_3dh.iloc[config[mask_name][mask_ind]]
     df_mask = df_mask_with_nulls[~df_mask_with_nulls['x'].isnull()].astype(int)
     mask_with_bg = df_mask.sort_values(['z'], ascending=False).drop_duplicates(['x', 'y'], keep='first')
 
     return mask_with_bg
+
 
 @profile
 def project_3d(r_img, pose):
@@ -122,7 +95,8 @@ def project_3d(r_img, pose):
     # turn values from float to integer
     projected_head = np.round(projected_head_float).astype(int)
     df = pd.DataFrame(projected_head, columns=['x', 'y', 'z'])
-    df[~((0 <= df.x) & (df.x <= r_img.shape[1] - 1)) & ((0 <= df.y) & (df.y <= r_img.shape[0] - 1))] = [None, None, None]
+    values_in_range = ((0 <= df.x) & (df.x <= r_img.shape[1] - 1)) & ((0 <= df.y) & (df.y <= r_img.shape[0] - 1))
+    df[~values_in_range] = [None, None, None]
 
     return df
 
@@ -133,9 +107,7 @@ def scale(img, most_important_mask, second_important_mask, third_important_mask,
     second_mask_img = mark_image_with_mask(second_important_mask, img, scale_factor)
     third_img = mark_image_with_mask(third_important_mask, img, scale_factor)
 
-    mask_on_image = np.multiply(4, most_mask_img) + \
-                    np.multiply(2, second_mask_img) +\
-                    np.multiply(1, third_img)
+    mask_on_image = np.multiply(4, most_mask_img) + np.multiply(2, second_mask_img) + np.multiply(1, third_img)
 
     # Each pixel is main mask/additional strings or rest of the head, the numbers 1/2/4 are arbitrary,
     # and used to get the relevant type even when there are overlapping
@@ -165,8 +137,6 @@ def crop_bbox(img, bbox, inc_bbox):
 
 def get_1id_pose(results, img, threshold):
     h, w, _ = img.shape
-    img_h_center = h / 2
-    img_w_center = w / 2
 
     # Get all the bounding boxes
     all_bboxes = results["boxes"].cpu().numpy().astype('float')
@@ -210,12 +180,13 @@ def read_images(input_images, image_extensions):
     return img_paths
 
 
-def color_face_mask(img, color, mask_x, mask_y, rest_mask_x, rest_mask_y, mask_name, config):
-    img_output = mask_on_img(mask_x, mask_y, img.copy(), color)
+def color_face_mask(img, color, mask_x, mask_y, rest_mask_x, rest_mask_y, mask_name):
+    img_output = draw_mask_on_img(mask_x, mask_y, img.copy(), color)
     if config[mask_name].draw_rest_mask:
-        img_output = rest_on_img(rest_mask_x, rest_mask_y, img, img_output)
+        img_output = draw_rest_on_img(rest_mask_x, rest_mask_y, img, img_output)
 
     return img_output
+
 
 @profile
 def mark_image_with_mask(frontal_coords, img, scale_factor):
@@ -232,7 +203,7 @@ def mark_image_with_mask(frontal_coords, img, scale_factor):
 
 
 @profile
-def head3D_z_dist(r_img, df):
+def head3d_z_dist(r_img, df):
     img_x_dim, img_y_dim = r_img.shape[1], r_img.shape[0]
     mask_on_img = np.asarray([[None] * img_x_dim] * img_y_dim)
     not_none_df = df[~df['x'].isnull()].astype(int)
@@ -247,14 +218,14 @@ def head3D_z_dist(r_img, df):
     return mask_on_img
 
 
-def mask_on_img(mask_x, mask_y, img, color):
+def draw_mask_on_img(mask_x, mask_y, img, color):
     for x, y in zip(mask_x, mask_y):
         img[y, x, :] = [color[0], color[1], color[2]]
 
     return img
 
 
-def rest_on_img(rest_mask_x, rest_mask_y, img, img_output):
+def draw_rest_on_img(rest_mask_x, rest_mask_y, img, img_output):
     for x, y in zip(rest_mask_x, rest_mask_y):
         img_output[y, x, :] = img[y, x, :]
 

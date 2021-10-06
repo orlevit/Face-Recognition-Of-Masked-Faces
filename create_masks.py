@@ -1,26 +1,22 @@
 import cv2
-import math
+from time import time ###############33
 import numpy as np
 from skimage.filters import threshold_multiotsu
-from time import time
-from helpers import scale, split_head_mask_parts
-from masks_indices import make_eye_mask, make_hat_mask, make_covid19_mask, \
-    make_scarf_mask, make_sunglasses_mask
+from masks_indices import make_eye_mask, make_hat_mask, make_covid19_mask, make_scarf_mask, make_sunglasses_mask
+from helpers import scale, split_head_mask_parts, get_1id_pose, resize_image, project_3d, color_face_mask, save_image, \
+    head3d_z_dist
 from config_file import config, VERTICES_PATH, EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, COVID19_MASK_NAME, \
-    SUNGLASSES_MASK_NAME, NEAR_NEIGHBOUR_STRIDE, MIN_MASK_SIZE, FILTER_MASK_RIGHT_POINT_IMAGE_SIZE, SAME_AREA_DIST, \
+    SUNGLASSES_MASK_NAME, NEAR_NEIGHBOUR_STRIDE, MIN_MASK_SIZE, FILTER_MASK_RIGHT_POINT_IMAGE_SIZE, \
     FILTER_SIZE_MASK_RIGHT_POINT, FILTER_SIZE_MASK_ADD_LEFT_POINT, FILTER_SIZE_MASK_ADD_RIGHT_POINT, THRESHOLD_BUFFER, \
-    STD_CHECK, HEAD_3D_NAME
-from functools import lru_cache
+    RANGE_CHECK, HEAD_3D_NAME
+
 from line_profiler_pycharm import profile
-import warnings
 
 
 @profile
-def render(img, r_img, df_3Dh, h3D2i, mask_name, scale_factor):
-    # Transform the 3DMM according to the pose and get only frontal face areas
-    # with warnings.catch_warnings(record=True) as w:
-    #     warnings.filterwarnings("error")
-    frontal_mask, frontal_add_mask, frontal_rest = get_frontal(r_img, df_3Dh, h3D2i, mask_name, scale_factor)
+def render(img, r_img, df_3dh, h3d2i, mask_name, scale_factor):
+    # Get only frontal face areas
+    frontal_mask, frontal_add_mask, frontal_rest = get_frontal(r_img, df_3dh, h3d2i, mask_name, scale_factor)
 
     # Whether to add the forehead to the mask, this is currently only used for eye and hat masks
     if config[mask_name].add_forehead:
@@ -72,78 +68,57 @@ def neighbors_cells_z(mask_on_img, x_pixel, y_pixel, max_x, max_y):
 
 
 @profile
-def three_clusters_inds(elements, thresholds, bin_half_size):
-    # taking he elements instead of the "where"
-    # more thinking
-    a1=time()
+def three_clusters_arrays(elements, thresholds, bin_half_size):
+    is_bin2_free = True
     left_bin1_range = elements <= thresholds[0] + bin_half_size
     right_bin2_range = thresholds[1] - bin_half_size <= elements
-    bin1_ind = np.where(thresholds[0] - bin_half_size <= elements[left_bin1_range])
-    cluster1_arr_ind = np.where(~(left_bin1_range | right_bin2_range))
+    bin1 = elements[left_bin1_range][thresholds[0] - bin_half_size <= elements[left_bin1_range]]
+    cluster1_arr = elements[~(left_bin1_range | right_bin2_range)]
     bin2_range = elements[right_bin2_range] <= thresholds[1] + bin_half_size
-    bin2_ind = np.where(bin2_range)
-    cluster2_arr_ind = elements[right_bin2_range][~bin2_range]
-    a2 = time()
-    print('test1',a2-a1)
+    bin2 = elements[right_bin2_range][bin2_range]
+    cluster2_arr = elements[right_bin2_range][~bin2_range]
 
-    is_bin2_free = True
-    a1=time()
-
-    bin1_ind = np.where((thresholds[0] - bin_half_size <= elements) &
-                        (elements <= thresholds[0] + bin_half_size))[0]
-    cluster1_arr_ind = np.where((thresholds[0] + bin_half_size < elements) &
-                                (elements < thresholds[1] - bin_half_size))[0]
-    bin2_ind = np.where((thresholds[1] - bin_half_size <= elements) &
-                        (elements <= thresholds[1] + bin_half_size))[0]
-    cluster2_arr_ind = np.where(thresholds[1] + bin_half_size < elements)[0]
-    a2 = time()
-    print('test2', a2 - a1)
-
-    if not cluster2_arr_ind.size:
-        cluster2_arr_ind = np.append(cluster2_arr_ind, bin2_ind)
+    if not cluster2_arr.size:
+        cluster2_arr = np.append(cluster2_arr, bin2)
         is_bin2_free = False
-        if not cluster1_arr_ind.size:
-            cluster1_arr_ind = np.append(cluster1_arr_ind, bin1_ind)
+        if not cluster1_arr.size:
+            cluster1_arr = np.append(cluster1_arr, bin1)
 
-    if not cluster1_arr_ind.size:
-        if bin2_ind.size and is_bin2_free:
-            cluster1_arr_ind = np.append(cluster1_arr_ind, bin2_ind)
+    if not cluster1_arr.size:
+        if bin2.size and is_bin2_free:
+            cluster1_arr = np.append(cluster1_arr, bin2)
         else:
-            cluster1_arr_ind = np.append(cluster1_arr_ind, bin1_ind)
+            cluster1_arr = np.append(cluster1_arr, bin1)
 
-    return cluster1_arr_ind, cluster2_arr_ind
+    return cluster1_arr, cluster2_arr
 
 
 @profile
-def two_clusters_inds(elements, threshold, bin_half_size):
+def two_clusters_arrays(elements, threshold, bin_half_size):
     less_range = elements < threshold - bin_half_size
     bigger_range = threshold + bin_half_size < elements
-    cluster1_arr_ind = np.where(less_range)[0]
-    cluster2_arr_ind = np.where(bigger_range)[0]
-    bin_ind = np.where(~(less_range | bigger_range))[0]
+    cluster1_arr = elements[less_range]
+    cluster2_arr = elements[bigger_range]
+    bin1 = elements[~(less_range | bigger_range)]
 
-    if not cluster1_arr_ind.size:
-        cluster1_arr_ind = np.append(cluster1_arr_ind, bin_ind)
-    elif not cluster2_arr_ind.size:
-        cluster2_arr_ind = np.append(cluster2_arr_ind, bin_ind)
+    if not cluster1_arr.size:
+        cluster1_arr = np.append(cluster1_arr, bin1)
+    elif not cluster2_arr.size:
+        cluster2_arr = np.append(cluster2_arr, bin1)
 
-    return cluster1_arr_ind, cluster2_arr_ind
+    return cluster1_arr, cluster2_arr
 
 
 @profile
 def otsu_clustering(elements, cluster_number, bins_number, bin_half_size):
     thresholds = threshold_multiotsu(elements, cluster_number, nbins=bins_number)
-    # print(thresholds)
-    if cluster_number == 2:
-        cluster1_arr_ind, cluster2_arr_ind = two_clusters_inds(elements, thresholds, bin_half_size)
-    else:  # cluster_number == 3
-        cluster1_arr_ind, cluster2_arr_ind = three_clusters_inds(elements, thresholds, bin_half_size)
 
-    cluster1_arr = elements[cluster1_arr_ind]
-    cluster2_arr = elements[cluster2_arr_ind]
+    if cluster_number == 2:
+        cluster1_arr, cluster2_arr = two_clusters_arrays(elements, thresholds, bin_half_size)
+    else:  # cluster_number == 3
+        cluster1_arr, cluster2_arr = three_clusters_arrays(elements, thresholds, bin_half_size)
 
     return cluster1_arr, cluster2_arr
-
 
 
 @profile
@@ -153,8 +128,8 @@ def clustering(elements, bins_number=100):
     range_arr1 = max(cluster1_arr) - min(cluster1_arr)
     range_arr2 = max(cluster2_arr) - min(cluster2_arr)
 
-    if STD_CHECK <= range_arr1 or STD_CHECK <= range_arr2:
-            cluster1_arr, cluster2_arr = otsu_clustering(elements, 3, bins_number, bin_half_size)
+    if RANGE_CHECK <= range_arr1 or RANGE_CHECK <= range_arr2:
+        cluster1_arr, cluster2_arr = otsu_clustering(elements, 3, bins_number, bin_half_size)
 
     cluster1 = np.mean(cluster1_arr)
     cluster2 = np.mean(cluster2_arr)
@@ -188,7 +163,6 @@ def threshold_front(r_img, mask_on_img, frontal_mask_all):
     for x, y, z in zip(frontal_mask_all.x, frontal_mask_all.y, frontal_mask_all.z):
         surrounding_mask = neighbors_cells_z(mask_on_img, x, y, img_x_dim - 1, img_y_dim - 1)
         more_indication = more_than_one(surrounding_mask)
-        aa = np.unique(surrounding_mask)
         mask_on_img_front[y, x] = 1
 
         if more_indication:
@@ -201,10 +175,11 @@ def threshold_front(r_img, mask_on_img, frontal_mask_all):
     mask_marks = np.asarray(np.where(mask_on_img_front == 1)).T[:, [1, 0]]
     return mask_marks
 
+
 @profile
-def frontal_points(take_only_frontal_ind, r_img, h3D2i, df_with_bg, return_empty = False):
+def frontal_points(take_only_frontal_ind, r_img, h3d2i, df_with_bg, return_empty=False):
     if take_only_frontal_ind:
-         arr = threshold_front(r_img, h3D2i, df_with_bg)
+        arr = threshold_front(r_img, h3d2i, df_with_bg)
     else:
         if return_empty or df_with_bg is None:
             arr = []
@@ -214,19 +189,15 @@ def frontal_points(take_only_frontal_ind, r_img, h3D2i, df_with_bg, return_empty
     return arr
 
 
-# TODO: project  images without added strings on image
 @profile
-def get_frontal(r_img, df_3Dh, h3D2i, mask_name, scale_factor):
+def get_frontal(r_img, df_3dh, h3d2i, mask_name, scale_factor):
     print('frontal: ', mask_name)
-    #TODO: can project the pose only once and take the mask_z_dist once!
-    #   It can be done by change the creation of the masks to to stor indicis and not coord, and add stor coord for *all* the face once
-    #   split this function so the projection is out side (including limit detection) and only the extraction of the relevant indicis is here.
-    frontal_main_mask_w_bg, frontal_add_mask_w_bg, frontal_rest_mask_w_bg = split_head_mask_parts(df_3Dh, mask_name)
+    frontal_main_mask_w_bg, frontal_add_mask_w_bg, frontal_rest_mask_w_bg = split_head_mask_parts(df_3dh, mask_name)
 
     # Check each point if it is came from frontal or hidden area of tha face
-    famwb_arr = frontal_points(config[mask_name].mask_add_front_points_calc, r_img, h3D2i, frontal_add_mask_w_bg)
-    fmmwb_arr = frontal_points(config[mask_name].mask_front_points_calc, r_img, h3D2i, frontal_main_mask_w_bg)
-    frmwb_arr = frontal_points(config[mask_name].draw_rest_mask, r_img, h3D2i, frontal_rest_mask_w_bg, True)
+    famwb_arr = frontal_points(config[mask_name].mask_add_front_points_calc, r_img, h3d2i, frontal_add_mask_w_bg)
+    fmmwb_arr = frontal_points(config[mask_name].mask_front_points_calc, r_img, h3d2i, frontal_main_mask_w_bg)
+    frmwb_arr = frontal_points(config[mask_name].draw_rest_mask, r_img, h3d2i, frontal_rest_mask_w_bg, True)
 
     if mask_name == EYE_MASK_NAME:
         frontal_rest, frontal_add_mask, frontal_mask = scale(r_img, frmwb_arr, famwb_arr, fmmwb_arr, scale_factor)
@@ -339,7 +310,6 @@ def add_forehead_mask(frontal_mask, frontal_rest, image):
 def get_rest_mask(mask_ind, mask_add_ind, vertices):
     rest_of_head_ind_with_add = np.setdiff1d(range(vertices.shape[0]), mask_ind)
     rest_of_head_ind = np.setdiff1d(rest_of_head_ind_with_add, mask_add_ind)
-    # rest_of_head_mask = index_on_vertices(rest_of_head_ind, vertices)
 
     return rest_of_head_ind
 
@@ -366,9 +336,6 @@ def masks_templates(masks_name):
     masks_ind = [hat_mask_ind, eye_mask_ind, scarf_mask_ind, covid19_mask_ind, sunglasses_mask_ind]
     masks_add_ind = [None, None, None, add_covid19_ind, add_sunglasses_ind]
 
-    # masks = [index_on_vertices(maskInd, vertices) for maskInd in masks_ind]
-    # masks_add = [None if mask_add_ind is None else
-    #              index_on_vertices(mask_add_ind, vertices) for mask_add_ind in masks_add_ind]
     rest_ind = [get_rest_mask(maskInd, maskAInd, vertices) for maskInd, maskAInd in zip(masks_ind, masks_add_ind)]
     masks_to_create = masks_name.split(',')
     head3d_cords = index_on_vertices(range(0, len(vertices)), vertices)
@@ -383,3 +350,51 @@ def add_mask_to_config(head3d_cords, masks_ind, masks_add_ind, rest_ind, masks_o
         config[mask_name].mask_ind = masks_ind[masks_order.index(mask_name)]
         config[mask_name].mask_add_ind = masks_add_ind[masks_order.index(mask_name)]
         config[mask_name].rest_ind = rest_ind[masks_order.index(mask_name)]
+
+
+def process_image(img_path, model, transform, masks_to_create, args):
+    print(img_path)
+    # Read an image
+    img = cv2.imread(img_path, 1)
+
+    # results from img2pose
+    results = model.predict([transform(img)])[0]
+    tic = time()
+
+    # Get only one 6DOF from all the 6DFs that img2pose found
+    pose, bbox = get_1id_pose(results, img, args.threshold)
+
+    # face detected with img2pose and above the threshold
+    if pose.size != 0:
+        # Resize image that ROI will be in a fix size
+        r_img, scale_factor = resize_image(img, bbox)
+
+        # project 3D face according to pose
+        df_3dh = project_3d(r_img, pose)
+
+        # Projection of the 3d head z coordinate on the image
+        h3d2i = head3d_z_dist(r_img, df_3dh)
+
+        # for mask, mask_add, rest_of_head, mask_name in zip(masks, masks_add, rest_of_heads, MASKS_NAMES):
+        for mask_name in masks_to_create:
+            process_mask(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, img_path, bbox, args)
+    else:
+        print(f'No face detected for: {img_path}')
+    config[HAT_MASK_NAME].mask_exists = False
+    toc = time()
+    return toc-tic
+
+def process_mask(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, img_path, bbox, args):
+    print('start: ',mask_name)
+
+    # Get the location of the masks on the image
+    mask_x, mask_y, rest_mask_x, rest_mask_y = render(img, r_img, df_3dh, h3d2i, mask_name, scale_factor)
+
+    # The average color of the surrounding of the image
+    color = bg_color(mask_x, mask_y, img)
+
+    # Put the colored mask on the face in the image
+    masked_image = color_face_mask(img, color, mask_x, mask_y, rest_mask_x, rest_mask_y, mask_name)
+
+    # Save masked image
+    save_image(img_path, mask_name, masked_image, args.output, bbox, args.bbox_ind, args.inc_bbox)
