@@ -73,7 +73,22 @@ def neighbors_cells_z(mask_on_img, x_pixel, y_pixel, max_x, max_y):
 
 @profile
 def three_clusters_inds(elements, thresholds, bin_half_size):
+    # taking he elements instead of the "where"
+    # more thinking
+    a1=time()
+    left_bin1_range = elements <= thresholds[0] + bin_half_size
+    right_bin2_range = thresholds[1] - bin_half_size <= elements
+    bin1_ind = np.where(thresholds[0] - bin_half_size <= elements[left_bin1_range])
+    cluster1_arr_ind = np.where(~(left_bin1_range | right_bin2_range))
+    bin2_range = elements[right_bin2_range] <= thresholds[1] + bin_half_size
+    bin2_ind = np.where(bin2_range)
+    cluster2_arr_ind = elements[right_bin2_range][~bin2_range]
+    a2 = time()
+    print('test1',a2-a1)
+
     is_bin2_free = True
+    a1=time()
+
     bin1_ind = np.where((thresholds[0] - bin_half_size <= elements) &
                         (elements <= thresholds[0] + bin_half_size))[0]
     cluster1_arr_ind = np.where((thresholds[0] + bin_half_size < elements) &
@@ -81,6 +96,8 @@ def three_clusters_inds(elements, thresholds, bin_half_size):
     bin2_ind = np.where((thresholds[1] - bin_half_size <= elements) &
                         (elements <= thresholds[1] + bin_half_size))[0]
     cluster2_arr_ind = np.where(thresholds[1] + bin_half_size < elements)[0]
+    a2 = time()
+    print('test2', a2 - a1)
 
     if not cluster2_arr_ind.size:
         cluster2_arr_ind = np.append(cluster2_arr_ind, bin2_ind)
@@ -99,10 +116,11 @@ def three_clusters_inds(elements, thresholds, bin_half_size):
 
 @profile
 def two_clusters_inds(elements, threshold, bin_half_size):
-    bin_ind = np.where((threshold - bin_half_size <= elements) &
-                       (elements <= threshold + bin_half_size))[0]
-    cluster1_arr_ind = np.where(elements < threshold - bin_half_size)[0]
-    cluster2_arr_ind = np.where(threshold + bin_half_size < elements)[0]
+    less_range = elements < threshold - bin_half_size
+    bigger_range = threshold + bin_half_size < elements
+    cluster1_arr_ind = np.where(less_range)[0]
+    cluster2_arr_ind = np.where(bigger_range)[0]
+    bin_ind = np.where(~(less_range | bigger_range))[0]
 
     if not cluster1_arr_ind.size:
         cluster1_arr_ind = np.append(cluster1_arr_ind, bin_ind)
@@ -135,7 +153,7 @@ def clustering(elements, bins_number=100):
     range_arr1 = max(cluster1_arr) - min(cluster1_arr)
     range_arr2 = max(cluster2_arr) - min(cluster2_arr)
 
-    if STD_CHECK <= range_arr1  or STD_CHECK <= range_arr2:
+    if STD_CHECK <= range_arr1 or STD_CHECK <= range_arr2:
             cluster1_arr, cluster2_arr = otsu_clustering(elements, 3, bins_number, bin_half_size)
 
     cluster1 = np.mean(cluster1_arr)
@@ -170,14 +188,14 @@ def threshold_front(r_img, mask_on_img, frontal_mask_all):
     for x, y, z in zip(frontal_mask_all.x, frontal_mask_all.y, frontal_mask_all.z):
         surrounding_mask = neighbors_cells_z(mask_on_img, x, y, img_x_dim - 1, img_y_dim - 1)
         more_indication = more_than_one(surrounding_mask)
+        aa = np.unique(surrounding_mask)
         mask_on_img_front[y, x] = 1
 
         if more_indication:
             cluster1, cluster2 = clustering(surrounding_mask)
-            diff = abs(cluster1 - cluster2)
-            min_cluster = min(cluster1, cluster2)
+            diff = cluster2 - cluster1
             threshold_buffer = diff * THRESHOLD_BUFFER
-            threshold = min_cluster + threshold_buffer
+            threshold = cluster1 + threshold_buffer
             mask_on_img_front[y, x] = 0 if z < threshold else 1
 
     mask_marks = np.asarray(np.where(mask_on_img_front == 1)).T[:, [1, 0]]
