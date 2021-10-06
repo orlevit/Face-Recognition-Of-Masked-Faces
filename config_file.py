@@ -13,6 +13,7 @@ LENS_RADIUS = 40 * FACE_MODEL_DENSITY
 STRING_SIZE = 5
 THRESHOLD_BUFFER = 30/100
 SAME_AREA_DIST = 20
+HEAD_3D_NAME = "head3D"
 EYE_MASK_NAME = "eyemask"
 HAT_MASK_NAME = "hatmask"
 SCARF_MASK_NAME = "scarfmask"
@@ -55,7 +56,9 @@ config = {
         "draw_rest_mask": True,
         "additional_masks_req": HAT_MASK_NAME,
         "filter_size": 9,
-        "mask_front_points_calc": False
+        "mask_front_points_calc": False,
+        "mask_add_front_points_calc": False
+
     },
     HAT_MASK_NAME: {
         "inds": {
@@ -68,6 +71,7 @@ config = {
         "additional_masks_req": None,
         "filter_size": 15,
         "mask_front_points_calc": True,
+        "mask_add_front_points_calc": False,
         "mask_exists": False
     },
     SCARF_MASK_NAME: {
@@ -80,7 +84,8 @@ config = {
         "draw_rest_mask": False,
         "additional_masks_req": None,
         "filter_size": 15,
-        "mask_front_points_calc": True
+        "mask_front_points_calc": True,
+        "mask_add_front_points_calc": False
     },
     COVID19_MASK_NAME: {
         "inds": {
@@ -101,7 +106,8 @@ config = {
         "draw_rest_mask": False,
         "additional_masks_req": None,
         "filter_size": 15,
-        "mask_front_points_calc": True
+        "mask_front_points_calc": True,
+        "mask_add_front_points_calc": True
     },
     SUNGLASSES_MASK_NAME: {
         "inds": {
@@ -111,7 +117,8 @@ config = {
         "draw_rest_mask": False,
         "additional_masks_req": None,
         "filter_size": 9.355,
-        "mask_front_points_calc": True
+        "mask_front_points_calc": True,
+        "mask_add_front_points_calc": True
     }
 }
 config = edict(config)

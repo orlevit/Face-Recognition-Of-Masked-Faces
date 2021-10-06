@@ -12,7 +12,7 @@ from img2pose import img2poseModel
 from model_loader import load_model
 from project_on_image import transform_vertices
 from config_file import config, DEPTH, MAX_SIZE, MIN_SIZE, POSE_MEAN, POSE_STDDEV, MODEL_PATH, \
-    PATH_3D_POINTS, ALL_MASKS, BBOX_REQUESTED_SIZE, EYE_MASK_NAME
+    PATH_3D_POINTS, ALL_MASKS, BBOX_REQUESTED_SIZE, HEAD_3D_NAME
 from line_profiler_pycharm import profile
 
 
@@ -63,29 +63,68 @@ def resize_image(image, bbox):
     return resized_image, scale_img
 
 @profile
-def masks_parts_dataframe(r_img, pose, mask_name):
-    # An indication whether it is a mask coordinate, additional  mask or rest of the head and add them to the matrices
-    mask_marks = 3 * np.ones([config[mask_name].mask_ind.shape[0], 1], dtype=bool)
-    mask_stacked = np.hstack((config[mask_name].mask_ind, mask_marks))
-    rest_marks = np.ones([config[mask_name].rest_ind.shape[0], 1], dtype=bool)
-    rest_stacked = np.hstack((config[mask_name].rest_ind, rest_marks))
+def split_head_mask_parts(df_3Dh, mask_name):
+    # # An indication whether it is a mask coordinate, additional  mask or rest of the head and add them to the matrices
+    # mask_marks = 3 * np.ones([config[mask_name].mask_ind.shape[0], 1], dtype=bool)
+    # mask_stacked = np.hstack((config[mask_name].mask_ind, mask_marks))
+    # rest_marks = np.ones([config[mask_name].rest_ind.shape[0], 1], dtype=bool)
+    # rest_stacked = np.hstack((config[mask_name].rest_ind, rest_marks))
+    #
+    # if isinstance(config[mask_name].mask_add_ind, type(None)):
+    #     combined_float = np.vstack((mask_stacked, rest_stacked))
+    # else:
+    #     mask_add_marks = 2 * np.ones([config[mask_name].mask_add_ind.shape[0], 1], dtype=bool)
+    #     mask_add_stacked = np.hstack((config[mask_name].mask_add_ind, mask_add_marks))
+    #     combined_float = np.vstack((mask_stacked, mask_add_stacked, rest_stacked))
+    #
+    # # Masks projection on the image plane
+    # combined_float[:, :3] = transform_vertices(r_img, pose, combined_float[:, :3])
 
-    if isinstance(config[mask_name].mask_add_ind, type(None)):
-        combined_float = np.vstack((mask_stacked, rest_stacked))
+
+    # Order the coordinates by z, remove duplicates x,y values and keep the first occurrence
+    # Only the closer z pixels is consider as a candidate for appearing in that pixel
+
+    # df_mask_with_nulls = df_3Dh.iloc[config[mask_name].mask_ind]
+    # df_mask = df_mask_with_nulls[~df_mask_with_nulls.isnull()['x']].astype(int)
+    # frontal_main_mask_with_bg = df_mask.drop_duplicates(['x', 'y'], keep='first')
+    #
+    # df_rest_with_nulls = df_3Dh.iloc[config[mask_name].rest_ind]
+    # df_rest = df_rest_with_nulls[~df_rest_with_nulls.isnull()['x']].astype(int)
+    # frontal_rest_mask_with_bg = df_rest.drop_duplicates(['x', 'y'], keep='first')
+    frontal_main_mask_with_bg = head3d_to_mask(df_3Dh, mask_name, "mask_ind")
+    frontal_rest_mask_with_bg = head3d_to_mask(df_3Dh, mask_name, "rest_ind")
+
+
+    if config[mask_name].mask_add_ind is not None:
+        frontal_add_mask_with_bg = head3d_to_mask(df_3Dh, mask_name, "mask_add_ind")
+
+        # df_add_mask_with_nulls = df_3Dh.iloc[config[mask_name].mask_add_ind]
+        # df_add_mask = df_add_mask_with_nulls[~df_add_mask_with_nulls.isnull()['x']].astype(int)
+        # frontal_add_mask_with_bg = df_add_mask.drop_duplicates(['x', 'y'], keep='first')
     else:
-        mask_add_marks = 2 * np.ones([config[mask_name].mask_add_ind.shape[0], 1], dtype=bool)
-        mask_add_stacked = np.hstack((config[mask_name].mask_add_ind, mask_add_marks))
-        combined_float = np.vstack((mask_stacked, mask_add_stacked, rest_stacked))
+        frontal_add_mask_with_bg = None
 
+    return frontal_main_mask_with_bg, frontal_add_mask_with_bg, frontal_rest_mask_with_bg
+
+@profile
+def head3d_to_mask(df_3Dh, mask_name, mask_ind):
+    df_mask_with_nulls = df_3Dh.iloc[config[mask_name][mask_ind]]
+    df_mask = df_mask_with_nulls[~df_mask_with_nulls['x'].isnull()].astype(int)
+    mask_with_bg = df_mask.sort_values(['z'], ascending=False).drop_duplicates(['x', 'y'], keep='first')
+
+    return mask_with_bg
+
+@profile
+def project_3d(r_img, pose):
     # Masks projection on the image plane
-    combined_float[:, :3] = transform_vertices(r_img, pose, combined_float[:, :3])
+    projected_head_float = transform_vertices(r_img, pose, config[HEAD_3D_NAME])
 
     # turn values from float to integer
-    combined = np.round(combined_float).astype(int)
-    df = pd.DataFrame(combined, columns=['x', 'y', 'z', 'mask'])
-    df_in_range = df[((0 <= df.x) & (df.x <= r_img.shape[1] - 1)) & ((0 <= df.y) & (df.y <= r_img.shape[0] - 1))]
+    projected_head = np.round(projected_head_float).astype(int)
+    df = pd.DataFrame(projected_head, columns=['x', 'y', 'z'])
+    df[~((0 <= df.x) & (df.x <= r_img.shape[1] - 1)) & ((0 <= df.y) & (df.y <= r_img.shape[0] - 1))] = [None, None, None]
 
-    return df_in_range
+    return df
 
 
 @profile
@@ -190,6 +229,22 @@ def mark_image_with_mask(frontal_coords, img, scale_factor):
             mask_on_image[min(y, img_y_dim - 1), min(x, img_x_dim - 1)] = 1
 
     return mask_on_image
+
+
+@profile
+def head3D_z_dist(r_img, df):
+    img_x_dim, img_y_dim = r_img.shape[1], r_img.shape[0]
+    mask_on_img = np.asarray([[None] * img_x_dim] * img_y_dim)
+    not_none_df = df[~df['x'].isnull()].astype(int)
+
+    # Each pixel contains a list of all the Z coordinates from the 3D model
+    for x, y, z in zip(not_none_df.x, not_none_df.y, not_none_df.z):
+        if mask_on_img[y, x] is None:
+            mask_on_img[y, x] = [z]
+        else:
+            mask_on_img[y, x].append(z)
+
+    return mask_on_img
 
 
 def mask_on_img(mask_x, mask_y, img, color):

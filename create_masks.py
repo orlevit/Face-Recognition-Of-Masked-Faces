@@ -3,24 +3,24 @@ import math
 import numpy as np
 from skimage.filters import threshold_multiotsu
 from time import time
-from helpers import scale, masks_parts_dataframe
+from helpers import scale, split_head_mask_parts
 from masks_indices import make_eye_mask, make_hat_mask, make_covid19_mask, \
     make_scarf_mask, make_sunglasses_mask
 from config_file import config, VERTICES_PATH, EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, COVID19_MASK_NAME, \
     SUNGLASSES_MASK_NAME, NEAR_NEIGHBOUR_STRIDE, MIN_MASK_SIZE, FILTER_MASK_RIGHT_POINT_IMAGE_SIZE, SAME_AREA_DIST, \
     FILTER_SIZE_MASK_RIGHT_POINT, FILTER_SIZE_MASK_ADD_LEFT_POINT, FILTER_SIZE_MASK_ADD_RIGHT_POINT, THRESHOLD_BUFFER, \
-    STD_CHECK
+    STD_CHECK, HEAD_3D_NAME
 from functools import lru_cache
 from line_profiler_pycharm import profile
 import warnings
 
 
 @profile
-def render(img, r_img, pose, mask_name, scale_factor):
+def render(img, r_img, df_3Dh, h3D2i, mask_name, scale_factor):
     # Transform the 3DMM according to the pose and get only frontal face areas
     # with warnings.catch_warnings(record=True) as w:
     #     warnings.filterwarnings("error")
-    frontal_mask, frontal_add_mask, frontal_rest = get_frontal(r_img, pose, mask_name, scale_factor)
+    frontal_mask, frontal_add_mask, frontal_rest = get_frontal(r_img, df_3Dh, h3D2i, mask_name, scale_factor)
 
     # Whether to add the forehead to the mask, this is currently only used for eye and hat masks
     if config[mask_name].add_forehead:
@@ -183,60 +183,32 @@ def threshold_front(r_img, mask_on_img, frontal_mask_all):
     mask_marks = np.asarray(np.where(mask_on_img_front == 1)).T[:, [1, 0]]
     return mask_marks
 
-
-def mask_z_dist(r_img, df):
-    img_x_dim, img_y_dim = r_img.shape[1], r_img.shape[0]
-    mask_on_img = np.asarray([[None] * img_x_dim] * img_y_dim)
-
-    # Each pixel contains a list of all the Z coordinates from the 3D model
-    for x, y, z in zip(df.x, df.y, df.z):
-        if mask_on_img[y, x] is None:
-            mask_on_img[y, x] = [z]
+@profile
+def frontal_points(take_only_frontal_ind, r_img, h3D2i, df_with_bg, return_empty = False):
+    if take_only_frontal_ind:
+         arr = threshold_front(r_img, h3D2i, df_with_bg)
+    else:
+        if return_empty or df_with_bg is None:
+            arr = []
         else:
-            mask_on_img[y, x].append(z)
+            arr = df_with_bg[['x', 'y']].to_numpy()
 
-    return mask_on_img
+    return arr
 
 
 # TODO: project  images without added strings on image
 @profile
-def get_frontal(r_img, pose, mask_name, scale_factor):
+def get_frontal(r_img, df_3Dh, h3D2i, mask_name, scale_factor):
     print('frontal: ', mask_name)
     #TODO: can project the pose only once and take the mask_z_dist once!
     #   It can be done by change the creation of the masks to to stor indicis and not coord, and add stor coord for *all* the face once
     #   split this function so the projection is out side (including limit detection) and only the extraction of the relevant indicis is here.
-    df = masks_parts_dataframe(r_img, pose, mask_name)
-    mask_on_img = mask_z_dist(r_img, df)
-    # Order the coordinates by z, remove duplicates x,y,mask values and keep the first occurrence
-    # Only the closer z pixels is consider as a candidate for appearing in that pixel
-    unique_df = df.sort_values(['z'], ascending=False).drop_duplicates(['x', 'y', 'mask'], keep='first')
-
-    frontal_main_mask_with_bg = unique_df[(unique_df['mask'] == 3)][['x', 'y', 'z']]
-    frontal_add_mask_with_bg = unique_df[(unique_df['mask'] == 2)][['x', 'y', 'z']]
-    frontal_rest_mask_with_bg = unique_df[(unique_df['mask'] == 1)][['x', 'y', 'z']]
+    frontal_main_mask_w_bg, frontal_add_mask_w_bg, frontal_rest_mask_w_bg = split_head_mask_parts(df_3Dh, mask_name)
 
     # Check each point if it is came from frontal or hidden area of tha face
-    if config[mask_name].mask_add_ind is not None:
-        famwb_arr = threshold_front(r_img, mask_on_img, frontal_add_mask_with_bg)
-    else:
-        famwb_arr = frontal_add_mask_with_bg[['x', 'y']].to_numpy()
-
-    if config[mask_name].mask_front_points_calc:
-        fmmwb_arr = threshold_front(r_img, mask_on_img, frontal_main_mask_with_bg)
-    else:
-        fmmwb_arr = frontal_main_mask_with_bg[['x', 'y']].to_numpy()
-
-    # TODO: Switch comments to take frontal mask center if NOT multithread!
-    ############## Switch comments to take frontal mask center if NOT multithread! #######################################
-    # fmmwb_arr = threshold_front(r_img, df, frontal_main_mask_with_bg)
-    # fmmwb_arr = frontal_main_mask_with_bg[['x', 'y']].to_numpy()
-    #####################################################################################################################
-    # rest_mask_on_image = mark_image_with_mask(img, frontal_rest_mask_with_bg.x, frontal_rest_mask_with_bg.y)
-
-    if config[mask_name].draw_rest_mask:
-        frmwb_arr = threshold_front(r_img, mask_on_img, frontal_rest_mask_with_bg)
-    else:
-        frmwb_arr = []
+    famwb_arr = frontal_points(config[mask_name].mask_add_front_points_calc, r_img, h3D2i, frontal_add_mask_w_bg)
+    fmmwb_arr = frontal_points(config[mask_name].mask_front_points_calc, r_img, h3D2i, frontal_main_mask_w_bg)
+    frmwb_arr = frontal_points(config[mask_name].draw_rest_mask, r_img, h3D2i, frontal_rest_mask_w_bg, True)
 
     if mask_name == EYE_MASK_NAME:
         frontal_rest, frontal_add_mask, frontal_mask = scale(r_img, frmwb_arr, famwb_arr, fmmwb_arr, scale_factor)
@@ -349,9 +321,9 @@ def add_forehead_mask(frontal_mask, frontal_rest, image):
 def get_rest_mask(mask_ind, mask_add_ind, vertices):
     rest_of_head_ind_with_add = np.setdiff1d(range(vertices.shape[0]), mask_ind)
     rest_of_head_ind = np.setdiff1d(rest_of_head_ind_with_add, mask_add_ind)
-    rest_of_head_mask = index_on_vertices(rest_of_head_ind, vertices)
+    # rest_of_head_mask = index_on_vertices(rest_of_head_ind, vertices)
 
-    return rest_of_head_mask
+    return rest_of_head_ind
 
 
 def load_3dmm():
@@ -372,22 +344,24 @@ def masks_templates(masks_name):
     covid19_mask_ind, add_covid19_ind = make_covid19_mask(x, y, z)
     sunglasses_mask_ind, add_sunglasses_ind = make_sunglasses_mask(x, y)
 
-    masks_order = [EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, COVID19_MASK_NAME, SUNGLASSES_MASK_NAME]
-    masks_ind = [eye_mask_ind, hat_mask_ind, scarf_mask_ind, covid19_mask_ind, sunglasses_mask_ind]
+    masks_order = [HAT_MASK_NAME, EYE_MASK_NAME, SCARF_MASK_NAME, COVID19_MASK_NAME, SUNGLASSES_MASK_NAME]
+    masks_ind = [hat_mask_ind, eye_mask_ind, scarf_mask_ind, covid19_mask_ind, sunglasses_mask_ind]
     masks_add_ind = [None, None, None, add_covid19_ind, add_sunglasses_ind]
 
-    masks = [index_on_vertices(maskInd, vertices) for maskInd in masks_ind]
-    masks_add = [None if mask_add_ind is None else
-                 index_on_vertices(mask_add_ind, vertices) for mask_add_ind in masks_add_ind]
-    rest_of_heads = [get_rest_mask(maskInd, maskAInd, vertices) for maskInd, maskAInd in zip(masks_ind, masks_add_ind)]
+    # masks = [index_on_vertices(maskInd, vertices) for maskInd in masks_ind]
+    # masks_add = [None if mask_add_ind is None else
+    #              index_on_vertices(mask_add_ind, vertices) for mask_add_ind in masks_add_ind]
+    rest_ind = [get_rest_mask(maskInd, maskAInd, vertices) for maskInd, maskAInd in zip(masks_ind, masks_add_ind)]
     masks_to_create = masks_name.split(',')
-    add_mask_to_config(masks, masks_add, rest_of_heads, masks_order, masks_to_create)
+    head3d_cords = index_on_vertices(range(0, len(vertices)), vertices)
+    add_mask_to_config(head3d_cords, masks_ind, masks_add_ind, rest_ind, masks_order, masks_to_create)
 
     return masks_to_create
 
 
-def add_mask_to_config(masks, masks_add, rest_of_heads, masks_order, masks_to_create):
+def add_mask_to_config(head3d_cords, masks_ind, masks_add_ind, rest_ind, masks_order, masks_to_create):
+    config[HEAD_3D_NAME] = head3d_cords
     for mask_name in masks_to_create:
-        config[mask_name].mask_ind = masks[masks_order.index(mask_name)]
-        config[mask_name].mask_add_ind = masks_add[masks_order.index(mask_name)]
-        config[mask_name].rest_ind = rest_of_heads[masks_order.index(mask_name)]
+        config[mask_name].mask_ind = masks_ind[masks_order.index(mask_name)]
+        config[mask_name].mask_add_ind = masks_add_ind[masks_order.index(mask_name)]
+        config[mask_name].rest_ind = rest_ind[masks_order.index(mask_name)]

@@ -6,9 +6,11 @@ import cv2
 from tqdm import tqdm
 from config_file import config, HAT_MASK_NAME
 from create_masks import masks_templates, bg_color, render
-from helpers import get_model, save_image, get_1id_pose, read_images, color_face_mask, parse_arguments, resize_image
+from helpers import get_model, save_image, get_1id_pose, read_images, color_face_mask, parse_arguments, resize_image,\
+    project_3d, head3D_z_dist
 from line_profiler_pycharm import profile
 
+#TODO: change STD_CHECK to range chreck
 # TODO: 0) check morphologicals sunglasses and eye mask
 # TODO: 1)run big examples
 # TODO: 2) profiling the code + refactoring
@@ -48,12 +50,18 @@ def main(args):
             # Resize image that ROI will be in a fix size
             r_img, scale_factor = resize_image(img, bbox)
 
+            # project 3D face according to pose
+            df_3Dh = project_3d(r_img, pose)
+
+            # Projection of the 3d head z coordinate on the image
+            h3D2i = head3D_z_dist(r_img, df_3Dh)
+
             # for mask, mask_add, rest_of_head, mask_name in zip(masks, masks_add, rest_of_heads, MASKS_NAMES):
             for mask_name in masks_to_create:
                 print('start: ',mask_name)
 
                 # Get the location of the masks on the image
-                mask_x, mask_y, rest_mask_x, rest_mask_y = render(img, r_img, pose, mask_name, scale_factor)
+                mask_x, mask_y, rest_mask_x, rest_mask_y = render(img, r_img, df_3Dh, h3D2i, mask_name, scale_factor)
 
                 # The average color of the surrounding of the image
                 color = bg_color(mask_x, mask_y, img)
