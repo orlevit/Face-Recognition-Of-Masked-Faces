@@ -2,10 +2,10 @@
 import numpy as np
 #############
 from tqdm import tqdm
-# from config_file import config, HAT_MASK_NAME
 from create_masks import masks_templates, process_image
 from helpers import parse_arguments, get_model, read_images
 from line_profiler_pycharm import profile
+
 
 # TODO: 0) check morphologicals sunglasses and eye mask
 # TODO: 1)run big examples
@@ -28,6 +28,8 @@ def main(args):
 
     # Paths of all the images to create masks for
     img_paths = read_images(args.input, args.image_extensions)
+
+    # Process each image and create the requested masks
     for img_path in tqdm(img_paths):
         time1 = process_image(img_path, model, transform, masks_to_create, args)
         time_total.append(time1)
