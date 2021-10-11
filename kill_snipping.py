@@ -17,7 +17,7 @@ def plotMask(SEP):
     x = SEP[:, 0];
     y = SEP[:, 1];
     z = SEP[:, 2];
-    ax.scatter(x, y, z , c='r', marker="*", s=10 ** 2)
+    ax.scatter(x, y, z , c='b', marker=".", s=10 ** -1)
     ax.view_init(-90, 90)
     plt.axis([-50, 50, -50, 50])
     plt.gca().invert_xaxis()

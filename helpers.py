@@ -35,7 +35,7 @@ def get_model():
     return img2pose_model, transform
 
 
-def save_image(img_path, mask_name, img_output, output, bbox, bbox_ind, inc_bbox):
+def save_image(img_path, mask_name, img_output, output, output_bbox):
     # Extracts the right directory to create in the destination
     full_path, image_name = os.path.split(os.path.normpath(img_path))
     image_org_dir = os.path.basename(full_path)
@@ -46,11 +46,11 @@ def save_image(img_path, mask_name, img_output, output, bbox, bbox_ind, inc_bbox
     if not os.path.exists(image_dst_dir):
         os.makedirs(image_dst_dir)
 
-    # Save the image
-    if bbox_ind:
-        img_output = crop_bbox(img_output, bbox, inc_bbox)
+    # Extract from the image the wanted area
+    img_output_bbox = img_output[output_bbox[1]: output_bbox[3], output_bbox[0]:output_bbox[2], :]
 
-    cv2.imwrite(image_dst, img_output)
+    # Save the image
+    cv2.imwrite(image_dst, img_output_bbox)
 
 
 def resize_image(image, bbox):
@@ -92,8 +92,17 @@ def project_3d(r_img, pose):
     # Masks projection on the image plane
     projected_head_float = transform_vertices(r_img, pose, config[HEAD_3D_NAME])
 
+    ####################3333
+    # pose2 = pose.copy()
+    # pose2[-1] *= 0.98
+    # projected_head_float2 = transform_vertices(r_img, pose2, config[HEAD_3D_NAME][config["covid19mask"].mask_add_ind])
+    # projected_head_float[config["covid19mask"].mask_add_ind, :] = projected_head_float2
+    #####################33
+
+
     # turn values from float to integer
     projected_head = np.round(projected_head_float).astype(int)
+
     df = pd.DataFrame(projected_head, columns=['x', 'y', 'z'])
     values_in_range = ((0 <= df.x) & (df.x <= r_img.shape[1] - 1)) & ((0 <= df.y) & (df.y <= r_img.shape[0] - 1))
     df[~values_in_range] = [None, None, None]
@@ -118,7 +127,13 @@ def scale(img, most_important_mask, second_important_mask, third_important_mask,
     return most_mask, second_mask, third_rest
 
 
-def crop_bbox(img, bbox, inc_bbox):
+def img_output_bbox(img, bbox, inc_bbox, bbox_ind):
+    img_x_dim = img.shape[1]
+    img_y_dim = img.shape[0]
+
+    if not bbox_ind:
+        return [0, 0, img_x_dim, img_y_dim]
+
     wbbox = bbox[2] - bbox[0]
     lbbox = bbox[3] - bbox[1]
     half_w = wbbox / 2
@@ -129,10 +144,10 @@ def crop_bbox(img, bbox, inc_bbox):
     cy = half_l + bbox[1]
     n0 = max(np.round(cx - half_w_inc).astype(int), 0)
     n1 = max(np.round(cy - half_l_inc).astype(int), 0)
-    n2 = min(np.round(cx + half_w_inc).astype(int), img.shape[1] - 1)
-    n3 = min(np.round(cy + half_l_inc).astype(int), img.shape[0] - 1)
+    n2 = min(np.round(cx + half_w_inc).astype(int), img_x_dim - 1)
+    n3 = min(np.round(cy + half_l_inc).astype(int), img_y_dim - 1)
 
-    return img[n1:n3, n0:n2, :]
+    return [n0, n1, n2, n3]
 
 
 def get_1id_pose(results, img, threshold):

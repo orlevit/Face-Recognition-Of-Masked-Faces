@@ -4,7 +4,7 @@ import numpy as np
 from skimage.filters import threshold_multiotsu
 from masks_indices import make_eye_mask, make_hat_mask, make_covid19_mask, make_scarf_mask, make_sunglasses_mask
 from helpers import scale, split_head_mask_parts, get_1id_pose, resize_image, project_3d, color_face_mask, save_image, \
-    head3d_z_dist
+    head3d_z_dist, img_output_bbox
 from config_file import config, VERTICES_PATH, EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, COVID19_MASK_NAME, \
     SUNGLASSES_MASK_NAME, NEAR_NEIGHBOUR_STRIDE, MIN_MASK_SIZE, FILTER_MASK_RIGHT_POINT_IMAGE_SIZE, \
     FILTER_SIZE_MASK_RIGHT_POINT, FILTER_SIZE_MASK_ADD_LEFT_POINT, FILTER_SIZE_MASK_ADD_RIGHT_POINT, THRESHOLD_BUFFER, \
@@ -14,23 +14,25 @@ from line_profiler_pycharm import profile
 
 
 @profile
-def render(img, r_img, df_3dh, h3d2i, mask_name, scale_factor):
+def render(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, bbox_ind, output_bbox):
     # Get only frontal face areas
     frontal_mask, frontal_add_mask, frontal_rest = get_frontal(r_img, df_3dh, h3d2i, mask_name, scale_factor)
+    mask_x = frontal_mask[:, 0].astype(int)
+    mask_y = frontal_mask[:, 1].astype(int)
+    morph_mask_x, morph_mask_y = morphological_op(mask_x, mask_y, img, config[mask_name].filter_size)
 
     # Whether to add the forehead to the mask, this is currently only used for eye and hat masks
     if config[mask_name].add_forehead:
         if mask_name == HAT_MASK_NAME:
-            forehead_x, forehead_y = add_forehead_mask(frontal_mask, frontal_rest, img)
+            forehead_x, forehead_y = add_forehead_mask(frontal_mask, frontal_rest, img, bbox_ind, output_bbox)
             config[HAT_MASK_NAME].forehead_x, config[HAT_MASK_NAME].forehead_y = forehead_x, forehead_y
         else:
             forehead_x, forehead_y = config[HAT_MASK_NAME].forehead_x, config[HAT_MASK_NAME].forehead_y
     else:
         forehead_x, forehead_y = [], []
 
-    mask_x = np.append(forehead_x, frontal_mask[:, 0]).astype(int)
-    mask_y = np.append(forehead_y, frontal_mask[:, 1]).astype(int)
-    morph_mask_x, morph_mask_y = morphological_op(mask_x, mask_y, img, config[mask_name].filter_size)
+    morph_mask_x = np.append(forehead_x, morph_mask_x).astype(int)
+    morph_mask_y = np.append(forehead_y, morph_mask_y).astype(int)
 
     if config[mask_name].mask_add_ind is not None:
         mask_add_x, mask_add_y = frontal_add_mask[:, 0], frontal_add_mask[:, 1]
@@ -263,7 +265,13 @@ def morphological_op(mask_x, mask_y, image, left_filter_size=config[EYE_MASK_NAM
         mask_on_image[y, x] = 1
 
     # morphology close
+    # TODO: delete if
     filter_size = calc_filter_size(mask_x, mask_y, left_filter_size, right_filter_dim)
+    #
+    # if morph_op == cv2.MORPH_CLOSE:
+    #     filter_size = calc_filter_size(mask_x, mask_y, left_filter_size, right_filter_dim)
+    # else:
+    #     filter_size =  (2,2)
     kernel = np.ones(filter_size, np.uint8)  # kernel filter
     morph_mask = cv2.morphologyEx(mask_on_image, morph_op, kernel)
     yy, xx = np.where(morph_mask == 1)
@@ -271,7 +279,7 @@ def morphological_op(mask_x, mask_y, image, left_filter_size=config[EYE_MASK_NAM
     return xx, yy
 
 
-def add_forehead_mask(frontal_mask, frontal_rest, image):
+def add_forehead_mask(frontal_mask, frontal_rest, image, bbox_ind, output_bbox):
     # Perform morphological close
     morph_mask_x, morph_mask_y = morphological_op(frontal_mask[:, 0], frontal_mask[:, 1],
                                                   image, config[HAT_MASK_NAME].filter_size)
@@ -290,8 +298,14 @@ def add_forehead_mask(frontal_mask, frontal_rest, image):
 
     all_face_proj = np.concatenate((frontal_mask, frontal_rest), axis=0)
     all_face_proj_y = all_face_proj[:, 1]
-    max_proj_y, min_proj_y = np.max(all_face_proj_y), np.min(all_face_proj_y)
-    kernel_len = int((max_proj_y - min_proj_y) / 2)
+    min_proj_y = np.min(all_face_proj_y)
+
+    if bbox_ind:
+        kernel_len = int(2 * (min_proj_y - output_bbox[1]))
+    else:
+        max_proj_y =  np.max(all_face_proj_y)
+        kernel_len = int((max_proj_y - min_proj_y) / 2)
+
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (1, kernel_len))
     dilated_image = cv2.dilate(mask_on_img, kernel, iterations=1)
 
@@ -369,6 +383,9 @@ def process_image(img_path, model, transform, masks_to_create, args):
         # Resize image that ROI will be in a fix size
         r_img, scale_factor = resize_image(img, bbox)
 
+        # output image selected area
+        output_bbox = img_output_bbox(img, bbox, args.inc_bbox, args.bbox_ind)
+
         # project 3D face according to pose
         df_3dh = project_3d(r_img, pose)
 
@@ -377,18 +394,19 @@ def process_image(img_path, model, transform, masks_to_create, args):
 
         # for mask, mask_add, rest_of_head, mask_name in zip(masks, masks_add, rest_of_heads, MASKS_NAMES):
         for mask_name in masks_to_create:
-            process_mask(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, img_path, bbox, args)
+            process_mask(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, img_path, args, output_bbox)
     else:
         print(f'No face detected for: {img_path}')
     config[HAT_MASK_NAME].mask_exists = False
     toc = time()
     return toc-tic
 
-def process_mask(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, img_path, bbox, args):
+def process_mask(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, img_path, args, output_bbox):
     print('start: ',mask_name)
 
     # Get the location of the masks on the image
-    mask_x, mask_y, rest_mask_x, rest_mask_y = render(img, r_img, df_3dh, h3d2i, mask_name, scale_factor)
+    mask_x, mask_y, rest_mask_x, rest_mask_y = \
+        render(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, args.bbox_ind, output_bbox)
 
     # The average color of the surrounding of the image
     color = bg_color(mask_x, mask_y, img)
@@ -397,4 +415,4 @@ def process_mask(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, img_path, b
     masked_image = color_face_mask(img, color, mask_x, mask_y, rest_mask_x, rest_mask_y, mask_name)
 
     # Save masked image
-    save_image(img_path, mask_name, masked_image, args.output, bbox, args.bbox_ind, args.inc_bbox)
+    save_image(img_path, mask_name, masked_image, args.output, output_bbox)

@@ -91,16 +91,16 @@ config = {
             "center_middle": 25733,
             "right_middle": 178,
             "left_lower": 47948,
-            "right_lower": 51439,
+            "right_lower": 30393,#51439,
             "left_upper_string1": 16098,
             "left_upper_string2": 33284,
-            "left_lower_string1": 51827,
-            "left_lower_string2": 20571,#20567,
+            "left_lower_string1": 29873, #20571, #51827,
+            "left_lower_string2": 20567,
             "right_upper_string1": 185,
             "right_upper_string2": 21157,
-            "right_lower_string1": 44003,
+            "right_lower_string1": 24714, #44003
             "right_lower_string2": 34082
-        },
+        },# 29873
         "add_forehead": False,
         "draw_rest_mask": False,
         "additional_masks_req": None,

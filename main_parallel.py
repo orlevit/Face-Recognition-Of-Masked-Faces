@@ -9,7 +9,7 @@ def main_parallel(img_path):
     cv2.setNumThreads(0)
     time1 = process_image(img_path, model, transform, masks_to_create, args)
     print(time() - time1)
-
+# TODO add log file.
 
 if __name__ == '__main__':
     # Get the input and output directories and create the masks
