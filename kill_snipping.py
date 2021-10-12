@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
-from config_file import SAME_AREA_DIST, THRESHOLD_BUFFER
+from config_file import SAME_AREA_DIST, THRESHOLD_BUFFER, RANGE_CHECK
 import numpy  as np
 import math
-from create_masks import  neighbors_cells_z, threshold_front
+from create_masks import  neighbors_cells_z, threshold_front, two_clusters_arrays, three_clusters_arrays
 from skimage.filters import threshold_otsu, threshold_multiotsu
 # from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
@@ -140,6 +140,50 @@ def otsu_clustering_current(elements, STD_CHECK, bins_number=100):
 
     return cluster1, cluster2, int(round(std1)), int(round(std2)), 000, True ,last_cluster_number
 ################################################################################################
+def plt_vlines(x,y,z,surrounding_mask):
+    def otsu_clustering2(elements, cluster_number, bins_number, bin_half_size):
+        thresholds = threshold_multiotsu(elements, cluster_number, nbins=bins_number)
+
+        if cluster_number == 2:
+            cluster1_arr, cluster2_arr = two_clusters_arrays(elements, thresholds, bin_half_size)
+        else:  # cluster_number == 3
+            cluster1_arr, cluster2_arr = three_clusters_arrays(elements, thresholds, bin_half_size)
+
+        return cluster1_arr, cluster2_arr, thresholds
+
+    def clustering2(elements, bins_number=100):
+        bin_half_size = (max(elements) - min(elements)) / (2 * bins_number)
+        cluster1_arr, cluster2_arr, thresholds = otsu_clustering2(elements, 2, bins_number, bin_half_size)
+        range_arr1 = max(cluster1_arr) - min(cluster1_arr)
+        range_arr2 = max(cluster2_arr) - min(cluster2_arr)
+
+        if RANGE_CHECK <= range_arr1 or RANGE_CHECK <= range_arr2:
+            cluster1_arr, cluster2_arr, thresholds = otsu_clustering2(elements, 3, bins_number, bin_half_size)
+
+        cluster1 = np.mean(cluster1_arr)
+        cluster2 = np.mean(cluster2_arr)
+
+        return cluster1, cluster2, cluster1_arr, cluster2_arr, thresholds
+
+    cluster1, cluster2, cluster1_arr, cluster2_arr, thr = clustering2(surrounding_mask)
+    range_arr1 = max(cluster1_arr) - min(cluster1_arr)
+    range_arr2 = max(cluster2_arr) - min(cluster2_arr)
+    diff = cluster2 - cluster1
+    clusters = [cluster1, cluster2]
+    min_cluster = min(cluster1, cluster2)
+    threshold_buffer = diff * THRESHOLD_BUFFER
+    threshold = min_cluster + threshold_buffer
+    clusters_y = [5] * len(clusters)
+    plt.figure(
+        f'x:{x},y:{y},z:{z}, threshold:{thr}, cluster1:({np.round(cluster1)}-{range_arr1}), cluster2({np.round(cluster2)}-{range_arr2})')
+    plt.hist(surrounding_mask, bins=100)
+    plt.xticks(range(int(min(surrounding_mask)), int(max(surrounding_mask)), 10),
+               range(int(min(surrounding_mask)), int(max(surrounding_mask)), 10))
+    plt.vlines(clusters, ymin=0, ymax=10, color='k', linewidth=3)
+    plt.vlines(threshold, ymin=0, ymax=10, color='y', linewidth=3)
+    plt.vlines(thr, ymin=0, ymax=10, color='r', linewidth=3)
+    plt.vlines([z], ymin=0, ymax=10, color='c', linewidth=3)
+    plt.show()
 ###################### points stds on the images
 def dist(r_img, df,X_VALUE,Y_VALUE,the_type=2):
     unique_df = df.sort_values(['z', 'mask'], ascending=False).drop_duplicates(['x', 'y', 'mask'], keep='first')

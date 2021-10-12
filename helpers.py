@@ -88,6 +88,22 @@ def head3d_to_mask(df_3dh, mask_name, mask_ind):
 
 
 @profile
+def scale(img, most_important_mask, second_important_mask, third_important_mask, scale_factor):
+    most_mask_img = mark_image_with_mask(most_important_mask, img, scale_factor)
+    second_mask_img = mark_image_with_mask(second_important_mask, img, scale_factor)
+    third_img = mark_image_with_mask(third_important_mask, img, scale_factor)
+
+    mask_on_image = np.multiply(4, most_mask_img) + np.multiply(2, second_mask_img) + np.multiply(1, third_img)
+
+    # Each pixel is main mask/additional strings or rest of the head, the numbers 1/2/4 are arbitrary,
+    # and used to get the relevant type even when there are overlapping
+    most_mask = np.asarray(np.where(np.isin(mask_on_image, [4, 5, 6, 7])))[[1, 0], :].T
+    second_mask = np.asarray(np.where(np.isin(mask_on_image, [2, 3])))[[1, 0], :].T
+    third_rest = np.asarray(np.where(mask_on_image == 1))[[1, 0], :].T
+
+    return most_mask, second_mask, third_rest
+
+@profile
 def project_3d(r_img, pose):
     # Masks projection on the image plane
     projected_head_float = transform_vertices(r_img, pose, config[HEAD_3D_NAME])
@@ -108,23 +124,6 @@ def project_3d(r_img, pose):
     df[~values_in_range] = [None, None, None]
 
     return df
-
-
-@profile
-def scale(img, most_important_mask, second_important_mask, third_important_mask, scale_factor):
-    most_mask_img = mark_image_with_mask(most_important_mask, img, scale_factor)
-    second_mask_img = mark_image_with_mask(second_important_mask, img, scale_factor)
-    third_img = mark_image_with_mask(third_important_mask, img, scale_factor)
-
-    mask_on_image = np.multiply(4, most_mask_img) + np.multiply(2, second_mask_img) + np.multiply(1, third_img)
-
-    # Each pixel is main mask/additional strings or rest of the head, the numbers 1/2/4 are arbitrary,
-    # and used to get the relevant type even when there are overlapping
-    most_mask = np.asarray(np.where(np.isin(mask_on_image, [4, 5, 6, 7])))[[1, 0], :].T
-    second_mask = np.asarray(np.where(np.isin(mask_on_image, [2, 3])))[[1, 0], :].T
-    third_rest = np.asarray(np.where(mask_on_image == 1))[[1, 0], :].T
-
-    return most_mask, second_mask, third_rest
 
 
 def img_output_bbox(img, bbox, inc_bbox, bbox_ind):
