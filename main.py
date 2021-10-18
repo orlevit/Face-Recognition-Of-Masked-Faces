@@ -30,9 +30,14 @@ def main(args):
     img_paths = read_images(args.input, args.image_extensions)
 
     # Process each image and create the requested masks
+    i=0
     for img_path in tqdm(img_paths):
-        time1 = process_image(img_path, model, transform, masks_to_create, args)
+    # for img_path in img_paths:
+        time1,ii = process_image(img_path, model, transform, masks_to_create, args)
         time_total.append(time1)
+        i+=ii
+        if i > 50:
+            break
     print(np.mean(time_total))
 
 

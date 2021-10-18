@@ -17,9 +17,9 @@ from line_profiler_pycharm import profile
 def render(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, bbox_ind, output_bbox):
     # Get only frontal face areas
     frontal_mask, frontal_add_mask, frontal_rest = get_frontal(r_img, df_3dh, h3d2i, mask_name, scale_factor)
-    mask_x = frontal_mask[:, 0].astype(int)
-    mask_y = frontal_mask[:, 1].astype(int)
-    morph_mask_x, morph_mask_y = morphological_op(mask_x, mask_y, img, config[mask_name].filter_size)
+
+    # morphological close of the mask
+    mask_x, mask_y = morphological_op(frontal_mask[:, 0], frontal_mask[:, 1], img, config[mask_name].filter_size)
 
     # Whether to add the forehead to the mask, this is currently only used for eye and hat masks
     if config[mask_name].add_forehead:
@@ -31,8 +31,8 @@ def render(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, bbox_ind, output_
     else:
         forehead_x, forehead_y = [], []
 
-    morph_mask_x = np.append(forehead_x, morph_mask_x).astype(int)
-    morph_mask_y = np.append(forehead_y, morph_mask_y).astype(int)
+    morph_mask_x = np.append(forehead_x, mask_x).astype(int)
+    morph_mask_y = np.append(forehead_y, mask_y).astype(int)
 
     if config[mask_name].mask_add_ind is not None:
         mask_add_x, mask_add_y = frontal_add_mask[:, 0], frontal_add_mask[:, 1]
@@ -193,7 +193,7 @@ def frontal_points(take_only_frontal_ind, r_img, h3d2i, df_with_bg, return_empty
 
 @profile
 def get_frontal(r_img, df_3dh, h3d2i, mask_name, scale_factor):
-    print('frontal: ', mask_name)
+    # print('frontal: ', mask_name)
     frontal_main_mask_w_bg, frontal_add_mask_w_bg, frontal_rest_mask_w_bg = split_head_mask_parts(df_3dh, mask_name)
 
     # Check each point if it is came from frontal or hidden area of tha face
@@ -296,27 +296,30 @@ def add_forehead_mask(frontal_mask, frontal_rest, image, bbox_ind, output_bbox):
         if iy.any():
             bottom_hat[i] = np.min(iy)
 
-    all_face_proj = np.concatenate((frontal_mask, frontal_rest), axis=0)
-    all_face_proj_y = all_face_proj[:, 1]
-    min_proj_y = np.min(all_face_proj_y)
+
+    min_proj_y = np.min(frontal_mask)
 
     if bbox_ind:
-        kernel_len = int(2 * (min_proj_y - output_bbox[1]))
+        kernel_len = max(int(2 * (min_proj_y - output_bbox[1])), 0)
     else:
+        all_face_proj = np.concatenate((frontal_mask, frontal_rest), axis=0)
+        all_face_proj_y = all_face_proj[:, 1]
         max_proj_y =  np.max(all_face_proj_y)
         kernel_len = int((max_proj_y - min_proj_y) / 2)
 
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (1, kernel_len))
-    dilated_image = cv2.dilate(mask_on_img, kernel, iterations=1)
-
     forehead_x_ind, forehead_y_ind = [], []
-    for i in range(image.shape[1]):
-        iy, _ = np.where(dilated_image[:, i])
-        jj = np.where(iy <= bottom_hat[i])
-        if jj[0].any():
-            j = iy[jj]
-            forehead_x_ind.extend([i] * len(j))
-            forehead_y_ind.extend(j)
+
+    if kernel_len:
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (1, kernel_len))
+        dilated_image = cv2.dilate(mask_on_img, kernel, iterations=1)
+
+        for i in range(image.shape[1]):
+            iy, _ = np.where(dilated_image[:, i])
+            jj = np.where(iy <= bottom_hat[i])
+            if jj[0].any():
+                j = iy[jj]
+                forehead_x_ind.extend([i] * len(j))
+                forehead_y_ind.extend(j)
 
     return np.asarray(forehead_x_ind), np.asarray(forehead_y_ind)
 
@@ -367,7 +370,6 @@ def add_mask_to_config(head3d_cords, masks_ind, masks_add_ind, rest_ind, masks_o
 
 
 def process_image(img_path, model, transform, masks_to_create, args):
-    print(img_path)
     # Read an image
     img = cv2.imread(img_path, 1)
 
@@ -377,9 +379,12 @@ def process_image(img_path, model, transform, masks_to_create, args):
 
     # Get only one 6DOF from all the 6DFs that img2pose found
     pose, bbox = get_1id_pose(results, img, args.threshold)
-
+    ii = 0
     # face detected with img2pose and above the threshold
     if pose.size != 0:
+        ii=1
+        print(img_path)
+        # TODO: check images with and without rescale ,does the imcrease fucked the head size?
         # Resize image that ROI will be in a fix size
         r_img, scale_factor = resize_image(img, bbox)
 
@@ -392,6 +397,8 @@ def process_image(img_path, model, transform, masks_to_create, args):
         # Projection of the 3d head z coordinate on the image
         h3d2i = head3d_z_dist(r_img, df_3dh)
 
+        print(f'pitch: {round(pose[0], 2)}, yaw: {round(pose[1], 2)}, roll: {round(pose[2], 2)}, scale: {round(pose[-1], 2)}')
+
         # for mask, mask_add, rest_of_head, mask_name in zip(masks, masks_add, rest_of_heads, MASKS_NAMES):
         for mask_name in masks_to_create:
             process_mask(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, img_path, args, output_bbox)
@@ -399,10 +406,10 @@ def process_image(img_path, model, transform, masks_to_create, args):
         print(f'No face detected for: {img_path}')
     config[HAT_MASK_NAME].mask_exists = False
     toc = time()
-    return toc-tic
+    return toc-tic, ii
 
 def process_mask(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, img_path, args, output_bbox):
-    print('start: ',mask_name)
+    # print('start: ',mask_name)
 
     # Get the location of the masks on the image
     mask_x, mask_y, rest_mask_x, rest_mask_y = \
