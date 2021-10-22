@@ -45,7 +45,7 @@ def get_scarf_mask_index(a1, b1, c1, x_left, x_right, x, y):
     return index_list
 
 
-def get_eye_mask_index(a1, b1, c1, a2, b2, c2, x_left, x_right, x, y):
+def get_eye_mask_index(a1, b1, c1, a2, b2, c2, x_left, x_right, x, y, z):
     """
     Extracting the indices for creating the eye mask.
     It is achieved by taking all the indices between two parabolic lines drawn between two points,
@@ -61,6 +61,8 @@ def get_eye_mask_index(a1, b1, c1, a2, b2, c2, x_left, x_right, x, y):
     :param x_right: Right point.
     :param x: All the x of the points in the 3D model.
     :param y: All the y of the points in the 3D model.
+    :param z: All the z of the points in the 3D model.
+
     :return: Eye mask indices.
     """
     index_list = []
@@ -70,15 +72,19 @@ def get_eye_mask_index(a1, b1, c1, a2, b2, c2, x_left, x_right, x, y):
                 (x[i] > x_left - 2) and (x[i] < x_right + 2)):
             index_list.append(i)
 
-    index_list = np.setdiff1d(range(len(x)), index_list)
+    filtered_ind = [ii for ii, cord in enumerate(z) if (cord >= 0)]
+    index_list = np.setdiff1d(filtered_ind, index_list)
+
     return index_list
 
 
-def make_eye_mask(x, y):
+def make_eye_mask(x, y, z):
     """
     Getting the eye mask indices.
     :param x: All the x of the points in the 3D model.
     :param y: All the y of the points in the 3D model.
+    :param z: All the z of the points in the 3D model.
+
     :return: Eyes mask indices
     """
     x_left, y_left = x[config.eyemask.inds.left], y[config.eyemask.inds.left]
@@ -93,7 +99,8 @@ def make_eye_mask(x, y):
     a1, b1, c1 = np.polyfit(x_3points, y_3points2, 2)
     a2, b2, c2 = np.polyfit(x_3points, y_3points1, 2)
 
-    index_list = get_eye_mask_index(a1, b1, c1, a2, b2, c2, x_left, x_right, x, y)
+    index_list = get_eye_mask_index(a1, b1, c1, a2, b2, c2, x_left, x_right, x, y, z)
+
     return index_list
 
 

@@ -20,9 +20,6 @@ def plot_3d_landmark(vertices, pose, intrinsics):
 
 def transform_vertices(img, pose, vertices, global_intrinsics=None):
     (h, w, _) = img.shape
-    m, n = np.polyfit([0, 1], [1, 0.9], 1)
-    scale_head = m * (abs(pose[1]) + abs(pose[0]) + abs(pose[2])) + n # remove pose[0,1]
-    pose[-1] *= scale_head
     if global_intrinsics is None:
         global_intrinsics = np.array(
             [[w + h, 0, w // 2], [0, w + h, h // 2], [0, 0, 1]]

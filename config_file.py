@@ -11,6 +11,7 @@ MIN_SIZE = 600
 FACE_MODEL_DENSITY = 0.001
 LENS_RADIUS = 40 * FACE_MODEL_DENSITY
 STRING_SIZE = 5
+HATMASK_EYEMASK_GAP_FILLER = 5
 THRESHOLD_BUFFER = 30/100
 HEAD_3D_NAME = "head3D"
 EYE_MASK_NAME = "eyemask"
@@ -91,14 +92,14 @@ config = {
             "center_middle": 25733,
             "right_middle": 178,
             "left_lower": 47948,
-            "right_lower": 30393,#51439,
+            "right_lower": 30393,
             "left_upper_string1": 16098,
-            "left_upper_string2": 33284,
-            "left_lower_string1": 29873, #20571, #51827,
+            "left_upper_string2": 33284,# smaller upper string 31481,
+            "left_lower_string1": 29873,
             "left_lower_string2": 20567,
             "right_upper_string1": 185,
-            "right_upper_string2": 21157,
-            "right_lower_string1": 24714, #44003
+            "right_upper_string2": 21157,# smaller upper string 22967 ,
+            "right_lower_string1": 24714,
             "right_lower_string2": 34082
         },# 29873
         "add_forehead": False,

@@ -8,11 +8,11 @@ from helpers import scale, split_head_mask_parts, get_1id_pose, resize_image, pr
 from config_file import config, VERTICES_PATH, EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, COVID19_MASK_NAME, \
     SUNGLASSES_MASK_NAME, NEAR_NEIGHBOUR_STRIDE, MIN_MASK_SIZE, FILTER_MASK_RIGHT_POINT_IMAGE_SIZE, \
     FILTER_SIZE_MASK_RIGHT_POINT, FILTER_SIZE_MASK_ADD_LEFT_POINT, FILTER_SIZE_MASK_ADD_RIGHT_POINT, THRESHOLD_BUFFER, \
-    RANGE_CHECK, HEAD_3D_NAME
+    RANGE_CHECK, HEAD_3D_NAME, HATMASK_EYEMASK_GAP_FILLER
 
 from line_profiler_pycharm import profile
 
-
+#todo: refactor this
 @profile
 def render(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, bbox_ind, output_bbox):
     # Get only frontal face areas
@@ -279,14 +279,11 @@ def morphological_op(mask_x, mask_y, image, left_filter_size=config[EYE_MASK_NAM
     return xx, yy
 
 
-def add_forehead_mask(frontal_mask, frontal_rest, image, bbox_ind, output_bbox):
-    # Perform morphological close
-    morph_mask_x, morph_mask_y = morphological_op(frontal_mask[:, 0], frontal_mask[:, 1],
-                                                  image, config[HAT_MASK_NAME].filter_size)
+
+def add_forehead_mask(frontal_mask_x, frontal_mask_y, frontal_rest, image, bbox_ind, output_bbox):
 
     mask_on_img = np.zeros_like(image)
-    mask_x_ind, mask_y_ind = morph_mask_x, morph_mask_y
-    for x, y in zip(mask_x_ind, mask_y_ind):
+    for x, y in zip(frontal_mask_x, frontal_mask_y):
         mask_on_img[y, x] = 255
 
     bottom_hat = np.empty(image.shape[1])
@@ -296,14 +293,12 @@ def add_forehead_mask(frontal_mask, frontal_rest, image, bbox_ind, output_bbox):
         if iy.any():
             bottom_hat[i] = np.min(iy)
 
-
-    min_proj_y = np.min(frontal_mask)
+    min_proj_y = np.min(frontal_mask_y)
 
     if bbox_ind:
         kernel_len = max(int(2 * (min_proj_y - output_bbox[1])), 0)
     else:
-        all_face_proj = np.concatenate((frontal_mask, frontal_rest), axis=0)
-        all_face_proj_y = all_face_proj[:, 1]
+        all_face_proj_y = np.concatenate((frontal_mask_y, frontal_rest[:, 1]), axis=0)
         max_proj_y =  np.max(all_face_proj_y)
         kernel_len = int((max_proj_y - min_proj_y) / 2)
 
@@ -315,7 +310,7 @@ def add_forehead_mask(frontal_mask, frontal_rest, image, bbox_ind, output_bbox):
 
         for i in range(image.shape[1]):
             iy, _ = np.where(dilated_image[:, i])
-            jj = np.where(iy <= bottom_hat[i])
+            jj = np.where(iy - HATMASK_EYEMASK_GAP_FILLER <= bottom_hat[i])
             if jj[0].any():
                 j = iy[jj]
                 forehead_x_ind.extend([i] * len(j))
@@ -324,8 +319,15 @@ def add_forehead_mask(frontal_mask, frontal_rest, image, bbox_ind, output_bbox):
     return np.asarray(forehead_x_ind), np.asarray(forehead_y_ind)
 
 
-def get_rest_mask(mask_ind, mask_add_ind, vertices):
-    rest_of_head_ind_with_add = np.setdiff1d(range(vertices.shape[0]), mask_ind)
+
+#todo: remove sunglasses_mask_ind?
+def get_rest_mask(mask_ind, mask_add_ind, vertices, mask_name, sunglasses_mask_ind):
+    if mask_name == EYE_MASK_NAME:
+        relevant_indices = [ii for ii, cord in enumerate(vertices[:,2]) if (cord <= 0)]
+    else:
+        relevant_indices = range(vertices.shape[0])
+
+    rest_of_head_ind_with_add = np.setdiff1d(relevant_indices, mask_ind)
     rest_of_head_ind = np.setdiff1d(rest_of_head_ind_with_add, mask_add_ind)
 
     return rest_of_head_ind
@@ -343,17 +345,19 @@ def load_3dmm():
 def masks_templates(masks_name):
     vertices, vertices_rotated = load_3dmm()
     x, y, z = vertices_rotated[:, 0], vertices_rotated[:, 1], vertices_rotated[:, 2]
-    eye_mask_ind = make_eye_mask(x, y)
     hat_mask_ind = make_hat_mask(x, y)
-    scarf_mask_ind = make_scarf_mask(x, y)
-    covid19_mask_ind, add_covid19_ind = make_covid19_mask(x, y, z)
     sunglasses_mask_ind, add_sunglasses_ind = make_sunglasses_mask(x, y)
+    scarf_mask_ind = make_scarf_mask(x, y)
+    # eye_mask_ind = make_eye_mask(y, z, sunglasses_mask_ind)
+    eye_mask_ind = make_eye_mask(x, y, z)
+
+    covid19_mask_ind, add_covid19_ind = make_covid19_mask(x, y, z)
 
     masks_order = [HAT_MASK_NAME, EYE_MASK_NAME, SCARF_MASK_NAME, COVID19_MASK_NAME, SUNGLASSES_MASK_NAME]
     masks_ind = [hat_mask_ind, eye_mask_ind, scarf_mask_ind, covid19_mask_ind, sunglasses_mask_ind]
     masks_add_ind = [None, None, None, add_covid19_ind, add_sunglasses_ind]
-
-    rest_ind = [get_rest_mask(maskInd, maskAInd, vertices) for maskInd, maskAInd in zip(masks_ind, masks_add_ind)]
+    rest_ind = [get_rest_mask(maskInd, maskAInd, vertices, mask_name, sunglasses_mask_ind)
+                for maskInd, maskAInd, mask_name in zip(masks_ind, masks_add_ind, masks_order)]
     masks_to_create = masks_name.split(',')
     head3d_cords = index_on_vertices(range(0, len(vertices)), vertices)
     add_mask_to_config(head3d_cords, masks_ind, masks_add_ind, rest_ind, masks_order, masks_to_create)
