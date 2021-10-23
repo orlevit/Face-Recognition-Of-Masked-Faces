@@ -44,7 +44,7 @@ def get_scarf_mask_index(a1, b1, c1, x_left, x_right, x, y):
 
     return index_list
 
-
+#todo: change docstring
 def get_eye_mask_index(a1, b1, c1, a2, b2, c2, x_left, x_right, x, y, z):
     """
     Extracting the indices for creating the eye mask.
@@ -72,8 +72,8 @@ def get_eye_mask_index(a1, b1, c1, a2, b2, c2, x_left, x_right, x, y, z):
                 (x[i] > x_left - 2) and (x[i] < x_right + 2)):
             index_list.append(i)
 
-    filtered_ind = [ii for ii, cord in enumerate(z) if (cord >= 0)]
-    index_list = np.setdiff1d(filtered_ind, index_list)
+    # filtered_ind = [ii for ii, cord in enumerate(z) if (cord >= 0)]
+    # index_list = np.setdiff1d(filtered_ind, index_list)
 
     return index_list
 

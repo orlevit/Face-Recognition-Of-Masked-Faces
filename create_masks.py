@@ -2,52 +2,66 @@ import cv2
 from time import time ###############33
 import numpy as np
 from skimage.filters import threshold_multiotsu
+from sklearn.linear_model import LinearRegression
+
 from masks_indices import make_eye_mask, make_hat_mask, make_covid19_mask, make_scarf_mask, make_sunglasses_mask
 from helpers import scale, split_head_mask_parts, get_1id_pose, resize_image, project_3d, color_face_mask, save_image, \
-    head3d_z_dist, img_output_bbox
+    head3d_z_dist, img_output_bbox, points_on_image
 from config_file import config, VERTICES_PATH, EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, COVID19_MASK_NAME, \
     SUNGLASSES_MASK_NAME, NEAR_NEIGHBOUR_STRIDE, MIN_MASK_SIZE, FILTER_MASK_RIGHT_POINT_IMAGE_SIZE, \
-    FILTER_SIZE_MASK_RIGHT_POINT, FILTER_SIZE_MASK_ADD_LEFT_POINT, FILTER_SIZE_MASK_ADD_RIGHT_POINT, THRESHOLD_BUFFER, \
+    MASK_RIGHT_POINT, ADD_LEFT_POINT, ADD_RIGHT_POINT, THRESHOLD_BUFFER, \
     RANGE_CHECK, HEAD_3D_NAME, HATMASK_EYEMASK_GAP_FILLER
 
 from line_profiler_pycharm import profile
 
 #todo: refactor this
 @profile
-def render(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, bbox_ind, output_bbox):
+def render(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, bbox_ind, output_bbox, pose):
     # Get only frontal face areas
     frontal_mask, frontal_add_mask, frontal_rest = get_frontal(r_img, df_3dh, h3d2i, mask_name, scale_factor)
 
     # morphological close of the mask
-    mask_x, mask_y = morphological_op(frontal_mask[:, 0], frontal_mask[:, 1], img, config[mask_name].filter_size)
+    # mask_x, mask_y = morphological_op(frontal_mask[:, 0], frontal_mask[:, 1], img, config[mask_name].filter_size)
+    mask_x, mask_y = morphological_op(True, frontal_mask, img,
+                                      config[mask_name].filter_size, MASK_RIGHT_POINT)
+    morph_mask_add_x, morph_mask_add_y = morphological_op(config[mask_name].mask_add_front_points_calc,frontal_add_mask,
+                                                          img, ADD_LEFT_POINT, ADD_RIGHT_POINT,cv2.MORPH_DILATE)
+    morph_rest_x, morph_rest_y = morphological_op(config[mask_name].draw_rest_mask, frontal_rest, img,
+                                      config[mask_name].filter_size, MASK_RIGHT_POINT, cv2.MORPH_DILATE)
 
-    # Whether to add the forehead to the mask, this is currently only used for eye and hat masks
-    if config[mask_name].add_forehead:
-        if mask_name == HAT_MASK_NAME:
-            forehead_x, forehead_y = add_forehead_mask(frontal_mask, frontal_rest, img, bbox_ind, output_bbox)
-            config[HAT_MASK_NAME].forehead_x, config[HAT_MASK_NAME].forehead_y = forehead_x, forehead_y
-        else:
-            forehead_x, forehead_y = config[HAT_MASK_NAME].forehead_x, config[HAT_MASK_NAME].forehead_y
-    else:
-        forehead_x, forehead_y = [], []
-
-    morph_mask_x = np.append(forehead_x, mask_x).astype(int)
-    morph_mask_y = np.append(forehead_y, mask_y).astype(int)
-
-    if config[mask_name].mask_add_ind is not None:
-        mask_add_x, mask_add_y = frontal_add_mask[:, 0], frontal_add_mask[:, 1]
-        morph_mask_add_x, morph_mask_add_y = morphological_op(mask_add_x, mask_add_y, img,
-                                                              FILTER_SIZE_MASK_ADD_LEFT_POINT,
-                                                              FILTER_SIZE_MASK_ADD_RIGHT_POINT, cv2.MORPH_DILATE)
-        morph_mask_x = np.append(morph_mask_x, morph_mask_add_x)
-        morph_mask_y = np.append(morph_mask_y, morph_mask_add_y)
-
-    if config[mask_name].draw_rest_mask:
-        rest_x, rest_y = frontal_rest[:, 0], frontal_rest[:, 1]
-        morph_rest_x, morph_rest_y = morphological_op(rest_x, rest_y, img,
-                                                      config[mask_name].filter_size, morph_op=cv2.MORPH_DILATE)
-    else:
+    if len(morph_rest_x) == 0:
         morph_rest_x, morph_rest_y = None, None
+
+    # # Whether to add the forehead to the mask, this is currently only used for eye and hat masks
+    # if config[mask_name].add_forehead:
+    #     if mask_name == HAT_MASK_NAME:
+    #         forehead_x, forehead_y = add_forehead_mask(frontal_mask, frontal_rest, img, bbox_ind, output_bbox)
+    #         config[HAT_MASK_NAME].forehead_x, config[HAT_MASK_NAME].forehead_y = forehead_x, forehead_y
+    #     else:
+    #         forehead_x, forehead_y = config[HAT_MASK_NAME].forehead_x, config[HAT_MASK_NAME].forehead_y
+    # else:
+    #     forehead_x, forehead_y = [], []
+    forehead_x, forehead_y = [], []
+
+    mask_x_w_f = np.append(forehead_x, mask_x).astype(int)
+    mask_y_w_f = np.append(forehead_y, mask_y).astype(int)
+    extend_mask_x_w_f, extend_mask_y_w_f = extend_mask(mask_x_w_f, mask_y_w_f, img, pose, output_bbox, mask_name)
+    morph_mask_x = np.append(extend_mask_x_w_f, morph_mask_add_x).astype(int)
+    morph_mask_y = np.append(extend_mask_y_w_f, morph_mask_add_y).astype(int)
+    # if config[mask_name].mask_add_ind is not None:
+    #     mask_add_x, mask_add_y = frontal_add_mask[:, 0], frontal_add_mask[:, 1]
+    #     morph_mask_add_x, morph_mask_add_y = morphological_op(mask_add_x, mask_add_y, img,
+    #                                                           FILTER_SIZE_MASK_ADD_LEFT_POINT,
+    #                                                           FILTER_SIZE_MASK_ADD_RIGHT_POINT, cv2.MORPH_DILATE)
+    #     morph_mask_x = np.append(morph_mask_x, morph_mask_add_x)
+    #     morph_mask_y = np.append(morph_mask_y, morph_mask_add_y)
+    #
+    # if config[mask_name].draw_rest_mask:
+    #     rest_x, rest_y = frontal_rest[:, 0], frontal_rest[:, 1]
+    #     morph_rest_x, morph_rest_y = morphological_op(rest_x, rest_y, img,
+    #                                                   config[mask_name].filter_size, morph_op=cv2.MORPH_DILATE)
+    # else:
+    #     morph_rest_x, morph_rest_y = None, None
 
     return morph_mask_x, morph_mask_y, morph_rest_x, morph_rest_y
 
@@ -179,11 +193,11 @@ def threshold_front(r_img, mask_on_img, frontal_mask_all):
 
 
 @profile
-def frontal_points(take_only_frontal_ind, r_img, h3d2i, df_with_bg, return_empty=False):
+def frontal_points(take_only_frontal_ind, r_img, h3d2i, df_with_bg):
     if take_only_frontal_ind:
         arr = threshold_front(r_img, h3d2i, df_with_bg)
     else:
-        if return_empty or df_with_bg is None:
+        if df_with_bg is None:
             arr = []
         else:
             arr = df_with_bg[['x', 'y']].to_numpy()
@@ -199,12 +213,17 @@ def get_frontal(r_img, df_3dh, h3d2i, mask_name, scale_factor):
     # Check each point if it is came from frontal or hidden area of tha face
     famwb_arr = frontal_points(config[mask_name].mask_add_front_points_calc, r_img, h3d2i, frontal_add_mask_w_bg)
     fmmwb_arr = frontal_points(config[mask_name].mask_front_points_calc, r_img, h3d2i, frontal_main_mask_w_bg)
-    frmwb_arr = frontal_points(config[mask_name].draw_rest_mask, r_img, h3d2i, frontal_rest_mask_w_bg, True)
+    frmwb_arr = frontal_points(config[mask_name].draw_rest_mask, r_img, h3d2i, frontal_rest_mask_w_bg)
+
+    frontal_mask = (fmmwb_arr / scale_factor).astype(int)
+    frontal_add_mask = (famwb_arr / scale_factor).astype(int)
+    frontal_rest = (frmwb_arr / scale_factor).astype(int)
 
     if mask_name == EYE_MASK_NAME:
-        frontal_rest, frontal_add_mask, frontal_mask = scale(r_img, frmwb_arr, famwb_arr, fmmwb_arr, scale_factor)
-    else:
-        frontal_mask, frontal_add_mask, frontal_rest = scale(r_img, fmmwb_arr, famwb_arr, frmwb_arr, scale_factor)
+        frontal_mask = np.append(frontal_mask, frontal_rest, axis=0)
+    # else:
+    #     #todo maybe this is not relevant?
+    #     frontal_mask, frontal_add_mask, frontal_rest = scale(r_img, fmmwb_arr, famwb_arr, scale_factor)
 
     return frontal_mask, frontal_add_mask, frontal_rest
 
@@ -257,27 +276,53 @@ def calc_filter_size(mask_x, mask_y, left_filter_size, right_filter_dim):
 
     return filter_size
 
+#TODO: run bigger test - If gooD make it formal!
+# todo: not to sunglasses
+#todo: is frontal check for eyemask?
+# dOES CLOSE AFTER CLOSE WITH THE SAME SIZE GIVES THE SAME RESULTS WHEN COUNTER IS 1?
+def extend_mask(morph_mask_x, morph_mask_y, image, pose, output_bbox, mask_name):
+    mask_on_image = points_on_image(morph_mask_x, morph_mask_y, image)
+    w_bbox = output_bbox[2] - output_bbox[0]
+    # X = np.array([[0.5666, 215],[0.6211, 236], [0.4427, 299], [0.614, 134]])##[[0.0316, 218],[0.2085, 397],[0.8158, 138],[0.5103, 392],[0.8613, 208], ]
+    # y = np.array([[24,  30,25, 10]]).T # [1, 1,10,16, 14,]
+    # reg = LinearRegression().fit(X, y)
+    # a1, a2, b = reg.coef_[0][0], reg.coef_[0][1], reg.intercept_[0]
+    # filter_length = max(int(round(a1 * abs(pose[1]) + a2 * w_bbox + b)), 0)
+    ################################################
+    #134_5019.jpg,78_2986.jpg,292_10400.jpg,,342_12404.jpg,269_9667.jpg
+    # X = np.array([[0.6171 * 261], [0.614 * 134], [0.5276 * 236],[1.5441 * 115],[0.9157 * 89]])  ##[[0.0316, 218],[0.2085, 397],[0.8158, 138],[0.5103, 392],[0.8613, 208], ]
+    # y = np.array([[10, 5, 13, 7, 8]]).T  # [1, 1,10,16, 14,]
+    # reg = LinearRegression().fit(X, y)
+    # a, b = reg.coef_[0][0], reg.intercept_[0]
+    # filter_length = max(int(round(a * abs(pose[1]) * w_bbox + b)), 0)
 
-def morphological_op(mask_x, mask_y, image, left_filter_size=config[EYE_MASK_NAME].filter_size,
-                     right_filter_dim=FILTER_SIZE_MASK_RIGHT_POINT, morph_op=cv2.MORPH_CLOSE):
-    mask_on_image = np.zeros((image.shape[0], image.shape[1]))
-    for x, y in zip(mask_x, mask_y):
-        mask_on_image[y, x] = 1
+    # filter_length = max(int(round(5 * abs(pose[1]) * w_bbox / 320)), 0)
+    filter_length = max(int(round(13 * abs(pose[1]) * w_bbox / 150)), 0)# 9, 167
 
-    # morphology close
-    # TODO: delete if
-    filter_size = calc_filter_size(mask_x, mask_y, left_filter_size, right_filter_dim)
-    #
-    # if morph_op == cv2.MORPH_CLOSE:
-    #     filter_size = calc_filter_size(mask_x, mask_y, left_filter_size, right_filter_dim)
-    # else:
-    #     filter_size =  (2,2)
-    kernel = np.ones(filter_size, np.uint8)  # kernel filter
-    morph_mask = cv2.morphologyEx(mask_on_image, morph_op, kernel)
+    if pose[1] > 0:
+        kernel = np.expand_dims(np.append(np.zeros(filter_length, np.uint8),np.ones(filter_length, np.uint8)), axis=0)
+    else:
+        kernel = np.expand_dims(np.append(np.ones(filter_length, np.uint8),np.zeros(filter_length, np.uint8)), axis=0)
+
+    morph_mask = cv2.morphologyEx(mask_on_image, cv2.MORPH_DILATE, kernel)
     yy, xx = np.where(morph_mask == 1)
 
     return xx, yy
 
+
+def morphological_op(make_morph_op_ind, mask, image, left_filter_size, right_filter_dim, morph_op=cv2.MORPH_CLOSE):
+    if make_morph_op_ind:
+        mask_x, mask_y = mask[:, 0], mask[:, 1]
+        mask_on_image = points_on_image(mask_x, mask_y, image)
+        filter_size = calc_filter_size(mask_x, mask_y, left_filter_size, right_filter_dim)
+        kernel = np.ones(filter_size, np.uint8)  # kernel filter
+        morph_mask = cv2.morphologyEx(mask_on_image, morph_op, kernel)
+        yy, xx = np.where(morph_mask == 1)
+
+    else:
+        yy, xx = [], []
+
+    return xx, yy
 
 
 def add_forehead_mask(frontal_mask_x, frontal_mask_y, frontal_rest, image, bbox_ind, output_bbox):
@@ -319,14 +364,14 @@ def add_forehead_mask(frontal_mask_x, frontal_mask_y, frontal_rest, image, bbox_
     return np.asarray(forehead_x_ind), np.asarray(forehead_y_ind)
 
 
-
 #todo: remove sunglasses_mask_ind?
-def get_rest_mask(mask_ind, mask_add_ind, vertices, mask_name, sunglasses_mask_ind):
+def get_rest_mask(mask_ind, mask_add_ind, vertices, vertices_rotated, mask_name):
     if mask_name == EYE_MASK_NAME:
-        relevant_indices = [ii for ii, cord in enumerate(vertices[:,2]) if (cord <= 0)]
-    else:
-        relevant_indices = range(vertices.shape[0])
+        x, y, z = vertices_rotated[:, 0], vertices_rotated[:, 1], vertices_rotated[:, 2]
+        return make_eye_mask(x, y, z)
 
+
+    relevant_indices = range(vertices.shape[0])
     rest_of_head_ind_with_add = np.setdiff1d(relevant_indices, mask_ind)
     rest_of_head_ind = np.setdiff1d(rest_of_head_ind_with_add, mask_add_ind)
 
@@ -349,14 +394,14 @@ def masks_templates(masks_name):
     sunglasses_mask_ind, add_sunglasses_ind = make_sunglasses_mask(x, y)
     scarf_mask_ind = make_scarf_mask(x, y)
     # eye_mask_ind = make_eye_mask(y, z, sunglasses_mask_ind)
-    eye_mask_ind = make_eye_mask(x, y, z)
+    eye_mask_ind = [ii for ii, cord in enumerate(z) if (cord >= 0)]
 
     covid19_mask_ind, add_covid19_ind = make_covid19_mask(x, y, z)
 
     masks_order = [HAT_MASK_NAME, EYE_MASK_NAME, SCARF_MASK_NAME, COVID19_MASK_NAME, SUNGLASSES_MASK_NAME]
     masks_ind = [hat_mask_ind, eye_mask_ind, scarf_mask_ind, covid19_mask_ind, sunglasses_mask_ind]
     masks_add_ind = [None, None, None, add_covid19_ind, add_sunglasses_ind]
-    rest_ind = [get_rest_mask(maskInd, maskAInd, vertices, mask_name, sunglasses_mask_ind)
+    rest_ind = [get_rest_mask(maskInd, maskAInd, vertices, vertices_rotated, mask_name)
                 for maskInd, maskAInd, mask_name in zip(masks_ind, masks_add_ind, masks_order)]
     masks_to_create = masks_name.split(',')
     head3d_cords = index_on_vertices(range(0, len(vertices)), vertices)
@@ -405,19 +450,19 @@ def process_image(img_path, model, transform, masks_to_create, args):
 
         # for mask, mask_add, rest_of_head, mask_name in zip(masks, masks_add, rest_of_heads, MASKS_NAMES):
         for mask_name in masks_to_create:
-            process_mask(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, img_path, args, output_bbox)
+            process_mask(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, img_path, args, output_bbox, pose)
     else:
         print(f'No face detected for: {img_path}')
     config[HAT_MASK_NAME].mask_exists = False
     toc = time()
     return toc-tic, ii
 
-def process_mask(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, img_path, args, output_bbox):
+def process_mask(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, img_path, args, output_bbox, pose):
     # print('start: ',mask_name)
 
     # Get the location of the masks on the image
     mask_x, mask_y, rest_mask_x, rest_mask_y = \
-        render(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, args.bbox_ind, output_bbox)
+        render(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, args.bbox_ind, output_bbox, pose)
 
     # The average color of the surrounding of the image
     color = bg_color(mask_x, mask_y, img)

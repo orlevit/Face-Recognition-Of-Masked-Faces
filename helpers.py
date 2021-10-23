@@ -5,6 +5,8 @@ import argparse
 import numpy as np
 import pandas as pd
 from glob import glob
+from scipy.spatial.transform import Rotation
+
 from time import time
 
 
@@ -68,12 +70,16 @@ def resize_image(image, bbox):
 @profile
 def split_head_mask_parts(df_3dh, mask_name):
     frontal_main_mask_with_bg = head3d_to_mask(df_3dh, mask_name, "mask_ind")
-    frontal_rest_mask_with_bg = head3d_to_mask(df_3dh, mask_name, "rest_ind")
 
     if config[mask_name].mask_add_ind is not None:
         frontal_add_mask_with_bg = head3d_to_mask(df_3dh, mask_name, "mask_add_ind")
     else:
         frontal_add_mask_with_bg = None
+
+    if config[mask_name].draw_rest_mask is not None:
+        frontal_rest_mask_with_bg = head3d_to_mask(df_3dh, mask_name, "rest_ind")
+    else:
+        frontal_rest_mask_with_bg = None
 
     return frontal_main_mask_with_bg, frontal_add_mask_with_bg, frontal_rest_mask_with_bg
 
@@ -88,20 +94,18 @@ def head3d_to_mask(df_3dh, mask_name, mask_ind):
 
 
 @profile
-def scale(img, most_important_mask, second_important_mask, third_important_mask, scale_factor):
+def scale(img, most_important_mask, second_important_mask, scale_factor):
     most_mask_img = mark_image_with_mask(most_important_mask, img, scale_factor)
     second_mask_img = mark_image_with_mask(second_important_mask, img, scale_factor)
-    third_img = mark_image_with_mask(third_important_mask, img, scale_factor)
 
-    mask_on_image = np.multiply(4, most_mask_img) + np.multiply(2, second_mask_img) + np.multiply(1, third_img)
+    mask_on_image = np.multiply(2, most_mask_img) + np.multiply(1, second_mask_img)
 
-    # Each pixel is main mask/additional strings or rest of the head, the numbers 1/2/4 are arbitrary,
+    # Each pixel is main mask/additional strings or rest of the head, the numbers 1/2 are arbitrary,
     # and used to get the relevant type even when there are overlapping
-    most_mask = np.asarray(np.where(np.isin(mask_on_image, [4, 5, 6, 7])))[[1, 0], :].T
-    second_mask = np.asarray(np.where(np.isin(mask_on_image, [2, 3])))[[1, 0], :].T
-    third_rest = np.asarray(np.where(mask_on_image == 1))[[1, 0], :].T
+    most_mask = np.asarray(np.where(np.isin(mask_on_image, [2, 3])))[[1, 0], :].T
+    second_mask = np.asarray(np.where(mask_on_image == 1))[[1, 0], :].T
 
-    return most_mask, second_mask, third_rest
+    return most_mask, second_mask, None
 
 @profile
 def project_3d(r_img, pose):
@@ -149,6 +153,32 @@ def img_output_bbox(img, bbox, inc_bbox, bbox_ind):
     return [n0, n1, n2, n3]
 
 
+# return pitch, yaw, roll
+def rotvec_to_euler(poses):
+    poses_rotvec = poses[:,:3]
+    rotvec = Rotation.from_rotvec(poses_rotvec).as_matrix()
+    rotvec_transposed= np.array(list(map(lambda x: np.transpose(x), rotvec)))
+    angles = Rotation.from_matrix(rotvec_transposed).as_euler('xyz', degrees=True)
+    angles[0,1:3] *= -1
+
+    return angles
+
+
+def trapezoid(x):
+    if 20 < abs(x):
+        return max(-0.01 * abs(x) + 1.2, 0.1)
+    return 1
+
+
+def pose_scores(poses):
+    angles = rotvec_to_euler(poses)
+    pitches, yaws = angles[:, 0], angles[:, 1]
+    vtrapezoid = np.vectorize(trapezoid)
+    composition = 0.8 * vtrapezoid(yaws) + 0.2 * vtrapezoid(pitches)
+    scores = np.where(0.7 <= composition, composition, 0.7)
+    return scores
+
+
 def get_1id_pose(results, img, threshold):
     h, w, _ = img.shape
 
@@ -169,8 +199,9 @@ def get_1id_pose(results, img, threshold):
 
     else:
         # if more than one identity recognized, then check who has the biggest condition
+        poses = results["dofs"].cpu().numpy()[possible_id_ind].astype('float')
         bboxes = results["boxes"].cpu().numpy()[possible_id_ind].astype('float')
-        scores = results["scores"].cpu().numpy()[possible_id_ind].astype('float')
+        i_scores = results["scores"].cpu().numpy()[possible_id_ind].astype('float')
         bounding_box_size = (bboxes[:, 2] - bboxes[:, 0]) * (bboxes[:, 3] - bboxes[:, 1])
         center_x = (bboxes[:, 0] + bboxes[:, 2]) / 2
         center_y = (bboxes[:, 1] + bboxes[:, 3]) / 2
@@ -178,7 +209,8 @@ def get_1id_pose(results, img, threshold):
         dist_y = np.min(np.vstack((center_y, abs(center_y - img.shape[0]))), axis=0)
         offsets = np.vstack([dist_x, dist_y])
         offset_dist_squared = np.sum(np.power(offsets, 2.0), 0)
-        bbox_idx = np.argmax(scores * (bounding_box_size + offset_dist_squared))
+        p_scores = pose_scores(poses)
+        bbox_idx = np.argmax(i_scores * p_scores * (bounding_box_size + offset_dist_squared))
 
         return all_dofs[bbox_idx], all_bboxes[bbox_idx]
 
@@ -200,6 +232,14 @@ def color_face_mask(img, color, mask_x, mask_y, rest_mask_x, rest_mask_y, mask_n
         img_output = draw_rest_on_img(rest_mask_x, rest_mask_y, img, img_output)
 
     return img_output
+
+
+def points_on_image(points_x, points_y, image):
+    mask_on_image = np.zeros((image.shape[0], image.shape[1]))
+    for x, y in zip(points_x, points_y):
+        mask_on_image[y, x] = 1
+
+    return mask_on_image
 
 
 @profile
