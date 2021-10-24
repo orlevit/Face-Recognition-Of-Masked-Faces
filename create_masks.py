@@ -47,7 +47,7 @@ def render(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, bbox_ind, output_
 
     mask_x_w_f = np.append(f_x, mask_x).astype(int)
     mask_y_w_f = np.append(f_y, mask_y).astype(int)
-    # extend_mask_x_w_f, extend_mask_y_w_f = extend_mask(mask_x_w_f, mask_y_w_f, img, pose, output_bbox, mask_name)
+    # extend_mask_x_w_f, extend_mask_y_w_f = extend_mask(mask_on_image, img, pose, output_bbox, mask_name)
     morph_mask_x = np.append(mask_x_w_f, morph_mask_add_x).astype(int)
     morph_mask_y = np.append(mask_y_w_f, morph_mask_add_y).astype(int)
     # if config[mask_name].mask_add_ind is not None:
@@ -282,8 +282,7 @@ def calc_filter_size(mask_x, mask_y, left_filter_size, right_filter_dim):
 # todo: not to sunglasses
 #todo: is frontal check for eyemask?
 # dOES CLOSE AFTER CLOSE WITH THE SAME SIZE GIVES THE SAME RESULTS WHEN COUNTER IS 1?
-def extend_mask(morph_mask_x, morph_mask_y, image, pose, output_bbox, mask_name):
-    mask_on_image = points_on_image(morph_mask_x, morph_mask_y, image)
+def extend_mask(mask_on_image, image, pose, output_bbox, mask_name):
     w_bbox = output_bbox[2] - output_bbox[0]
     # X = np.array([[0.5666, 215],[0.6211, 236], [0.4427, 299], [0.614, 134]])##[[0.0316, 218],[0.2085, 397],[0.8158, 138],[0.5103, 392],[0.8613, 208], ]
     # y = np.array([[24,  30,25, 10]]).T # [1, 1,10,16, 14,]
