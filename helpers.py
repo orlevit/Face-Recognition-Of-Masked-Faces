@@ -15,8 +15,10 @@ from torchvision import transforms
 from img2pose import img2poseModel
 from model_loader import load_model
 from project_on_image import transform_vertices
-from config_file import config, DEPTH, MAX_SIZE, MIN_SIZE, POSE_MEAN, POSE_STDDEV, MODEL_PATH, \
-    PATH_3D_POINTS, ALL_MASKS, BBOX_REQUESTED_SIZE, HEAD_3D_NAME
+from config_file import config, DEPTH, MAX_SIZE, MIN_SIZE, POSE_MEAN, POSE_STDDEV, MODEL_PATH, PATH_3D_POINTS, \
+    ALL_MASKS, BBOX_REQUESTED_SIZE, HEAD_3D_NAME, SLOPE_TRAPEZOID, INTERCEPT_TRAPEZOID, MIN_TRAPEZOID_INPUT, \
+    MIN_TRAPEZOID_OUTPUT, YAW_IMPORTANCE, PITCH_IMPORTANCE, MIN_POSE_SCORES
+
 from line_profiler_pycharm import profile
 
 
@@ -130,6 +132,13 @@ def project_3d(r_img, pose):
     return df
 
 
+def turn_to_odd(num):
+    if num & 1:
+        return num
+
+    return num + 1
+
+
 def img_output_bbox(img, bbox, inc_bbox, bbox_ind):
     img_x_dim = img.shape[1]
     img_y_dim = img.shape[0]
@@ -155,18 +164,18 @@ def img_output_bbox(img, bbox, inc_bbox, bbox_ind):
 
 # return pitch, yaw, roll
 def rotvec_to_euler(poses):
-    poses_rotvec = poses[:,:3]
+    poses_rotvec = poses[:, :3]
     rotvec = Rotation.from_rotvec(poses_rotvec).as_matrix()
-    rotvec_transposed= np.array(list(map(lambda x: np.transpose(x), rotvec)))
+    rotvec_transposed = np.array(list(map(lambda x: np.transpose(x), rotvec)))
     angles = Rotation.from_matrix(rotvec_transposed).as_euler('xyz', degrees=True)
-    angles[0,1:3] *= -1
+    angles[0, 1:3] *= -1
 
     return angles
 
 
 def trapezoid(x):
-    if 20 < abs(x):
-        return max(-0.01 * abs(x) + 1.2, 0.1)
+    if MIN_TRAPEZOID_INPUT < abs(x):
+        return max(SLOPE_TRAPEZOID * abs(x) + INTERCEPT_TRAPEZOID, MIN_TRAPEZOID_OUTPUT)
     return 1
 
 
@@ -174,8 +183,9 @@ def pose_scores(poses):
     angles = rotvec_to_euler(poses)
     pitches, yaws = angles[:, 0], angles[:, 1]
     vtrapezoid = np.vectorize(trapezoid)
-    composition = 0.8 * vtrapezoid(yaws) + 0.2 * vtrapezoid(pitches)
-    scores = np.where(0.7 <= composition, composition, 0.7)
+    composition = YAW_IMPORTANCE * vtrapezoid(yaws) + PITCH_IMPORTANCE * vtrapezoid(pitches)
+    scores = np.where(MIN_POSE_SCORES <= composition, composition, MIN_POSE_SCORES)
+
     return scores
 
 

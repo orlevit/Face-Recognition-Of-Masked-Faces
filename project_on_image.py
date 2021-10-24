@@ -22,7 +22,7 @@ def transform_vertices(img, pose, vertices, global_intrinsics=None):
     (h, w, _) = img.shape
     if global_intrinsics is None:
         global_intrinsics = np.array(
-            [[w + h, 0, w // 2], [0, w + h, h // 2], [0, 0, 1]]
+            [[w + h, 0, w / 2], [0, w + h, h / 2], [0, 0, 1]]
         )
 
     projected_lms = np.zeros_like(vertices)
