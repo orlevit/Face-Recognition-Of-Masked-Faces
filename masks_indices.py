@@ -44,8 +44,8 @@ def get_scarf_mask_index(a1, b1, c1, x_left, x_right, x, y):
 
     return index_list
 
-#todo: change docstring
-def get_eye_mask_index(a1, b1, c1, a2, b2, c2, x_left, x_right, x, y, z):
+
+def get_eye_mask_index(a1, b1, c1, a2, b2, c2, x_left, x_right, x, y):
     """
     Extracting the indices for creating the eye mask.
     It is achieved by taking all the indices between two parabolic lines drawn between two points,
@@ -61,7 +61,6 @@ def get_eye_mask_index(a1, b1, c1, a2, b2, c2, x_left, x_right, x, y, z):
     :param x_right: Right point.
     :param x: All the x of the points in the 3D model.
     :param y: All the y of the points in the 3D model.
-    :param z: All the z of the points in the 3D model.
 
     :return: Eye mask indices.
     """
@@ -72,18 +71,14 @@ def get_eye_mask_index(a1, b1, c1, a2, b2, c2, x_left, x_right, x, y, z):
                 (x[i] > x_left - 2) and (x[i] < x_right + 2)):
             index_list.append(i)
 
-    # filtered_ind = [ii for ii, cord in enumerate(z) if (cord >= 0)]
-    # index_list = np.setdiff1d(filtered_ind, index_list)
-
     return index_list
 
 
-def make_eye_mask(x, y, z):
+def make_eye_mask(x, y):
     """
     Getting the eye mask indices.
     :param x: All the x of the points in the 3D model.
     :param y: All the y of the points in the 3D model.
-    :param z: All the z of the points in the 3D model.
 
     :return: Eyes mask indices
     """
@@ -99,7 +94,7 @@ def make_eye_mask(x, y, z):
     a1, b1, c1 = np.polyfit(x_3points, y_3points2, 2)
     a2, b2, c2 = np.polyfit(x_3points, y_3points1, 2)
 
-    index_list = get_eye_mask_index(a1, b1, c1, a2, b2, c2, x_left, x_right, x, y, z)
+    index_list = get_eye_mask_index(a1, b1, c1, a2, b2, c2, x_left, x_right, x, y)
 
     return index_list
 
@@ -182,19 +177,17 @@ def make_sunglasses_mask(x, y):
     :param y: All the y of the points in the 3D model.
     :return: Sunglasses mask indices
     """
-    right_eye_ind = config[SUNGLASSES_MASK_NAME].inds.right
+    right_eye_ind = config[SUNGLASSES_MASK_NAME].inds.center_right_lens
     left_eye_ind = get_sunglasses_left_eye(right_eye_ind, x, y)
-    right_lens_inds, right_ind_right_eye, left_ind_right_eye = get_lens(right_eye_ind, x, y)
-    left_lens_inds, right_ind_left_eye, left_ind_left_eye = get_lens(left_eye_ind, x, y)
-    left_string = get_mask_string(left_ind_left_eye,
-                                  config[COVID19_MASK_NAME].inds.left_upper_string2,
-                                  CENTER_FACE_PART, x, x, y)
+    right_lens_inds = get_lens(right_eye_ind, x, y)
+    left_lens_inds = get_lens(left_eye_ind, x, y)
+    left_string = get_mask_string(config[SUNGLASSES_MASK_NAME].inds.left_lens_left_side,
+                                  config[COVID19_MASK_NAME].inds.left_upper_string2, CENTER_FACE_PART, x, x, y)
     center_string = get_mask_string(right_eye_ind, left_eye_ind, CENTER_FACE_PART, x, x, y)
     right_string = get_mask_string(config[COVID19_MASK_NAME].inds.right_upper_string2,
-                                   right_ind_right_eye, CENTER_FACE_PART, x, x, y)
+                                   config[SUNGLASSES_MASK_NAME].inds.right_lens_right_side, CENTER_FACE_PART, x, x, y)
     sunglasses_lenses_inds = left_lens_inds + right_lens_inds
     sunglasses_strings_ind = left_string + center_string + right_string
-    sunglasses_strings_ind = np.setdiff1d(sunglasses_strings_ind, sunglasses_lenses_inds)
 
     return sunglasses_lenses_inds, sunglasses_strings_ind
 
@@ -355,7 +348,7 @@ def get_lens(center_eye_ind, x, y):
     :param center_eye_ind: Whether this is the left or right lens
     :param x: All the x of the points in the 3D model.
     :param y: All the y of the points in the 3D model.
-    :return: The indices of lens of the sunglasses mak.
+    :return: The indices of lens of the sunglasses mask.
     """
     distances = []
     indices = []
@@ -365,8 +358,4 @@ def get_lens(center_eye_ind, x, y):
             distances.append(x[i])
             indices.append(i)
 
-    array = np.column_stack((distances, indices))
-    right_ind = array[np.argmin(array[:, 0]), 1].astype(int)
-    left_ind = array[np.argmax(array[:, 0]), 1].astype(int)
-
-    return indices, right_ind, left_ind
+    return indices
