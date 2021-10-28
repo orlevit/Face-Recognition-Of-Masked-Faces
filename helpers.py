@@ -86,6 +86,19 @@ def split_head_mask_parts(df_3dh, mask_name):
     return frontal_main_mask_with_bg, frontal_add_mask_with_bg, frontal_rest_mask_with_bg
 
 
+def max_continuous_area(morph_mask, make_contour_ind, contours_number):
+    if not make_contour_ind:
+        return morph_mask
+
+    morph_mask_max = np.zeros_like(morph_mask)
+    contours, hierarchy = cv2.findContours(morph_mask.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours_indices =  np.argpartition(list(map(len, contours)), -contours_number)[-contours_number:]
+    relvent_contours = [contours[index] for index in contours_indices]
+    cv2.drawContours(morph_mask_max, relvent_contours, -1, color=1, thickness=-1)
+
+    return morph_mask_max
+
+
 @profile
 def head3d_to_mask(df_3dh, mask_name, mask_ind):
     df_mask_with_nulls = df_3dh.iloc[config[mask_name][mask_ind]]

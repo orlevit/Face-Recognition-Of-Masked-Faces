@@ -5,7 +5,7 @@ from skimage.filters import threshold_multiotsu
 
 from masks_indices import make_eye_mask, make_hat_mask, make_covid19_mask, make_scarf_mask, make_sunglasses_mask
 from helpers import scale, split_head_mask_parts, get_1id_pose, resize_image, project_3d, color_face_mask, save_image, \
-    head3d_z_dist, img_output_bbox, points_on_image
+    head3d_z_dist, img_output_bbox, points_on_image, max_continuous_area
 from config_file import config, VERTICES_PATH, EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, COVID19_MASK_NAME, \
     SUNGLASSES_MASK_NAME, NEAR_NEIGHBOUR_STRIDE, MIN_MASK_SIZE, FILTER_MASK_RIGHT_POINT_IMAGE_SIZE, \
     MASK_RIGHT_POINT, ADD_LEFT_POINT, ADD_RIGHT_POINT, THRESHOLD_BUFFER, RANGE_CHECK, HEAD_3D_NAME
@@ -20,22 +20,28 @@ def render(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, bbox_ind, output_
 
     # morphological operations on the mask
     mask_x, mask_y, mask_on_image = morphological_op(True, frontal_mask, img,
-                                      config[mask_name].filter_size, MASK_RIGHT_POINT)
-    morph_mask_add_x, morph_mask_add_y, _ = morphological_op(config[mask_name].mask_add_front_points_calc,frontal_add_mask,
-                                                          img, ADD_LEFT_POINT, ADD_RIGHT_POINT,cv2.MORPH_DILATE)
+                                                     config[mask_name].filter_size, MASK_RIGHT_POINT,
+                                                     True, config[mask_name].main_mask_contours_number)
+
+    morph_mask_add_x, morph_mask_add_y, _ = morphological_op(config[mask_name].mask_add_front_points_calc,
+                                                             frontal_add_mask, img, ADD_LEFT_POINT, ADD_RIGHT_POINT,
+                                                             False, 0,cv2.MORPH_DILATE)
+
     morph_rest_x, morph_rest_y, _ = morphological_op(config[mask_name].draw_rest_mask, frontal_rest, img,
-                                      config[mask_name].filter_size, MASK_RIGHT_POINT, cv2.MORPH_DILATE)
+                                                     config[mask_name].filter_size, MASK_RIGHT_POINT,
+                                                     False, 0, cv2.MORPH_DILATE)
 
     if len(morph_rest_x) == 0:
         morph_rest_x, morph_rest_y = None, None
 
     # Whether to add the forehead to the mask, this is currently only used for eye and hat masks
     if config[mask_name].add_forehead:
-        f_x, f_y = add_forehead_mask(frontal_mask, frontal_rest, img, bbox_ind, output_bbox, mask_on_image)
+        f_x, f_y = add_forehead_mask(frontal_mask, frontal_rest, bbox_ind, output_bbox, mask_on_image)
         mask_x_with_forehead = np.append(f_x, mask_x).astype(int)
         mask_y_with_forehead = np.append(f_y, mask_y).astype(int)
         mask_on_image = points_on_image(mask_x_with_forehead, mask_y_with_forehead, img)
 
+    # compensate for deviations from frontal face
     extend_mask_x, extend_mask_y = extend_mask(mask_on_image, img, pose, output_bbox, mask_name)
     morph_mask_x = np.append(extend_mask_x, morph_mask_add_x).astype(int)
     morph_mask_y = np.append(extend_mask_y, morph_mask_add_y).astype(int)
@@ -259,21 +265,7 @@ def calc_filter_size(mask_x, mask_y, left_filter_size, right_filter_dim):
 # dOES CLOSE AFTER CLOSE WITH THE SAME SIZE GIVES THE SAME RESULTS WHEN COUNTER IS 1?
 def extend_mask(mask_on_image, image, pose, output_bbox, mask_name):
     w_bbox = output_bbox[2] - output_bbox[0]
-    # X = np.array([[0.5666, 215],[0.6211, 236], [0.4427, 299], [0.614, 134]])##[[0.0316, 218],[0.2085, 397],[0.8158, 138],[0.5103, 392],[0.8613, 208], ]
-    # y = np.array([[24,  30,25, 10]]).T # [1, 1,10,16, 14,]
-    # reg = LinearRegression().fit(X, y)
-    # a1, a2, b = reg.coef_[0][0], reg.coef_[0][1], reg.intercept_[0]
-    # filter_length = max(int(round(a1 * abs(pose[1]) + a2 * w_bbox + b)), 0)
-    ################################################
-    #134_5019.jpg,78_2986.jpg,292_10400.jpg,,342_12404.jpg,269_9667.jpg
-    # X = np.array([[0.6171 * 261], [0.614 * 134], [0.5276 * 236],[1.5441 * 115],[0.9157 * 89]])  ##[[0.0316, 218],[0.2085, 397],[0.8158, 138],[0.5103, 392],[0.8613, 208], ]
-    # y = np.array([[10, 5, 13, 7, 8]]).T  # [1, 1,10,16, 14,]
-    # reg = LinearRegression().fit(X, y)
-    # a, b = reg.coef_[0][0], reg.intercept_[0]
-    # filter_length = max(int(round(a * abs(pose[1]) * w_bbox + b)), 0)
-
-    # filter_length = max(int(round(5 * abs(pose[1]) * w_bbox / 320)), 0)
-    filter_length = turn_to_odd(max(int(round(13 * abs(pose[1]) * w_bbox / 150)), 0))# 9, 167
+    filter_length = max(int(round(13 * abs(pose[1]) * w_bbox / 150)), 0)
 
     if pose[1] > 0:
         kernel = np.expand_dims(np.append(np.zeros(filter_length, np.uint8),np.ones(filter_length, np.uint8)), axis=0)
@@ -286,23 +278,24 @@ def extend_mask(mask_on_image, image, pose, output_bbox, mask_name):
     return xx, yy
 
 
-def morphological_op(make_morph_op_ind, mask, image, left_filter_size, right_filter_dim, morph_op=cv2.MORPH_CLOSE):
-    if make_morph_op_ind:
+def morphological_op(morph_ind, mask, image, left_filter_size, right_filter_dim, c_ind, cn, morph_op=cv2.MORPH_CLOSE):
+    if morph_ind:
         mask_x, mask_y = mask[:, 0], mask[:, 1]
         point_2d = points_on_image(mask_x, mask_y, image)
         filter_size = calc_filter_size(mask_x, mask_y, left_filter_size, right_filter_dim)
         kernel = np.ones(filter_size, np.uint8)  # kernel filter
         morph_mask = cv2.morphologyEx(point_2d, morph_op, kernel)
-        yy, xx = np.where(morph_mask == 1)
+        morph_mask_max = max_continuous_area(morph_mask, c_ind, cn)
+        yy, xx = np.where(morph_mask_max == 1)
 
     else:
-        yy, xx, morph_mask = [], [], []
+        yy, xx, morph_mask_max = [], [], []
 
-    return xx, yy, morph_mask
+    return xx, yy, morph_mask_max
 
 
 @profile
-def add_forehead_mask(frontal_mask, frontal_rest, image, bbox_ind, output_bbox, mask_on_image):
+def add_forehead_mask(frontal_mask, frontal_rest, bbox_ind, output_bbox, mask_on_image):
     forehead_y, forehead_x = [], []
     frontal_mask_x, frontal_mask_y = frontal_mask[:, 0], frontal_mask[:, 1]
     min_proj_y = np.min(frontal_mask_y)
@@ -393,7 +386,7 @@ def process_image(img_path, model, transform, masks_to_create, args):
     if pose.size != 0:
         ii=1
         print(img_path)
-        # TODO: check images with and without rescale ,does the imcrease fucked the head size?
+
         # Resize image that ROI will be in a fix size
         r_img, scale_factor = resize_image(img, bbox)
 

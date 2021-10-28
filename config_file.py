@@ -65,7 +65,8 @@ config = {
         "additional_masks_req": HAT_MASK_NAME,
         "filter_size": 9,
         "mask_front_points_calc": False,
-        "mask_add_front_points_calc": False
+        "mask_add_front_points_calc": False,
+        "main_mask_contours_number": 1
 
     },
     HAT_MASK_NAME: {
@@ -80,7 +81,8 @@ config = {
         "filter_size": 15,
         "mask_front_points_calc": True,
         "mask_add_front_points_calc": False,
-        "mask_exists": False
+        "mask_exists": False,
+        "main_mask_contours_number": 1
     },
     SCARF_MASK_NAME: {
         "inds": {
@@ -93,7 +95,8 @@ config = {
         "additional_masks_req": None,
         "filter_size": 15,
         "mask_front_points_calc": True,
-        "mask_add_front_points_calc": False
+        "mask_add_front_points_calc": False,
+        "main_mask_contours_number": 1
     },
     COVID19_MASK_NAME: {
         "inds": {
@@ -115,7 +118,8 @@ config = {
         "additional_masks_req": None,
         "filter_size": 15,
         "mask_front_points_calc": True,
-        "mask_add_front_points_calc": True
+        "mask_add_front_points_calc": True,
+        "main_mask_contours_number": 1
     },
     SUNGLASSES_MASK_NAME: {
         "inds": {
@@ -128,7 +132,8 @@ config = {
         "additional_masks_req": None,
         "filter_size": 9.355,
         "mask_front_points_calc": True,
-        "mask_add_front_points_calc": True
+        "mask_add_front_points_calc": True,
+        "main_mask_contours_number": 2
     }
 }
 config = edict(config)
