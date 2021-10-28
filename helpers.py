@@ -132,13 +132,6 @@ def project_3d(r_img, pose):
     return df
 
 
-def turn_to_odd(num):
-    if num & 1:
-        return num
-
-    return num + 1
-
-
 def img_output_bbox(img, bbox, inc_bbox, bbox_ind):
     img_x_dim = img.shape[1]
     img_y_dim = img.shape[0]

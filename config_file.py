@@ -47,8 +47,7 @@ FILTER_MASK_RIGHT_POINT_IMAGE_SIZE = 1888
 MASK_RIGHT_POINT = 67
 ADD_LEFT_POINT = 4.021#(FILTER_DIM_MASK_ADD_LEFT_POINT, FILTER_DIM_MASK_ADD_LEFT_POINT)
 ADD_RIGHT_POINT = 26
-CHIN_INDEX = 47862 # index on the chin, help to extends the masks
-NOSE_INDEX = 8160 # index on the nose, help to extends the masks
+
 # Hat needs to be before the eyemask(even if only eyemask is needed, hat mask need to be included).
 ALL_MASKS = f"{HAT_MASK_NAME},{EYE_MASK_NAME},{COVID19_MASK_NAME},{SUNGLASSES_MASK_NAME}"
 
