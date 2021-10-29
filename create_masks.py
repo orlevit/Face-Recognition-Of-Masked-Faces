@@ -4,7 +4,7 @@ import numpy as np
 from skimage.filters import threshold_multiotsu
 
 from masks_indices import make_eye_mask, make_hat_mask, make_covid19_mask, make_scarf_mask, make_sunglasses_mask
-from helpers import scale, split_head_mask_parts, get_1id_pose, resize_image, project_3d, color_face_mask, save_image, \
+from helpers import split_head_mask_parts, get_1id_pose, resize_image, project_3d, color_face_mask, save_image, \
     head3d_z_dist, img_output_bbox, points_on_image, max_continuous_area
 from config_file import config, VERTICES_PATH, EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, COVID19_MASK_NAME, \
     SUNGLASSES_MASK_NAME, NEAR_NEIGHBOUR_STRIDE, MIN_MASK_SIZE, FILTER_MASK_RIGHT_POINT_IMAGE_SIZE, \
@@ -127,8 +127,6 @@ def clustering(elements, bins_number=100):
     range_arr1 = max(cluster1_arr) - min(cluster1_arr)
     range_arr2 = max(cluster2_arr) - min(cluster2_arr)
 
-    # if RANGE_CHECK <= range_arr1 or RANGE_CHECK <= range_arr2:
-    #     cluster1_arr, cluster2_arr = otsu_clustering(elements, 3, bins_number, bin_half_size)
     if RANGE_CHECK <= range_arr2:
         cluster1_arr, cluster2_arr = otsu_clustering(cluster2_arr, 2, bins_number, bin_half_size)
     elif RANGE_CHECK <= range_arr1 :

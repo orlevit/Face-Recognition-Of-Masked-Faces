@@ -109,20 +109,6 @@ def head3d_to_mask(df_3dh, mask_name, mask_ind):
 
 
 @profile
-def scale(img, most_important_mask, second_important_mask, scale_factor):
-    most_mask_img = mark_image_with_mask(most_important_mask, img, scale_factor)
-    second_mask_img = mark_image_with_mask(second_important_mask, img, scale_factor)
-
-    mask_on_image = np.multiply(2, most_mask_img) + np.multiply(1, second_mask_img)
-
-    # Each pixel is main mask/additional strings or rest of the head, the numbers 1/2 are arbitrary,
-    # and used to get the relevant type even when there are overlapping
-    most_mask = np.asarray(np.where(np.isin(mask_on_image, [2, 3])))[[1, 0], :].T
-    second_mask = np.asarray(np.where(mask_on_image == 1))[[1, 0], :].T
-
-    return most_mask, second_mask, None
-
-@profile
 def project_3d(r_img, pose):
     # Masks projection on the image plane
     projected_head_float = transform_vertices(r_img, pose, config[HEAD_3D_NAME])
@@ -254,20 +240,6 @@ def points_on_image(points_x, points_y, image):
     mask_on_image = np.zeros((image.shape[0], image.shape[1]))
     for x, y in zip(points_x, points_y):
         mask_on_image[y, x] = 1
-
-    return mask_on_image
-
-
-@profile
-def mark_image_with_mask(frontal_coords, img, scale_factor):
-    mask_on_image = [0]
-
-    if len(frontal_coords):
-        frontal_coords_scaled = (frontal_coords / scale_factor).astype(int)
-        img_y_dim, img_x_dim = int(img.shape[0] / scale_factor), int(img.shape[1] / scale_factor)
-        mask_on_image = np.zeros((img_y_dim, img_x_dim))
-        for x, y in zip(frontal_coords_scaled[:, 0], frontal_coords_scaled[:, 1]):
-            mask_on_image[min(y, img_y_dim - 1), min(x, img_x_dim - 1)] = 1
 
     return mask_on_image
 
