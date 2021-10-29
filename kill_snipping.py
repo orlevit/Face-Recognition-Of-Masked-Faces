@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from config_file import SAME_AREA_DIST, THRESHOLD_BUFFER, RANGE_CHECK
+from config_file import THRESHOLD_BUFFER, RANGE_CHECK
 import numpy  as np
 import math
 from create_masks import  neighbors_cells_z, threshold_front, two_clusters_arrays, three_clusters_arrays

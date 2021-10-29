@@ -127,8 +127,12 @@ def clustering(elements, bins_number=100):
     range_arr1 = max(cluster1_arr) - min(cluster1_arr)
     range_arr2 = max(cluster2_arr) - min(cluster2_arr)
 
-    if RANGE_CHECK <= range_arr1 or RANGE_CHECK <= range_arr2:
-        cluster1_arr, cluster2_arr = otsu_clustering(elements, 3, bins_number, bin_half_size)
+    # if RANGE_CHECK <= range_arr1 or RANGE_CHECK <= range_arr2:
+    #     cluster1_arr, cluster2_arr = otsu_clustering(elements, 3, bins_number, bin_half_size)
+    if RANGE_CHECK <= range_arr2:
+        cluster1_arr, cluster2_arr = otsu_clustering(cluster2_arr, 2, bins_number, bin_half_size)
+    elif RANGE_CHECK <= range_arr1 :
+        _, cluster1_arr = otsu_clustering(cluster1_arr, 2, bins_number, bin_half_size)
 
     cluster1 = np.mean(cluster1_arr)
     cluster2 = np.mean(cluster2_arr)
@@ -137,7 +141,7 @@ def clustering(elements, bins_number=100):
 
 
 @profile
-def more_than_one(surrounding_mask):
+def more_than_one_points(surrounding_mask):
     index = 0
     sm_len = len(surrounding_mask)
     more_ind = False
@@ -161,7 +165,7 @@ def threshold_front(r_img, mask_on_img, frontal_mask_all):
 
     for x, y, z in zip(frontal_mask_all.x, frontal_mask_all.y, frontal_mask_all.z):
         surrounding_mask = neighbors_cells_z(mask_on_img, x, y, img_x_dim - 1, img_y_dim - 1)
-        more_indication = more_than_one(surrounding_mask)
+        more_indication = more_than_one_points(surrounding_mask)
         mask_on_img_front[y, x] = 1
 
         if more_indication:
