@@ -65,36 +65,10 @@ def neighbors_cells_z(mask_on_img, x_pixel, y_pixel, max_x, max_y):
 
     return np.asarray(z_neighbors, dtype=np.float)
 
-# todo: remove this
 
 @profile
-def three_clusters_arrays(elements, thresholds, bin_half_size):
-    is_bin2_free = True
-    left_bin1_range = elements <= thresholds[0] + bin_half_size
-    right_bin2_range = thresholds[1] - bin_half_size <= elements
-    bin1 = elements[left_bin1_range][thresholds[0] - bin_half_size <= elements[left_bin1_range]]
-    cluster1_arr = elements[~(left_bin1_range | right_bin2_range)]
-    bin2_range = elements[right_bin2_range] <= thresholds[1] + bin_half_size
-    bin2 = elements[right_bin2_range][bin2_range]
-    cluster2_arr = elements[right_bin2_range][~bin2_range]
-
-    if not cluster2_arr.size:
-        cluster2_arr = np.append(cluster2_arr, bin2)
-        is_bin2_free = False
-        if not cluster1_arr.size:
-            cluster1_arr = np.append(cluster1_arr, bin1)
-
-    if not cluster1_arr.size:
-        if bin2.size and is_bin2_free:
-            cluster1_arr = np.append(cluster1_arr, bin2)
-        else:
-            cluster1_arr = np.append(cluster1_arr, bin1)
-
-    return cluster1_arr, cluster2_arr
-
-
-@profile
-def two_clusters_arrays(elements, threshold, bin_half_size):
+def otsu_clustering(elements, cluster_number, bins_number, bin_half_size):
+    threshold = threshold_multiotsu(elements, cluster_number, nbins=bins_number)
     less_range = elements < threshold - bin_half_size
     bigger_range = threshold + bin_half_size < elements
     cluster1_arr = elements[less_range]
@@ -105,18 +79,6 @@ def two_clusters_arrays(elements, threshold, bin_half_size):
         cluster1_arr = np.append(cluster1_arr, bin1)
     elif not cluster2_arr.size:
         cluster2_arr = np.append(cluster2_arr, bin1)
-
-    return cluster1_arr, cluster2_arr
-
-# todo: remove 3
-@profile
-def otsu_clustering(elements, cluster_number, bins_number, bin_half_size):
-    thresholds = threshold_multiotsu(elements, cluster_number, nbins=bins_number)
-
-    if cluster_number == 2:
-        cluster1_arr, cluster2_arr = two_clusters_arrays(elements, thresholds, bin_half_size)
-    else:  # cluster_number == 3
-        cluster1_arr, cluster2_arr = three_clusters_arrays(elements, thresholds, bin_half_size)
 
     return cluster1_arr, cluster2_arr
 
