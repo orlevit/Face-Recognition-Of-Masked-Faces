@@ -165,7 +165,6 @@ def make_covid19_mask(x, y, z):
     index_list4 = get_mask_string(right_lower_string1, right_lower_string2, RIGHT_FACE_PART, x, y, z)
 
     covid19_strings_ind = index_list1 + index_list2 + index_list3 + index_list4
-    covid19_strings_ind = np.setdiff1d(covid19_strings_ind, covid19_mask_ind)
 
     return covid19_mask_ind, covid19_strings_ind
 

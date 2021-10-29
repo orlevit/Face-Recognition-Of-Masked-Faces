@@ -104,13 +104,13 @@ config = {
             "right_middle": 178,
             "left_lower": 47948,
             "right_lower": 30393,
-            "left_upper_string1": 16098,
+            "left_upper_string1": 15583,# 16098
             "left_upper_string2": 33284,# smaller upper string 31481,
-            "left_lower_string1": 29873,
+            "left_lower_string1": 29488,# 29873
             "left_lower_string2": 20567,
-            "right_upper_string1": 185,
+            "right_upper_string1": 702, #185
             "right_upper_string2": 21157,# smaller upper string 22967 ,
-            "right_lower_string1": 24714,
+            "right_lower_string1": 25103,#24714,
             "right_lower_string2": 34082
         },# 29873
         "add_forehead": False,

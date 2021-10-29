@@ -65,6 +65,7 @@ def neighbors_cells_z(mask_on_img, x_pixel, y_pixel, max_x, max_y):
 
     return np.asarray(z_neighbors, dtype=np.float)
 
+# todo: remove this
 
 @profile
 def three_clusters_arrays(elements, thresholds, bin_half_size):
@@ -107,7 +108,7 @@ def two_clusters_arrays(elements, threshold, bin_half_size):
 
     return cluster1_arr, cluster2_arr
 
-
+# todo: remove 3
 @profile
 def otsu_clustering(elements, cluster_number, bins_number, bin_half_size):
     thresholds = threshold_multiotsu(elements, cluster_number, nbins=bins_number)
