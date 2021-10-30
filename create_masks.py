@@ -5,7 +5,7 @@ from skimage.filters import threshold_multiotsu
 
 from masks_indices import make_eye_mask, make_hat_mask, make_covid19_mask, make_scarf_mask, make_sunglasses_mask
 from helpers import split_head_mask_parts, get_1id_pose, resize_image, project_3d, color_face_mask, save_image, \
-    head3d_z_dist, img_output_bbox, points_on_image, max_continuous_area, turn_to_odd
+    head3d_z_dist, img_output_bbox, points_on_image, max_continuous_area, turn_to_odd, is_face_detected
 from config_file import config, VERTICES_PATH, EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, COVID19_MASK_NAME, \
     SUNGLASSES_MASK_NAME, NEAR_NEIGHBOUR_STRIDE, MIN_MASK_SIZE, FILTER_MASK_RIGHT_POINT_IMAGE_SIZE, \
     MASK_RIGHT_POINT, ADD_LEFT_POINT, ADD_RIGHT_POINT, THRESHOLD_BUFFER, RANGE_CHECK, HEAD_3D_NAME
@@ -346,9 +346,12 @@ def process_image(img_path, model, transform, masks_to_create, args):
 
     # Get only one 6DOF from all the 6DFs that img2pose found
     pose, bbox = get_1id_pose(results, img, args.threshold)
+
+    # Indication whether a face was detected the successfully
+    face_detected_indication = is_face_detected(img, bbox)
     ii = 0
     # face detected with img2pose and above the threshold
-    if pose.size != 0:
+    if face_detected_indication:
         ii=1
         print(img_path)
 

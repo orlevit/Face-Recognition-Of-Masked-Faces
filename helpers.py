@@ -17,7 +17,8 @@ from model_loader import load_model
 from project_on_image import transform_vertices
 from config_file import config, DEPTH, MAX_SIZE, MIN_SIZE, POSE_MEAN, POSE_STDDEV, MODEL_PATH, PATH_3D_POINTS, \
     ALL_MASKS, BBOX_REQUESTED_SIZE, HEAD_3D_NAME, SLOPE_TRAPEZOID, INTERCEPT_TRAPEZOID, MIN_TRAPEZOID_INPUT, \
-    MIN_TRAPEZOID_OUTPUT, YAW_IMPORTANCE, PITCH_IMPORTANCE, MIN_POSE_SCORES, MIN_MASK_PIXELS
+    MIN_TRAPEZOID_OUTPUT, YAW_IMPORTANCE, PITCH_IMPORTANCE, MIN_POSE_SCORES, MIN_MASK_PIXELS, \
+    MIN_DETECTED_FACE_PERCENTAGE
 
 from line_profiler_pycharm import profile
 
@@ -227,6 +228,20 @@ def get_1id_pose(results, img, threshold):
         bbox_idx = np.argmax(i_scores * p_scores * (bounding_box_size + offset_dist_squared))
 
         return all_dofs[bbox_idx], all_bboxes[bbox_idx]
+
+
+def is_face_detected(img, bbox):
+    image_h, image_w, _ = img.shape
+
+    h_bbox = bbox[3] - bbox[1]
+    w_bbox = bbox[2] - bbox[0]
+
+    image_size = image_h * image_w
+    bbox_size = h_bbox * w_bbox
+
+    area_percentage = bbox_size / image_size
+    print('\n',np.round(area_percentage,4),w_bbox,h_bbox,np.round(bbox_size,4),image_size,'\n')
+    return MIN_DETECTED_FACE_PERCENTAGE < area_percentage
 
 
 def read_images(input_images, image_extensions):
