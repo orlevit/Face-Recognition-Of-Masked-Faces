@@ -17,7 +17,7 @@ from model_loader import load_model
 from project_on_image import transform_vertices
 from config_file import config, DEPTH, MAX_SIZE, MIN_SIZE, POSE_MEAN, POSE_STDDEV, MODEL_PATH, PATH_3D_POINTS, \
     ALL_MASKS, BBOX_REQUESTED_SIZE, HEAD_3D_NAME, SLOPE_TRAPEZOID, INTERCEPT_TRAPEZOID, MIN_TRAPEZOID_INPUT, \
-    MIN_TRAPEZOID_OUTPUT, YAW_IMPORTANCE, PITCH_IMPORTANCE, MIN_POSE_SCORES
+    MIN_TRAPEZOID_OUTPUT, YAW_IMPORTANCE, PITCH_IMPORTANCE, MIN_POSE_SCORES, MIN_MASK_PIXELS
 
 from line_profiler_pycharm import profile
 
@@ -91,12 +91,24 @@ def max_continuous_area(morph_mask, make_contour_ind, contours_number):
         return morph_mask
 
     morph_mask_max = np.zeros_like(morph_mask)
-    contours, hierarchy = cv2.findContours(morph_mask.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    contours_indices =  np.argpartition(list(map(len, contours)), -contours_number)[-contours_number:]
-    relvent_contours = [contours[index] for index in contours_indices]
-    cv2.drawContours(morph_mask_max, relvent_contours, -1, color=1, thickness=-1)
+    contours, _ = cv2.findContours(morph_mask.astype(np.uint8), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+
+    relevant_contour_indices = [index for index, contour in enumerate(contours) if MIN_MASK_PIXELS < len(contour)]
+    relevant_contours_number = min(len(relevant_contour_indices), contours_number)
+
+    contour_lengths = list(map(len, contours))
+    contours_indices = np.argpartition(contour_lengths, -relevant_contours_number)[-relevant_contours_number:]
+    relevant_contours = [contours[index] for index in contours_indices]
+    cv2.drawContours(morph_mask_max, relevant_contours, -1, color=1, thickness=-1)
 
     return morph_mask_max
+
+
+def turn_to_odd(num):
+    if num & 1:
+        return num
+
+    return num + 1
 
 
 @profile

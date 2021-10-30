@@ -5,7 +5,7 @@ from skimage.filters import threshold_multiotsu
 
 from masks_indices import make_eye_mask, make_hat_mask, make_covid19_mask, make_scarf_mask, make_sunglasses_mask
 from helpers import split_head_mask_parts, get_1id_pose, resize_image, project_3d, color_face_mask, save_image, \
-    head3d_z_dist, img_output_bbox, points_on_image, max_continuous_area
+    head3d_z_dist, img_output_bbox, points_on_image, max_continuous_area, turn_to_odd
 from config_file import config, VERTICES_PATH, EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, COVID19_MASK_NAME, \
     SUNGLASSES_MASK_NAME, NEAR_NEIGHBOUR_STRIDE, MIN_MASK_SIZE, FILTER_MASK_RIGHT_POINT_IMAGE_SIZE, \
     MASK_RIGHT_POINT, ADD_LEFT_POINT, ADD_RIGHT_POINT, THRESHOLD_BUFFER, RANGE_CHECK, HEAD_3D_NAME
@@ -23,7 +23,7 @@ def render(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, bbox_ind, output_
                                                      config[mask_name].filter_size, MASK_RIGHT_POINT,
                                                      True, config[mask_name].main_mask_contours_number)
 
-    morph_mask_add_x, morph_mask_add_y, _ = morphological_op(config[mask_name].mask_add_front_points_calc,
+    _, _, mask_add_on_image = morphological_op(config[mask_name].mask_add_front_points_calc,
                                                              frontal_add_mask, img, ADD_LEFT_POINT, ADD_RIGHT_POINT,
                                                              False, 0,cv2.MORPH_DILATE)
 
@@ -42,9 +42,11 @@ def render(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, bbox_ind, output_
         mask_on_image = points_on_image(mask_x_with_forehead, mask_y_with_forehead, img)
 
     # compensate for deviations from frontal face
-    extend_mask_x, extend_mask_y = extend_mask(mask_on_image, img, pose, output_bbox, mask_name)
-    morph_mask_x = np.append(extend_mask_x, morph_mask_add_x).astype(int)
-    morph_mask_y = np.append(extend_mask_y, morph_mask_add_y).astype(int)
+    extended_morph_mask = extend_mask(mask_on_image, pose, output_bbox)
+    if len(mask_add_on_image):
+        extended_morph_mask = extended_morph_mask + mask_add_on_image
+    morph_mask_one_contour = max_continuous_area(extended_morph_mask, True, 1)
+    morph_mask_y, morph_mask_x = np.where(morph_mask_one_contour.astype(int))
 
     return morph_mask_x, morph_mask_y, morph_rest_x, morph_rest_y
 
@@ -67,8 +69,8 @@ def neighbors_cells_z(mask_on_img, x_pixel, y_pixel, max_x, max_y):
 
 
 @profile
-def otsu_clustering(elements, cluster_number, bins_number, bin_half_size):
-    threshold = threshold_multiotsu(elements, cluster_number, nbins=bins_number)
+def otsu_clustering(elements, bins_number, bin_half_size):
+    threshold = threshold_multiotsu(elements, 2, nbins=bins_number)
     less_range = elements < threshold - bin_half_size
     bigger_range = threshold + bin_half_size < elements
     cluster1_arr = elements[less_range]
@@ -86,14 +88,14 @@ def otsu_clustering(elements, cluster_number, bins_number, bin_half_size):
 @profile
 def clustering(elements, bins_number=100):
     bin_half_size = (max(elements) - min(elements)) / (2 * bins_number)
-    cluster1_arr, cluster2_arr = otsu_clustering(elements, 2, bins_number, bin_half_size)
+    cluster1_arr, cluster2_arr = otsu_clustering(elements, bins_number, bin_half_size)
     range_arr1 = max(cluster1_arr) - min(cluster1_arr)
     range_arr2 = max(cluster2_arr) - min(cluster2_arr)
 
     if RANGE_CHECK <= range_arr2:
-        cluster1_arr, cluster2_arr = otsu_clustering(cluster2_arr, 2, bins_number, bin_half_size)
+        cluster1_arr, cluster2_arr = otsu_clustering(cluster2_arr, bins_number, bin_half_size)
     elif RANGE_CHECK <= range_arr1 :
-        _, cluster1_arr = otsu_clustering(cluster1_arr, 2, bins_number, bin_half_size)
+        _, cluster1_arr = otsu_clustering(cluster1_arr, bins_number, bin_half_size)
 
     cluster1 = np.mean(cluster1_arr)
     cluster2 = np.mean(cluster2_arr)
@@ -169,9 +171,6 @@ def get_frontal(r_img, df_3dh, h3d2i, mask_name, scale_factor):
 
     if mask_name == EYE_MASK_NAME:
         frontal_mask = np.append(frontal_mask, frontal_rest, axis=0)
-    # else:
-    #     #todo maybe this is not relevant?
-    #     frontal_mask, frontal_add_mask, frontal_rest = scale(r_img, fmmwb_arr, famwb_arr, scale_factor)
 
     return frontal_mask, frontal_add_mask, frontal_rest
 
@@ -217,9 +216,11 @@ def calc_filter_size(mask_x, mask_y, left_filter_size, right_filter_dim):
     y = [left_filter_size, right_filter_dim]
 
     a, b = np.polyfit(x, y, 1)
-    filter_dim = int(np.ceil(a * mask_size + b))
+    filter_dim = turn_to_odd(int(np.ceil(a * mask_size + b)))
+
     if filter_dim < 1:
         filter_dim = 1
+
     filter_size = (filter_dim, filter_dim)
 
     return filter_size
@@ -228,19 +229,18 @@ def calc_filter_size(mask_x, mask_y, left_filter_size, right_filter_dim):
 # todo: not to sunglasses
 #todo: is frontal check for eyemask?
 # dOES CLOSE AFTER CLOSE WITH THE SAME SIZE GIVES THE SAME RESULTS WHEN COUNTER IS 1?
-def extend_mask(mask_on_image, image, pose, output_bbox, mask_name):
+def extend_mask(mask_on_image, pose, output_bbox):
     w_bbox = output_bbox[2] - output_bbox[0]
-    filter_length = max(int(round(13 * abs(pose[1]) * w_bbox / 150)), 0)
+    filter_size = max(int(round(13 * abs(pose[1]) * w_bbox / 150)), 0)
 
     if pose[1] > 0:
-        kernel = np.expand_dims(np.append(np.zeros(filter_length, np.uint8),np.ones(filter_length, np.uint8)), axis=0)
+        kernel = np.expand_dims(np.append(np.zeros(filter_size, np.uint8), np.ones(filter_size + 1, np.uint8)), axis=0)
     else:
-        kernel = np.expand_dims(np.append(np.ones(filter_length, np.uint8),np.zeros(filter_length, np.uint8)), axis=0)
+        kernel = np.expand_dims(np.append(np.ones(filter_size+ 1, np.uint8), np.zeros(filter_size, np.uint8)), axis=0)
 
-    morph_mask = cv2.morphologyEx(mask_on_image, cv2.MORPH_DILATE, kernel)
-    yy, xx = np.where(morph_mask == 1)
+    morph_mask = cv2.morphologyEx(mask_on_image.astype(np.uint8), cv2.MORPH_DILATE, kernel)
 
-    return xx, yy
+    return morph_mask
 
 
 def morphological_op(morph_ind, mask, image, left_filter_size, right_filter_dim, c_ind, cn, morph_op=cv2.MORPH_CLOSE):
@@ -274,7 +274,7 @@ def add_forehead_mask(frontal_mask, frontal_rest, bbox_ind, output_bbox, mask_on
 
     if 1 < kernel_len:
         hkl = kernel_len // 2
-        kernel = np.expand_dims(np.append(np.zeros(hkl, np.uint8), np.ones(hkl, np.uint8)), axis=1)
+        kernel = np.expand_dims(np.append(np.zeros(hkl, np.uint8), np.ones(hkl + 1, np.uint8)), axis=1)
         dilated_image = cv2.dilate(mask_on_image, kernel, iterations=1)
         full_hat_img = mask_on_image + dilated_image
         forehead_y, forehead_x= np.where(full_hat_img == 1)
