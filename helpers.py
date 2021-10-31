@@ -40,12 +40,12 @@ def get_model():
     return img2pose_model, transform
 
 
-def save_image(img_path, mask_name, img_output, output, output_bbox):
+def save_image(img_path, mask_name, img_output, output, output_bbox,pose):
     # Extracts the right directory to create in the destination
     full_path, image_name = os.path.split(os.path.normpath(img_path))
     image_org_dir = os.path.basename(full_path)
     image_dst_dir = os.path.join(output, mask_name, image_org_dir)
-    image_dst = os.path.join(image_dst_dir, image_name)
+    image_dst = os.path.join(image_dst_dir, str(pose[1])+image_name)
 
     # Create the directory if it doesn't exists
     if not os.path.exists(image_dst_dir):
@@ -56,6 +56,12 @@ def save_image(img_path, mask_name, img_output, output, output_bbox):
 
     # Save the image
     cv2.imwrite(image_dst, img_output_bbox)
+
+
+def scale_int_array(array, scale_factor):
+    scaled_array = (array / scale_factor).astype(int)
+
+    return scaled_array
 
 
 def resize_image(image, bbox):
@@ -87,20 +93,20 @@ def split_head_mask_parts(df_3dh, mask_name):
     return frontal_main_mask_with_bg, frontal_add_mask_with_bg, frontal_rest_mask_with_bg
 
 
-def max_continuous_area(morph_mask, make_contour_ind, contours_number):
-    if not make_contour_ind:
+def max_connected_component(morph_mask, make_cc_nd, cc_number):
+    if not make_cc_nd:
         return morph_mask
 
-    morph_mask_max = np.zeros_like(morph_mask)
-    contours, _ = cv2.findContours(morph_mask.astype(np.uint8), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    _, lbl_mat, stats, _ = cv2.connectedComponentsWithStats(morph_mask.astype(np.uint8))
+    cc_areas = stats[1:, cv2.CC_STAT_AREA]
+    cc_areas_above_min = np.where(MIN_MASK_PIXELS < cc_areas, cc_areas, 0)
+    relevant_cc_number = min(cc_number, np.count_nonzero(cc_areas_above_min))
 
-    relevant_contour_indices = [index for index, contour in enumerate(contours) if MIN_MASK_PIXELS < len(contour)]
-    relevant_contours_number = min(len(relevant_contour_indices), contours_number)
+    if relevant_cc_number == cc_number:
+        return morph_mask
 
-    contour_lengths = list(map(len, contours))
-    contours_indices = np.argpartition(contour_lengths, -relevant_contours_number)[-relevant_contours_number:]
-    relevant_contours = [contours[index] for index in contours_indices]
-    cv2.drawContours(morph_mask_max, relevant_contours, -1, color=1, thickness=-1)
+    largest_lbls = 1 + np.argpartition(cc_areas, -relevant_cc_number)[-relevant_cc_number:]
+    morph_mask_max = np.where(np.isin(lbl_mat, largest_lbls), 1, 0).astype(np.uint8)
 
     return morph_mask_max
 
@@ -240,7 +246,7 @@ def is_face_detected(img, bbox):
     bbox_size = h_bbox * w_bbox
 
     area_percentage = bbox_size / image_size
-    print('\n',np.round(area_percentage,4),w_bbox,h_bbox,np.round(bbox_size,4),image_size,'\n')
+
     return MIN_DETECTED_FACE_PERCENTAGE < area_percentage
 
 

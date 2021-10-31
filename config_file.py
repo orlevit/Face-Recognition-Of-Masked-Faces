@@ -65,10 +65,10 @@ config = {
         "add_forehead": True,
         "draw_rest_mask": True,
         "additional_masks_req": HAT_MASK_NAME,
-        "filter_size": 9,
+        "filter_size": 15,#9,
         "mask_front_points_calc": False,
         "mask_add_front_points_calc": False,
-        "main_mask_contours_number": 1
+        "main_mask_components_number": 1
 
     },
     HAT_MASK_NAME: {
@@ -84,7 +84,7 @@ config = {
         "mask_front_points_calc": True,
         "mask_add_front_points_calc": False,
         "mask_exists": False,
-        "main_mask_contours_number": 1
+        "main_mask_components_number": 1
     },
     SCARF_MASK_NAME: {
         "inds": {
@@ -98,7 +98,7 @@ config = {
         "filter_size": 15,
         "mask_front_points_calc": True,
         "mask_add_front_points_calc": False,
-        "main_mask_contours_number": 1
+        "main_mask_components_number": 1
     },
     COVID19_MASK_NAME: {
         "inds": {
@@ -121,7 +121,7 @@ config = {
         "filter_size": 15,
         "mask_front_points_calc": True,
         "mask_add_front_points_calc": True,
-        "main_mask_contours_number": 1
+        "main_mask_components_number": 1
     },
     SUNGLASSES_MASK_NAME: {
         "inds": {
@@ -135,7 +135,7 @@ config = {
         "filter_size": 9.355,
         "mask_front_points_calc": True,
         "mask_add_front_points_calc": True,
-        "main_mask_contours_number": 2
+        "main_mask_components_number": 2
     }
 }
 config = edict(config)
@@ -152,3 +152,20 @@ POSE_STDDEV = os.path.join(IMG2POSE_DIR, CURRENT_DIR, MODEL_DIR, "WIDER_train_po
 MODEL_PATH = os.path.join(IMG2POSE_DIR, CURRENT_DIR, MODEL_DIR, "img2pose_v1.pth")
 VERTICES_PATH = os.path.join(IMG2POSE_DIR, CURRENT_DIR, "pose_references/vertices_trans.npy")
 PATH_3D_POINTS = os.path.join(IMG2POSE_DIR, CURRENT_DIR, "pose_references/reference_3d_68_points_trans.npy")
+
+
+# -------------------------------------------- Top eyemask head indices ----------------------------------------------
+
+TOP_EYEMASK_INDS = [38927, 38966, 39042, 39080, 39154, 39191, 39227, 39262, 39297,
+                    39366, 39400, 39434, 39467, 39500, 39533, 39565, 39597, 39629,
+                    39660, 39691, 39722, 39752, 39753, 39782, 39812, 39841, 39870,
+                    39899, 39927, 39955, 39983, 40011, 40039, 40066, 40093, 40094,
+                    40120, 40147, 40174, 40201, 40202, 40228, 40254, 40255, 40280,
+                    40306, 40332, 40358, 40384, 40410, 40436, 40462, 40488, 40514,
+                    40541, 40540, 40566, 40592, 40618, 40644, 40670, 40697, 40724,
+                    40751, 40778, 40805, 40833, 40832, 40859, 40887, 40915, 40943,
+                    40971, 40999, 41028, 41057, 41088, 41086, 41116, 41146, 41176,
+                    41207, 41238, 41270, 41269, 41301, 41366, 41365, 41431, 41464,
+                    41498, 41532, 41566, 41636, 41671, 41707, 41744, 41818, 41856,
+                    39004, 39117, 39332, 41333, 41398, 41601, 41781, 41894, 41932,
+                    41933, 41972, 41819, 41708, 38887, 38888, 38928, 39043]
