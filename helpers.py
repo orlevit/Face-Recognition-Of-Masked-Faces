@@ -37,12 +37,12 @@ def get_model():
     return img2pose_model, transform
 
 
-def save_image(img_path, mask_name, img_output, output, bbox_ind, output_bbox, pose):
+def save_image(img_path, mask_name, img_output, output, bbox_ind, output_bbox):
     # Extracts the right directory to create in the destination
     full_path, image_name = os.path.split(os.path.normpath(img_path))
     image_org_dir = os.path.basename(full_path)
     image_dst_dir = os.path.join(output, mask_name, image_org_dir)
-    image_dst = os.path.join(image_dst_dir, str(pose[1]) + image_name)
+    image_dst = os.path.join(image_dst_dir, image_name)
 
     # Create the directory if it doesn't exists
     if not os.path.exists(image_dst_dir):
@@ -232,6 +232,9 @@ def get_1id_pose(results, img, threshold):
 
 def is_face_detected(img, bbox):
     image_h, image_w, _ = img.shape
+
+    if not len(bbox):
+        return False
 
     h_bbox = bbox[3] - bbox[1]
     w_bbox = bbox[2] - bbox[0]

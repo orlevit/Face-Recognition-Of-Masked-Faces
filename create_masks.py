@@ -410,4 +410,4 @@ def process_mask(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, img_path, a
     masked_image = color_face_mask(img, color, mask_x, mask_y, rest_mask_x, rest_mask_y, mask_name)
 
     # Save masked image
-    save_image(img_path, mask_name, masked_image, args.output, args.bbox_ind, output_bbox, pose)
+    save_image(img_path, mask_name, masked_image, args.output, args.bbox_ind, output_bbox)
