@@ -246,38 +246,6 @@ def center_face_ind(center_middle_ind, right_middle_ind, left_lower_ind, right_l
     return index_list
 
 
-# TODO: Remove in final version
-# This is a temp for testing thinner string
-
-def get_mask_string2(ind1, ind2, face_side, split_face_cord, x, y):
-    if face_side == LEFT_FACE_PART:
-        filtered_ind = [ii for ii, cord in enumerate(split_face_cord) if (cord >= 0)]
-    elif face_side == RIGHT_FACE_PART:
-        filtered_ind = [ii for ii, cord in enumerate(split_face_cord) if (cord < 0)]
-    else:  # CENTER_FACE_PART
-        filtered_ind = [ii for ii, cord in enumerate(split_face_cord)]
-
-    x_pos = x[filtered_ind]
-    y_pos = y[filtered_ind]
-
-    # Draw line
-    received_x_pt = [x[ind1], x[ind2]]
-    received_y_pt = [y[ind1], y[ind2]]
-    m, mb = np.polyfit(received_x_pt, received_y_pt, 1)
-
-    start_x = min(received_x_pt)
-    end_x = max(received_x_pt)
-    line_list = []
-
-    for i in np.arange(start_x, end_x + FACE_MODEL_DENSITY, FACE_MODEL_DENSITY):
-        distances = np.asarray(((y_pos - (m * i + mb)) ** 2 + (x_pos - i) ** 2))
-        string_size_ind = np.argpartition(distances, 1)[:1]
-        cond_ind = list(np.asarray(filtered_ind)[string_size_ind])
-        line_list += cond_ind
-
-    return np.unique(np.asarray(line_list)).tolist()
-
-
 def get_mask_string(ind1, ind2, face_side, split_face_cord, x, y):
     """
     Extracting the string part of the covid19 mask.

@@ -35,7 +35,9 @@ BBOX_REQUESTED_SIZE = 500
 RANGE_CHECK = 30
 MIN_MASK_PIXELS = 10
 MIN_DETECTED_FACE_PERCENTAGE = 0.01
-
+MASK_EXTEND_PIXELS = 13
+MASK_EXTEND_BBOX_NORM = 150
+MIN_POSE_OPEN_EYEMASK = 0.8
 #center
 #img_size= [62,84,250,1888]
 #kernel_size=[2,2,7.504,67]
@@ -65,7 +67,8 @@ config = {
         "add_forehead": True,
         "draw_rest_mask": True,
         "additional_masks_req": HAT_MASK_NAME,
-        "filter_size": 15,#9,
+        "mask_filter_size": 15,
+        "rest_filter_size": 9,
         "mask_front_points_calc": False,
         "mask_add_front_points_calc": False,
         "main_mask_components_number": 1
@@ -80,10 +83,10 @@ config = {
         "add_forehead": True,
         "draw_rest_mask": False,
         "additional_masks_req": None,
-        "filter_size": 15,
+        "mask_filter_size": 15,
+        "rest_filter_size": 15,
         "mask_front_points_calc": True,
         "mask_add_front_points_calc": False,
-        "mask_exists": False,
         "main_mask_components_number": 1
     },
     SCARF_MASK_NAME: {
@@ -95,7 +98,8 @@ config = {
         "add_forehead": False,
         "draw_rest_mask": False,
         "additional_masks_req": None,
-        "filter_size": 15,
+        "mask_filter_size": 15,
+        "rest_filter_size": 15,
         "mask_front_points_calc": True,
         "mask_add_front_points_calc": False,
         "main_mask_components_number": 1
@@ -118,7 +122,8 @@ config = {
         "add_forehead": False,
         "draw_rest_mask": False,
         "additional_masks_req": None,
-        "filter_size": 15,
+        "mask_filter_size": 15,
+        "rest_filter_size": 15,
         "mask_front_points_calc": True,
         "mask_add_front_points_calc": True,
         "main_mask_components_number": 1
@@ -132,7 +137,8 @@ config = {
         "add_forehead": False,
         "draw_rest_mask": False,
         "additional_masks_req": None,
-        "filter_size": 9.355,
+        "mask_filter_size": 9.355,
+        "rest_filter_size": 9.355,
         "mask_front_points_calc": True,
         "mask_add_front_points_calc": True,
         "main_mask_components_number": 2

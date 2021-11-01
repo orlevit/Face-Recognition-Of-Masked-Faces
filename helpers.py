@@ -7,9 +7,6 @@ import pandas as pd
 from glob import glob
 from scipy.spatial.transform import Rotation
 
-from time import time
-
-
 sys.path.append('./img2pose')
 from torchvision import transforms
 from img2pose import img2poseModel
@@ -40,22 +37,25 @@ def get_model():
     return img2pose_model, transform
 
 
-def save_image(img_path, mask_name, img_output, output, output_bbox,pose):
+def save_image(img_path, mask_name, img_output, output, bbox_ind, output_bbox, pose):
     # Extracts the right directory to create in the destination
     full_path, image_name = os.path.split(os.path.normpath(img_path))
     image_org_dir = os.path.basename(full_path)
     image_dst_dir = os.path.join(output, mask_name, image_org_dir)
-    image_dst = os.path.join(image_dst_dir, str(pose[1])+image_name)
+    image_dst = os.path.join(image_dst_dir, str(pose[1]) + image_name)
 
     # Create the directory if it doesn't exists
     if not os.path.exists(image_dst_dir):
         os.makedirs(image_dst_dir)
 
     # Extract from the image the wanted area
-    img_output_bbox = img_output[output_bbox[1]: output_bbox[3], output_bbox[0]:output_bbox[2], :]
+    if bbox_ind:
+        img_to_save = img_output[output_bbox[1]: output_bbox[3], output_bbox[0]:output_bbox[2], :]
+    else:
+        img_to_save = img_output
 
     # Save the image
-    cv2.imwrite(image_dst, img_output_bbox)
+    cv2.imwrite(image_dst, img_to_save)
 
 
 def scale_int_array(array, scale_factor):
@@ -132,14 +132,6 @@ def project_3d(r_img, pose):
     # Masks projection on the image plane
     projected_head_float = transform_vertices(r_img, pose, config[HEAD_3D_NAME])
 
-    ####################3333
-    # pose2 = pose.copy()
-    # pose2[-1] *= 0.98
-    # projected_head_float2 = transform_vertices(r_img, pose2, config[HEAD_3D_NAME][config["covid19mask"].mask_add_ind])
-    # projected_head_float[config["covid19mask"].mask_add_ind, :] = projected_head_float2
-    #####################33
-
-
     # turn values from float to integer
     projected_head = np.round(projected_head_float).astype(int)
 
@@ -190,6 +182,7 @@ def trapezoid(x):
     return 1
 
 
+@profile
 def pose_scores(poses):
     angles = rotvec_to_euler(poses)
     pitches, yaws = angles[:, 0], angles[:, 1]
@@ -200,6 +193,7 @@ def pose_scores(poses):
     return scores
 
 
+@profile
 def get_1id_pose(results, img, threshold):
     h, w, _ = img.shape
 

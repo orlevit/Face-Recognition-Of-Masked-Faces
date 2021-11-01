@@ -1,15 +1,15 @@
 import cv2
 from time import time
+from multiprocessing import Pool
 from create_masks import masks_templates, process_image
 from helpers import parse_arguments, get_model, read_images
-from multiprocessing import Pool
 
 
 def main_parallel(img_path):
     cv2.setNumThreads(0)
     time1 = process_image(img_path, model, transform, masks_to_create, args)
     print(time() - time1)
-# TODO add log file.
+
 
 if __name__ == '__main__':
     # Get the input and output directories and create the masks

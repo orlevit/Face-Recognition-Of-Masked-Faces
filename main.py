@@ -7,15 +7,6 @@ from helpers import parse_arguments, get_model, read_images
 from line_profiler_pycharm import profile
 
 
-# TODO: 0) check morphologicals sunglasses and eye mask
-# TODO: 1)run big examples
-# TODO: 2) profiling the code + refactoring
-# TODO: 3)run ALL masks
-# TODO: 4)run in multithreads + check outputs to stdout of the main program
-# TODO: 5)add option for run in multithreads
-# TODO: 7) refactoring the code and profiling
-# TODO: 8) add documentation
-
 @profile
 def main(args):
     time_total = []
@@ -30,11 +21,11 @@ def main(args):
     img_paths = read_images(args.input, args.image_extensions)
 
     # Process each image and create the requested masks
-    i=0
+    i = 0
     for img_path in tqdm(img_paths):
-        time1,ii = process_image(img_path, model, transform, masks_to_create, args)
+        time1, ii = process_image(img_path, model, transform, masks_to_create, args)
         time_total.append(time1)
-        i+=ii
+        i += ii
         # if i > 500:
         #     break
     print(np.mean(time_total))
