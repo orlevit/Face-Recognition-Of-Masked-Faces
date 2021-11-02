@@ -275,7 +275,7 @@ def add_forehead_mask(frontal_mask, frontal_rest, bbox_ind, output_bbox, mask_on
         kernel = np.expand_dims(np.append(np.zeros(hkl, np.uint8), np.ones(hkl + 1, np.uint8)), axis=1)
         dilated_image = cv2.dilate(mask_on_image, kernel, iterations=1)
         full_hat_img = mask_on_image + dilated_image
-        forehead_y, forehead_x= np.where(full_hat_img == 1)
+        forehead_y, forehead_x= np.where(full_hat_img != 0)
 
     return forehead_x, forehead_y
 

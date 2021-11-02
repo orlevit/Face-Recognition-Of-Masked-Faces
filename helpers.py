@@ -98,12 +98,12 @@ def max_connected_component(morph_mask, make_cc_nd, cc_number):
 
     _, lbl_mat, stats, _ = cv2.connectedComponentsWithStats(morph_mask.astype(np.uint8))
     cc_areas = stats[1:, cv2.CC_STAT_AREA]
-    cc_areas_above_min = np.where(MIN_MASK_PIXELS < cc_areas, cc_areas, 0)
-    relevant_cc_number = min(cc_number, np.count_nonzero(cc_areas_above_min))
 
-    if relevant_cc_number == cc_number:
+    if len(cc_areas) == cc_number:
         return morph_mask
 
+    cc_areas_above_min = np.where(MIN_MASK_PIXELS < cc_areas, cc_areas, 0)
+    relevant_cc_number = min(cc_number, np.count_nonzero(cc_areas_above_min))
     largest_lbls = 1 + np.argpartition(cc_areas, -relevant_cc_number)[-relevant_cc_number:]
     morph_mask_max = np.where(np.isin(lbl_mat, largest_lbls), 1, 0).astype(np.uint8)
 
