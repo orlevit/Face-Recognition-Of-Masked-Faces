@@ -13,9 +13,8 @@ from img2pose import img2poseModel
 from model_loader import load_model
 from project_on_image import transform_vertices
 from config_file import config, DEPTH, MAX_SIZE, MIN_SIZE, POSE_MEAN, POSE_STDDEV, MODEL_PATH, PATH_3D_POINTS, \
-    ALL_MASKS, BBOX_REQUESTED_SIZE, HEAD_3D_NAME, SLOPE_TRAPEZOID, INTERCEPT_TRAPEZOID, MIN_TRAPEZOID_INPUT, \
-    MIN_TRAPEZOID_OUTPUT, YAW_IMPORTANCE, PITCH_IMPORTANCE, MIN_POSE_SCORES, MIN_MASK_PIXELS, \
-    MIN_DETECTED_FACE_PERCENTAGE
+     ALL_MASKS, BBOX_REQUESTED_SIZE, HEAD_3D_NAME, SLOPE_TRAPEZOID, INTERCEPT_TRAPEZOID, MIN_TRAPEZOID_INPUT, \
+     YAW_IMPORTANCE, PITCH_IMPORTANCE, MIN_POSE_SCORES, MIN_MASK_PIXELS, MIN_DETECTED_FACE_PERCENTAGE, MIN_YAW
 
 from line_profiler_pycharm import profile
 
@@ -165,32 +164,30 @@ def img_output_bbox(img, bbox, inc_bbox, bbox_ind):
     return [n0, n1, n2, n3]
 
 
-# return pitch, yaw, roll
-def rotvec_to_euler(poses):
-    poses_rotvec = poses[:, :3]
-    rotvec = Rotation.from_rotvec(poses_rotvec).as_matrix()
-    rotvec_transposed = np.array(list(map(lambda x: np.transpose(x), rotvec)))
-    angles = Rotation.from_matrix(rotvec_transposed).as_euler('xyz', degrees=True)
-    angles[0, 1:3] *= -1
-
-    return angles
-
-
 def trapezoid(x):
     if MIN_TRAPEZOID_INPUT < abs(x):
-        return max(SLOPE_TRAPEZOID * abs(x) + INTERCEPT_TRAPEZOID, MIN_TRAPEZOID_OUTPUT)
+        return SLOPE_TRAPEZOID * abs(x) + INTERCEPT_TRAPEZOID
+
     return 1
 
 
 @profile
 def pose_scores(poses):
-    angles = rotvec_to_euler(poses)
-    pitches, yaws = angles[:, 0], angles[:, 1]
+    pitches, yaws = poses[:, 0], poses[:, 1]
     vtrapezoid = np.vectorize(trapezoid)
     composition = YAW_IMPORTANCE * vtrapezoid(yaws) + PITCH_IMPORTANCE * vtrapezoid(pitches)
     scores = np.where(MIN_POSE_SCORES <= composition, composition, MIN_POSE_SCORES)
 
     return scores
+
+
+def possible_identities(results, threshold, all_dofs):
+    possible_id_ind = []
+    for i in range(len(all_dofs)):
+        if threshold < results["scores"][i] and abs(results["dofs"][i][1]) <= MIN_YAW:
+            possible_id_ind.append(i)
+
+    return possible_id_ind
 
 
 @profile
@@ -201,8 +198,8 @@ def get_1id_pose(results, img, threshold):
     all_bboxes = results["boxes"].cpu().numpy().astype('float')
     all_dofs = results["dofs"].cpu().numpy().astype('float')
 
-    # only the bounding boxes that have sufficient threshold
-    possible_id_ind = [i for i in range(len(all_bboxes)) if results["scores"][i] > threshold]
+    # only the bounding boxes that have sufficient threshold and the yaw is in limit
+    possible_id_ind = possible_identities(results, threshold, all_dofs)
 
     # If only one identity recognized, return it
     if len(possible_id_ind) == 1:

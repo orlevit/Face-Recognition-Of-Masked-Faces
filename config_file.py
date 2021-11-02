@@ -2,10 +2,10 @@ import os
 from easydict import EasyDict as edict
 
 # ------------------------------------------------ miscellaneous ------------------------------------------------
-SLOPE_TRAPEZOID = -0.01
-INTERCEPT_TRAPEZOID = 1.2
-MIN_TRAPEZOID_INPUT = 20
-MIN_TRAPEZOID_OUTPUT = 0.1
+MIN_YAW = 1.4
+SLOPE_TRAPEZOID = -0.76
+INTERCEPT_TRAPEZOID = 1.27
+MIN_TRAPEZOID_INPUT = 0.35
 YAW_IMPORTANCE = 0.8
 PITCH_IMPORTANCE = 0.2
 MIN_POSE_SCORES = 0.8

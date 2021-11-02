@@ -191,31 +191,6 @@ def make_sunglasses_mask(x, y):
     return sunglasses_lenses_inds, sunglasses_strings_ind
 
 
-# TODO: Remove in final version
-# This is a temp for testing new version of mask
-
-def center_face_ind2(center_middle_ind, right_middle_ind, left_lower_ind, right_lower_ind, y, z):
-    y_middle = y[[right_lower_ind, center_middle_ind, right_middle_ind]]
-    z_middle = z[[right_lower_ind, center_middle_ind, right_middle_ind]]
-    y_twist = y[[31919, 29207, 28040]]
-    z_twist = z[[31919, 29207, 28040]]
-    y_lower = y[[left_lower_ind, 31919]]
-    z_lower = z[[left_lower_ind, 31919]]
-
-    a1, b1, c1 = np.polyfit(y_middle, z_middle, 2)
-    a2, b2, c2 = np.polyfit(y_twist, z_twist, 2)
-    m, n = np.polyfit(y_lower, z_lower, 1)
-
-    index_list = []
-    for ii, y_i in enumerate(y):
-        if (z[ii] >= (a1 * (y_i ** 2) + b1 * y_i + c1)) and (-0.1456907 < y[ii] < y[right_middle_ind]) or \
-                (z[ii] >= (a2 * (y_i ** 2) + b2 * y_i + c2)) and (y[31919] < y[ii] < -0.1456907) or \
-                (z[ii] >= (m * y_i + n)) and (y[left_lower_ind] < y[ii] < y[31919]):
-            index_list.append(ii)
-
-    return index_list
-
-
 def center_face_ind(center_middle_ind, right_middle_ind, left_lower_ind, right_lower_ind, y, z):
     """
     Extracting the middle part of the covid19 mask(the part without the strings).

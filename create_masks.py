@@ -13,7 +13,6 @@ from config_file import config, VERTICES_PATH, EYE_MASK_NAME, HAT_MASK_NAME, SCA
 
 from line_profiler_pycharm import profile
 
-#todo: refactor this
 @profile
 def render(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, bbox_ind, output_bbox, pose):
     # Get only frontal face areas
