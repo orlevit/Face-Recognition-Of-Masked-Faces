@@ -4,10 +4,8 @@ import numpy as np
 from tqdm import tqdm
 from create_masks import masks_templates, process_image
 from helpers import parse_arguments, get_model, read_images
-from line_profiler_pycharm import profile
 
 
-@profile
 def main(args):
     time_total = []
 

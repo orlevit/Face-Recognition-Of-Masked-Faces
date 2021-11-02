@@ -11,9 +11,7 @@ from config_file import config, VERTICES_PATH, EYE_MASK_NAME, HAT_MASK_NAME, SCA
     MASK_RIGHT_POINT, ADD_LEFT_POINT, ADD_RIGHT_POINT, THRESHOLD_BUFFER, RANGE_CHECK, HEAD_3D_NAME,MASK_EXTEND_PIXELS, \
     MASK_EXTEND_BBOX_NORM, MIN_POSE_OPEN_EYEMASK
 
-from line_profiler_pycharm import profile
 
-@profile
 def render(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, bbox_ind, output_bbox, pose):
     # Get only frontal face areas
     frontal_mask, frontal_add_mask, frontal_rest = get_frontal(r_img, df_3dh, h3d2i, mask_name, scale_factor)
@@ -55,7 +53,6 @@ def render(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, bbox_ind, output_
     return morph_mask_x, morph_mask_y, morph_rest_x, morph_rest_y
 
 
-@profile
 def neighbors_cells_z(mask_on_img, x_pixel, y_pixel, max_x, max_y):
     x_right_limit = min(x_pixel + NEAR_NEIGHBOUR_STRIDE, max_x)
     y_upper_limit = min(y_pixel + NEAR_NEIGHBOUR_STRIDE, max_y)
@@ -72,7 +69,6 @@ def neighbors_cells_z(mask_on_img, x_pixel, y_pixel, max_x, max_y):
     return np.asarray(z_neighbors, dtype=np.float)
 
 
-@profile
 def otsu_clustering(elements, bins_number, bin_half_size):
     threshold = threshold_multiotsu(elements, 2, nbins=bins_number)
     less_range = elements < threshold - bin_half_size
@@ -89,7 +85,6 @@ def otsu_clustering(elements, bins_number, bin_half_size):
     return cluster1_arr, cluster2_arr
 
 
-@profile
 def clustering(elements, bins_number=100):
     bin_half_size = (max(elements) - min(elements)) / (2 * bins_number)
     cluster1_arr, cluster2_arr = otsu_clustering(elements, bins_number, bin_half_size)
@@ -107,7 +102,6 @@ def clustering(elements, bins_number=100):
     return cluster1, cluster2
 
 
-@profile
 def more_than_one_points(surrounding_mask):
     index = 0
     sm_len = len(surrounding_mask)
@@ -125,7 +119,6 @@ def more_than_one_points(surrounding_mask):
     return more_ind
 
 
-@profile
 def threshold_front(r_img, mask_on_img, frontal_mask_all):
     img_x_dim, img_y_dim = r_img.shape[1], r_img.shape[0]
     mask_on_img_front = np.zeros((img_y_dim, img_x_dim))
@@ -146,7 +139,6 @@ def threshold_front(r_img, mask_on_img, frontal_mask_all):
     return mask_marks
 
 
-@profile
 def frontal_points(take_only_frontal_ind, r_img, h3d2i, df_with_bg):
     if take_only_frontal_ind:
         arr = threshold_front(r_img, h3d2i, df_with_bg)
@@ -159,7 +151,6 @@ def frontal_points(take_only_frontal_ind, r_img, h3d2i, df_with_bg):
     return arr
 
 
-@profile
 def get_frontal(r_img, df_3dh, h3d2i, mask_name, scale_factor):
     # print('frontal: ', mask_name)
     frontal_main_mask_w_bg, frontal_add_mask_w_bg, frontal_rest_mask_w_bg = split_head_mask_parts(df_3dh, mask_name)
@@ -257,7 +248,6 @@ def morphological_op(morph_ind, mask, image, left_filter_size, right_filter_dim,
     return xx, yy, morph_mask_max
 
 
-@profile
 def add_forehead_mask(frontal_mask, frontal_rest, bbox_ind, output_bbox, mask_on_image):
     forehead_y, forehead_x = [], []
     frontal_mask_x, frontal_mask_y = frontal_mask[:, 0], frontal_mask[:, 1]
@@ -280,7 +270,6 @@ def add_forehead_mask(frontal_mask, frontal_rest, bbox_ind, output_bbox, mask_on
     return forehead_x, forehead_y
 
 
-@profile
 def forehead_mask(mask_name, frontal_mask, frontal_rest, bbox_ind, output_bbox, mask_on_image,
                   mask_x, mask_y, img, df_3dh, scale_factor):
 
@@ -357,7 +346,7 @@ def add_mask_to_config(head3d_cords, masks_ind, masks_add_ind, rest_ind, masks_o
         config[mask_name].mask_add_ind = masks_add_ind[masks_order.index(mask_name)]
         config[mask_name].rest_ind = rest_ind[masks_order.index(mask_name)]
 
-@profile
+
 def process_image(img_path, model, transform, masks_to_create, args):
     # Read an image
     img = cv2.imread(img_path, 1)

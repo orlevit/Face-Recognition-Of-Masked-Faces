@@ -14,9 +14,7 @@ from model_loader import load_model
 from project_on_image import transform_vertices
 from config_file import config, DEPTH, MAX_SIZE, MIN_SIZE, POSE_MEAN, POSE_STDDEV, MODEL_PATH, PATH_3D_POINTS, \
      ALL_MASKS, BBOX_REQUESTED_SIZE, HEAD_3D_NAME, SLOPE_TRAPEZOID, INTERCEPT_TRAPEZOID, MIN_TRAPEZOID_INPUT, \
-     YAW_IMPORTANCE, PITCH_IMPORTANCE, MIN_POSE_SCORES, MIN_MASK_PIXELS, MIN_DETECTED_FACE_PERCENTAGE, MIN_YAW
-
-from line_profiler_pycharm import profile
+     YAW_IMPORTANCE, PITCH_IMPORTANCE, MIN_POSE_SCORES, MIN_MASK_PIXELS, MIN_DETECTED_FACE_PERCENTAGE
 
 
 def get_model():
@@ -75,7 +73,6 @@ def resize_image(image, bbox):
     return resized_image, scale_img
 
 
-@profile
 def split_head_mask_parts(df_3dh, mask_name):
     frontal_main_mask_with_bg = head3d_to_mask(df_3dh, mask_name, "mask_ind")
 
@@ -117,7 +114,6 @@ def turn_to_odd(num):
     return num + 1
 
 
-@profile
 def head3d_to_mask(df_3dh, mask_name, mask_ind):
     df_mask_with_nulls = df_3dh.iloc[config[mask_name][mask_ind]]
     df_mask = df_mask_with_nulls[~df_mask_with_nulls['x'].isnull()].astype(int)
@@ -126,7 +122,6 @@ def head3d_to_mask(df_3dh, mask_name, mask_ind):
     return mask_with_bg
 
 
-@profile
 def project_3d(r_img, pose):
     # Masks projection on the image plane
     projected_head_float = transform_vertices(r_img, pose, config[HEAD_3D_NAME])
@@ -171,7 +166,6 @@ def trapezoid(x):
     return 1
 
 
-@profile
 def pose_scores(poses):
     pitches, yaws = poses[:, 0], poses[:, 1]
     vtrapezoid = np.vectorize(trapezoid)
@@ -181,16 +175,6 @@ def pose_scores(poses):
     return scores
 
 
-def possible_identities(results, threshold, all_dofs):
-    possible_id_ind = []
-    for i in range(len(all_dofs)):
-        if threshold < results["scores"][i] and abs(results["dofs"][i][1]) <= MIN_YAW:
-            possible_id_ind.append(i)
-
-    return possible_id_ind
-
-
-@profile
 def get_1id_pose(results, img, threshold):
     h, w, _ = img.shape
 
@@ -199,7 +183,7 @@ def get_1id_pose(results, img, threshold):
     all_dofs = results["dofs"].cpu().numpy().astype('float')
 
     # only the bounding boxes that have sufficient threshold and the yaw is in limit
-    possible_id_ind = possible_identities(results, threshold, all_dofs)
+    possible_id_ind = [i for i in range(len(all_bboxes)) if threshold < results["scores"][i]]
 
     # If only one identity recognized, return it
     if len(possible_id_ind) == 1:
@@ -224,7 +208,7 @@ def get_1id_pose(results, img, threshold):
         p_scores = pose_scores(poses)
         bbox_idx = np.argmax(i_scores * p_scores * (bounding_box_size + offset_dist_squared))
 
-        return all_dofs[bbox_idx], all_bboxes[bbox_idx]
+        return all_dofs[possible_id_ind][bbox_idx], all_bboxes[possible_id_ind][bbox_idx]
 
 
 def is_face_detected(img, bbox):
@@ -271,7 +255,6 @@ def points_on_image(points_x, points_y, image):
     return mask_on_image
 
 
-@profile
 def head3d_z_dist(r_img, df):
     img_x_dim, img_y_dim = r_img.shape[1], r_img.shape[0]
     mask_on_img = np.asarray([[None] * img_x_dim] * img_y_dim)
