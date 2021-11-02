@@ -289,12 +289,15 @@ def forehead_mask(mask_name, frontal_mask, frontal_rest, bbox_ind, output_bbox, 
         if mask_name == HAT_MASK_NAME:
             f_x, f_y = add_forehead_mask(frontal_mask, frontal_rest, bbox_ind, output_bbox, mask_on_image)
 
-            # Save the relevant section of the forehead for eyemask
-            df_top_eyemask = df_3dh.iloc[TOP_EYEMASK_INDS]
-            top_eyemask = df_top_eyemask[~df_top_eyemask['x'].isnull()]
-            top_eyemask_x = scale_int_array(top_eyemask.x.values, scale_factor)
-            rel_top = np.where((np.min(top_eyemask_x) <= f_x) & (f_x <= np.max(top_eyemask_x)))
-            config[EYE_MASK_NAME].forehead_x, config[EYE_MASK_NAME].forehead_y = f_x[rel_top], f_y[rel_top]
+            if not len(f_x):
+                config[EYE_MASK_NAME].forehead_x, config[EYE_MASK_NAME].forehead_y = [], []
+            else:
+                # Save the relevant section of the forehead for eyemask
+                df_top_eyemask = df_3dh.iloc[TOP_EYEMASK_INDS]
+                top_eyemask = df_top_eyemask[~df_top_eyemask['x'].isnull()]
+                top_eyemask_x = scale_int_array(top_eyemask.x.values, scale_factor)
+                rel_top = np.where((np.min(top_eyemask_x) <= f_x) & (f_x <= np.max(top_eyemask_x)))
+                config[EYE_MASK_NAME].forehead_x, config[EYE_MASK_NAME].forehead_y = f_x[rel_top], f_y[rel_top]
 
         else: # Eyemask
             f_x, f_y = config[EYE_MASK_NAME].forehead_x, config[EYE_MASK_NAME].forehead_y
