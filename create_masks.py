@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-from time import time ###############33
 from skimage.filters import threshold_multiotsu
 from masks_indices import make_eye_mask, make_hat_mask, make_covid19_mask, make_scarf_mask, make_sunglasses_mask
 from helpers import split_head_mask_parts, get_1id_pose, resize_image, project_3d, color_face_mask, save_image, \
@@ -301,7 +300,7 @@ def forehead_mask(mask_name, frontal_mask, frontal_rest, bbox_ind, output_bbox, 
             f_x, f_y = config[EYE_MASK_NAME].forehead_x, config[EYE_MASK_NAME].forehead_y
             mask_xwf, mask_ywf = np.append(f_x, mask_x).astype(int), np.append(f_y, mask_y).astype(int)
             mask_xywf = np.vstack((mask_xwf, mask_ywf)).T
-            _, _, mask_on_image = morphological_op(True, mask_xywf, img, EYE_HAT_MASK_LEFT_POINT, \
+            _, _, mask_on_image = morphological_op(True, mask_xywf, img, EYE_HAT_MASK_LEFT_POINT,
                                                    EYE_HAT_MASK_RIGHT_POINT, False, 0)
 
     return mask_on_image
@@ -371,19 +370,15 @@ def process_image(img_path, model, transform, masks_to_create, args):
 
     # results from img2pose
     results = model.predict([transform(img)])[0]
-    tic = time()
 
     # Get only one 6DOF from all the 6DFs that img2pose found
     pose, bbox = get_1id_pose(results, img, args.threshold)
 
     # Indication whether a face was detected the successfully
     face_detected_indication = is_face_detected(img, bbox)
-    ii = 0
+
     # face detected with img2pose and above the threshold
     if face_detected_indication:
-        ii=1
-        print(img_path)
-
         # Resize image that ROI will be in a fix size
         r_img, scale_factor = resize_image(img, bbox)
 
@@ -402,12 +397,8 @@ def process_image(img_path, model, transform, masks_to_create, args):
     else:
         print(f'No face detected for: {img_path}')
 
-    toc = time()
-    return toc-tic, ii
 
 def process_mask(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, img_path, args, output_bbox, pose):
-    # print('start: ',mask_name)
-
     # Get the location of the masks on the image
     mask_x, mask_y, rest_mask_x, rest_mask_y = \
         render(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, args.bbox_ind, output_bbox, pose)
