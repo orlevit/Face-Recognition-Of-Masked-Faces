@@ -185,10 +185,12 @@ def make_sunglasses_mask(x, y):
     center_string = get_mask_string(right_eye_ind, left_eye_ind, CENTER_FACE_PART, x, x, y)
     right_string = get_mask_string(config[COVID19_MASK_NAME].inds.right_upper_string2,
                                    config[SUNGLASSES_MASK_NAME].inds.right_lens_right_side, CENTER_FACE_PART, x, x, y)
-    sunglasses_lenses_inds = left_lens_inds + right_lens_inds
+
+    sunglasses_lenses_left_ind = left_lens_inds
+    sunglasses_lenses_right_ind = right_lens_inds
     sunglasses_strings_ind = left_string + center_string + right_string
 
-    return sunglasses_lenses_inds, sunglasses_strings_ind
+    return sunglasses_lenses_left_ind, sunglasses_lenses_right_ind, sunglasses_strings_ind
 
 
 def center_face_ind(center_middle_ind, right_middle_ind, left_lower_ind, right_lower_ind, y, z):

@@ -14,7 +14,8 @@ from model_loader import load_model
 from project_on_image import transform_vertices
 from config_file import config, DEPTH, MAX_SIZE, MIN_SIZE, POSE_MEAN, POSE_STDDEV, MODEL_PATH, PATH_3D_POINTS, \
      ALL_MASKS, BBOX_REQUESTED_SIZE, HEAD_3D_NAME, SLOPE_TRAPEZOID, INTERCEPT_TRAPEZOID, MIN_TRAPEZOID_INPUT, \
-     YAW_IMPORTANCE, PITCH_IMPORTANCE, MIN_POSE_SCORES, MIN_MASK_PIXELS, MIN_DETECTED_FACE_PERCENTAGE
+     YAW_IMPORTANCE, PITCH_IMPORTANCE, MIN_POSE_SCORES, MIN_MASK_PIXELS, MIN_DETECTED_FACE_PERCENTAGE, \
+     MIN_MAIN_MASK_SIZE
 
 
 def get_model():
@@ -73,20 +74,39 @@ def resize_image(image, bbox):
     return resized_image, scale_img
 
 
+def join_main_masks(fmmwb_arr1, fmmwb_arr2):
+
+    if MIN_MAIN_MASK_SIZE < len(fmmwb_arr1):
+        if MIN_MAIN_MASK_SIZE < len(fmmwb_arr2):
+            fmmwb_arr = np.append(fmmwb_arr1, fmmwb_arr2, axis=0)
+        else:
+            fmmwb_arr = fmmwb_arr1
+    elif MIN_MAIN_MASK_SIZE < len(fmmwb_arr2):
+        fmmwb_arr = fmmwb_arr2
+    else:
+        fmmwb_arr = []
+
+    return fmmwb_arr
+
 def split_head_mask_parts(df_3dh, mask_name):
-    frontal_main_mask_with_bg = head3d_to_mask(df_3dh, mask_name, "mask_ind")
+    front_main_mask1_w_bg = head3d_to_mask(df_3dh, mask_name, "mask_ind1")
+
+    if config[mask_name].mask_ind2 is not None:
+        front_main_mask2_w_bg = head3d_to_mask(df_3dh, mask_name, "mask_ind2")
+    else:
+        front_main_mask2_w_bg = None
 
     if config[mask_name].mask_add_ind is not None:
-        frontal_add_mask_with_bg = head3d_to_mask(df_3dh, mask_name, "mask_add_ind")
+        front_add_mask_w_bg = head3d_to_mask(df_3dh, mask_name, "mask_add_ind")
     else:
-        frontal_add_mask_with_bg = None
+        front_add_mask_w_bg = None
 
     if config[mask_name].draw_rest_mask is not None:
-        frontal_rest_mask_with_bg = head3d_to_mask(df_3dh, mask_name, "rest_ind")
+        front_rest_mask_w_bg = head3d_to_mask(df_3dh, mask_name, "rest_ind")
     else:
-        frontal_rest_mask_with_bg = None
+        front_rest_mask_w_bg = None
 
-    return frontal_main_mask_with_bg, frontal_add_mask_with_bg, frontal_rest_mask_with_bg
+    return front_main_mask1_w_bg, front_main_mask2_w_bg ,front_add_mask_w_bg, front_rest_mask_w_bg
 
 
 def max_connected_component(morph_mask, make_cc_nd, cc_number):
