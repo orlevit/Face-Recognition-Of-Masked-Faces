@@ -8,8 +8,8 @@ from helpers import split_head_mask_parts, get_1id_pose, resize_image, project_3
      scale_int_array, join_main_masks
 from config_file import config, VERTICES_PATH, EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, COVID19_MASK_NAME, \
      SUNGLASSES_MASK_NAME, NEAR_NEIGHBOUR_STRIDE, MIN_MASK_SIZE, FILTER_MASK_RIGHT_POINT_IMAGE_SIZE, TOP_EYEMASK_INDS, \
-     MASK_RIGHT_POINT, ADD_LEFT_POINT, ADD_RIGHT_POINT, THRESHOLD_BUFFER, RANGE_CHECK, HEAD_3D_NAME, \
-     MASK_EXTEND_BBOX_NORM, MIN_POSE_OPEN_EYEMASK, MASK_EXTEND_PIXELS
+     MASK_RIGHT_POINT, ADD_LEFT_POINT, ADD_RIGHT_POINT, MIN_POSE_OPEN_EYEMASK, RANGE_CHECK, MASK_EXTEND_BBOX_NORM, \
+     HEAD_3D_NAME, THRESHOLD_BUFFER, MASK_EXTEND_PIXELS, EYE_HAT_MASK_LEFT_POINT, EYE_HAT_MASK_RIGHT_POINT
 
 
 def render(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, bbox_ind, output_bbox, pose):
@@ -301,8 +301,8 @@ def forehead_mask(mask_name, frontal_mask, frontal_rest, bbox_ind, output_bbox, 
             f_x, f_y = config[EYE_MASK_NAME].forehead_x, config[EYE_MASK_NAME].forehead_y
             mask_xwf, mask_ywf = np.append(f_x, mask_x).astype(int), np.append(f_y, mask_y).astype(int)
             mask_xywf = np.vstack((mask_xwf, mask_ywf)).T
-            _, _, mask_on_image = morphological_op(True, mask_xywf, img, config[mask_name].mask_filter_size,
-                                                   MASK_RIGHT_POINT, False, 0)
+            _, _, mask_on_image = morphological_op(True, mask_xywf, img, EYE_HAT_MASK_LEFT_POINT, \
+                                                   EYE_HAT_MASK_RIGHT_POINT, False, 0)
 
     return mask_on_image
 
