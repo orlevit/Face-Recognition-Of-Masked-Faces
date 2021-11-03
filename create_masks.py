@@ -294,12 +294,15 @@ def forehead_mask(mask_name, frontal_mask, frontal_rest, bbox_ind, output_bbox, 
                 top_eyemask_x = scale_int_array(top_eyemask.x.values, scale_factor)
                 rel_top = np.where((np.min(top_eyemask_x) <= f_x) & (f_x <= np.max(top_eyemask_x)))
                 config[EYE_MASK_NAME].forehead_x, config[EYE_MASK_NAME].forehead_y = f_x[rel_top], f_y[rel_top]
+                mask_xwf, mask_ywf = np.append(f_x, mask_x).astype(int), np.append(f_y, mask_y).astype(int)
+                mask_on_image = points_on_image(mask_xwf, mask_ywf, img)
 
         else: # Eyemask
             f_x, f_y = config[EYE_MASK_NAME].forehead_x, config[EYE_MASK_NAME].forehead_y
-
-        mask_xwf, mask_ywf = np.append(f_x, mask_x).astype(int), np.append(f_y, mask_y).astype(int)
-        mask_on_image = points_on_image(mask_xwf, mask_ywf, img)
+            mask_xwf, mask_ywf = np.append(f_x, mask_x).astype(int), np.append(f_y, mask_y).astype(int)
+            mask_xywf = np.vstack((mask_xwf, mask_ywf)).T
+            _, _, mask_on_image = morphological_op(True, mask_xywf, img, config[mask_name].mask_filter_size,
+                                                   MASK_RIGHT_POINT, False, 0)
 
     return mask_on_image
 
