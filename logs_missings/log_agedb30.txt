@@ -1,0 +1,20 @@
+Model will use 1 GPUs!
+No face detected for: /RG/rg-tal/orlev/datasets/original_ds/AgeDB/agedb30/199/199_7614.jpg
+No face detected for: /RG/rg-tal/orlev/datasets/original_ds/AgeDB/agedb30/274/274_9828.jpg
+No face detected for: /RG/rg-tal/orlev/datasets/original_ds/AgeDB/agedb30/274/274_9870.jpg ->9872|rows:4321
+No face detected for: /RG/rg-tal/orlev/datasets/original_ds/AgeDB/agedb30/10/10_0426.jpg ->0424|rows:3901,4031,4134,4165
+No face detected for: /RG/rg-tal/orlev/datasets/original_ds/AgeDB/agedb30/46/46_1817.jpg ->1816|rows:2533
+No face detected for: /RG/rg-tal/orlev/datasets/original_ds/AgeDB/agedb30/169/169_6404.jpg
+No face detected for: /RG/rg-tal/orlev/datasets/original_ds/AgeDB/agedb30/190/190_7281.jpg ->7280 |rows:3028,3029,3354,3498
+No face detected for: /RG/rg-tal/orlev/datasets/original_ds/AgeDB/agedb30/270/270_9716.jpg
+No face detected for: /RG/rg-tal/orlev/datasets/original_ds/AgeDB/agedb30/270/270_9697.jpg
+No face detected for: /RG/rg-tal/orlev/datasets/original_ds/AgeDB/agedb30/251/251_8963.jpg ->8962|rows:708
+No face detected for: /RG/rg-tal/orlev/datasets/original_ds/AgeDB/agedb30/263/263_9442.jpg ->9444|rows:4924, 5141,5347
+No face detected for: /RG/rg-tal/orlev/datasets/original_ds/AgeDB/agedb30/240/240_8660.jpg
+No face detected for: /RG/rg-tal/orlev/datasets/original_ds/AgeDB/agedb30/66/66_2611.jpg
+No face detected for: /RG/rg-tal/orlev/datasets/original_ds/AgeDB/agedb30/278/278_10005.jpg
+No face detected for: /RG/rg-tal/orlev/datasets/original_ds/AgeDB/agedb30/61/61_2396.jpg
+No face detected for: /RG/rg-tal/orlev/datasets/original_ds/AgeDB/agedb30/247/247_8812.jpg ->8810|rows:2101,2164
+No face detected for: /RG/rg-tal/orlev/datasets/original_ds/AgeDB/agedb30/211/211_7945.jpg ->7940|rows:4223,4224,4557,4591,4610,4660
+No face detected for: /RG/rg-tal/orlev/datasets/original_ds/AgeDB/agedb30/166/166_6302.jpg ->6300|rows:5697,5732,5747,5759,5796,5915
+No face detected for: /RG/rg-tal/orlev/datasets/original_ds/AgeDB/agedb30/71/71_2810.jpg

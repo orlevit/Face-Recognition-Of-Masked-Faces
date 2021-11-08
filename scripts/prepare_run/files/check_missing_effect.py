@@ -4,9 +4,9 @@ import os
 
 # Locations of the files 
 loc='/home/or/dev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/files'
-file_lst_input = os.path.join(loc, 'casia.lst')
+file_lst_input = os.path.join(loc, 'original', 'casia.lst')
 file_lst_output = os.path.join(loc, 'casia_no_missings.lst')
-file_pairs = os.path.join(loc, 'casia_pairs_5k.txt')
+file_pairs = os.path.join(loc, 'original', 'casia_pairs_5k.txt')
 file_missings_log = os.path.join(loc, 'log_casia_second_time_missing.txt') # the missing log from masks creation
 
 def add_create(id_dict, id, img_number):

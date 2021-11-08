@@ -1,3 +1,0 @@
-Model will use 2 GPUs!
-Model will use 1 GPUs!
-Model will use 1 GPUs!
