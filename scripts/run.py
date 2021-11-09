@@ -13,20 +13,24 @@ def main(args):
     casia_dirs = []
     agedb30_dirs = []
     masked_faces_input_dirs = []
+    masked_faces_input_dirs_aligned = []
 
     # Get the directories
     for ds_dir in datasets_dirs:
         for masked_dir in os.listdir(ds_dir):
-            if not masked_dir.startswith('a'):
+            if not masked_dir.startswith('a'):# and not ds_dir.endswith('casia'):
                 # masked_faces_input_dirs.append(os.path.join(ds_dir, masked_dir))
                 if ds_dir.find('/lfw') != -1:
                     lfw_dirs.append(os.path.join(ds_dir, 'a' + masked_dir))
+                    masked_faces_input_dirs_aligned.append(os.path.join(ds_dir, 'a' + masked_dir))
                     masked_faces_input_dirs.append(os.path.join(ds_dir, masked_dir))
                 elif ds_dir.find('/agedb') != -1:
                     agedb30_dirs.append(os.path.join(ds_dir, 'a' + masked_dir))
+                    masked_faces_input_dirs_aligned.append(os.path.join(ds_dir, 'a' + masked_dir))
                     masked_faces_input_dirs.append(os.path.join(ds_dir, masked_dir))
                 elif ds_dir.find('/casia') != -1:
                     casia_dirs.append(os.path.join(ds_dir, 'a' + masked_dir))
+                    masked_faces_input_dirs_aligned.append(os.path.join(ds_dir, 'a' + masked_dir))
                     masked_faces_input_dirs.append(os.path.join(ds_dir, masked_dir))
                 else:
                     print(f'What is this dataset?! {ds_dir} and dir name; {masked_dir}')
@@ -37,11 +41,11 @@ def main(args):
 
     # Bin
     #prerequisite_bin(pairs_files)
-    #make_bin(masked_faces_input_dirs)
+    #make_bin(masked_faces_input_dirs_aligned)
 
     # IDX & REC
     #prerequisite_idx_rec(casia_dirs)
-    make_idx_rec(casia_dirs)
+    #make_idx_rec(casia_dirs)
 
     print('Finished!')
 
