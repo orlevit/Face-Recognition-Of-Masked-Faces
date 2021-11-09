@@ -5,7 +5,9 @@ kill/
 scripts/logs/finished_logs/*
 scripts/logs/slurm_logs/*
 scripts/rec_run/models/*
-masks_images*
+images_masked*
+*.err
+*.out
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
