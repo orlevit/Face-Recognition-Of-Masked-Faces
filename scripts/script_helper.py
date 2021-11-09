@@ -4,7 +4,7 @@ import shutil
 import argparse
 import numpy as np
 from glob import iglob
-from scripts.script_config import ARCFACE_DATSETS_LOC, SBATCH, SLEEP_TIME, RESULTS_HEADERS, RESULTS_TARGET_FILES, \
+from script_config import ARCFACE_DATSETS_LOC, SBATCH, SLEEP_TIME, RESULTS_HEADERS, RESULTS_TARGET_FILES, \
     MODELS_DIRS_LIST, SLURM_LOGS_DIR, ARCFACE_DS_NAMES
 
 

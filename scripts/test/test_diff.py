@@ -13,7 +13,7 @@ sys.path.insert(-1, parent_parent_dir)
 from scripts.script_helper import sbatch, delete_create_file, wait_until_jobs_finished, organized_results
 from scripts.script_config import TEST_DIFF_MEM, TEST_DIFF_JOBS_NAME, TEST_DIFF_SBATCH_FILE, ARCFACE_ENV, \
     TEST_DIFF_COMMANDS_FILE, TEST_DIFF_TRACK_FILE, MODELS_DIRS_LIST, ARCFACE_DATSETS_LOC, ARCFACE_DS_NAMES, \
-    ARCDACE_VALIDATON_DS, NOMASK_DATA_LOC, TEST_DIFF_RESULTS_FILE
+    ARCFACE_VALIDATON_DS, NOMASK_DATA_LOC, TEST_DIFF_RESULTS_FILE
 
 
 def get_bin_test_files():
@@ -23,7 +23,7 @@ def get_bin_test_files():
         for test_path in iglob(os.path.join(ds_dir, '*.bin')):
             rest_path, file_name = os.path.split(test_path)
             _, dir_name = os.path.split(rest_path)
-            if dir_name in ARCFACE_DS_NAMES and file_name not in ARCDACE_VALIDATON_DS:
+            if dir_name in ARCFACE_DS_NAMES and file_name not in ARCFACE_VALIDATON_DS:
                 test_files.append(test_path)
 
     grouped_input = [list(g) for k, g in groupby(test_files, lambda s: s.split('/')[-2])]
