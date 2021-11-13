@@ -1,4 +1,5 @@
 # Check all the IDs in the pairs, to detect how many distinct images there are.
+# This is used later to go over all the images manually to chceck if there are any fault images, and calculate the fault precentage
 import os
 import random
 

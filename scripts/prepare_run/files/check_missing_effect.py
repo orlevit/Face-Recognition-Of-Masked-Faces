@@ -1,13 +1,13 @@
 # Checking the effect f the missings images and id's on the pairs file and the lst file
-
+# make sure that the first line in the log missing:"file_missings_log" is not important line(it is ignored in the code due to "first_line=True"
 import os
 
 # Locations of the files 
-loc='/home/or/dev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/files'
+loc='/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/files'
 file_lst_input = os.path.join(loc, 'original', 'casia.lst')
-file_lst_output = os.path.join(loc, 'casia_no_missings.lst')
+file_lst_output = os.path.join(loc,'no_missings' ,'casia_no_missings.lst')
 file_pairs = os.path.join(loc, 'original', 'casia_pairs_5k.txt')
-file_missings_log = os.path.join(loc, 'log_casia_second_time_missing.txt') # the missing log from masks creation
+file_missings_log = os.path.join(loc, 'log_casia_missing.txt') # the missing log from masks creation
 
 def add_create(id_dict, id, img_number):
     img_number = int(img_number)
