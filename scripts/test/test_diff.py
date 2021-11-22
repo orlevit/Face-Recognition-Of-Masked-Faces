@@ -1,5 +1,6 @@
 import os
 import sys
+import shutil
 import inspect
 from glob import iglob
 from itertools import groupby
@@ -13,7 +14,7 @@ sys.path.insert(-1, parent_parent_dir)
 from scripts.script_helper import sbatch, delete_create_file, wait_until_jobs_finished, organized_results
 from scripts.script_config import TEST_DIFF_MEM, TEST_DIFF_JOBS_NAME, TEST_DIFF_SBATCH_FILE, ARCFACE_ENV, \
     TEST_DIFF_COMMANDS_FILE, TEST_DIFF_TRACK_FILE, MODELS_DIRS_LIST, ARCFACE_DATSETS_LOC, ARCFACE_DS_NAMES, \
-    ARCFACE_VALIDATON_DS, NOMASK_DATA_LOC, TEST_DIFF_RESULTS_FILE
+    ARCFACE_VALIDATON_DS, NOMASK_DATA_LOC, TEST_DIFF_RESULTS_FILE, TEST_DIFF_ROC
 
 
 def get_bin_test_files():
@@ -58,6 +59,10 @@ def get_model(model_dir):
 
 
 def make_test_diff():
+    if os.path.exists(TEST_DIFF_ROC):
+       shutil.rmtree(TEST_DIFF_ROC)
+    os.makedirs(TEST_DIFF_ROC)
+
     grouped_input = get_bin_test_files()
     delete_create_file(TEST_DIFF_TRACK_FILE)
     items_number = sum([len(list_input) for list_input in grouped_input])
@@ -75,7 +80,7 @@ def make_test_diff():
                 data_dir_mask, target = os.path.split(input_file)
                 _, dir_name = os.path.split(data_dir_mask)
                 target_name_only = target.split('.')[0]
-                roc_name = f'{target_name_only}_{model_name}-nomask_{dir_name}'
+                roc_name = os.path.join(TEST_DIFF_ROC, f'diff-{target_name_only}_{model_name}-nomask_{dir_name}')
                 input_str += f'{ARCFACE_ENV} {data_dir_mask} {NOMASK_DATA_LOC} {target_name_only} {model} ' \
                              f'{roc_name} {threshold} {TEST_DIFF_COMMANDS_FILE} {str(TEST_DIFF_TRACK_FILE)} '
 

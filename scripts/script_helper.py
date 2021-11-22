@@ -5,7 +5,7 @@ import argparse
 import numpy as np
 from glob import iglob
 from script_config import ARCFACE_DATSETS_LOC, SBATCH, SLEEP_TIME, RESULTS_HEADERS, RESULTS_TARGET_FILES, \
-    MODELS_DIRS_LIST, SLURM_LOGS_DIR, ARCFACE_DS_NAMES
+    MODELS_DIRS_LIST, SLURM_LOGS_DIR, ARCFACE_DS_NAMES, NO_DATASET_TEST
 
 
 # def run_multy(func, inputs):
@@ -92,20 +92,27 @@ def get_latests_results(prefix_input_files):
 def fill_table(arr_results, latest_jobs):
     for f in latest_jobs:
         results = open(f).readlines()
-        db_name, middle, _, tested_db = results[0].strip().split("_")
+        result = results[0].strip().split('/')[-1]
+        first, middle, _, tested_db = result.strip().split("_")
+        _, db_name = first.split("-")
         model_name = middle.split("-")[-1]
-
         model_name_idx = [i for i, one_model in enumerate(MODELS_DIRS_LIST) if model_name in one_model]
         target_db_idx = [i for i, one_model in enumerate(ARCFACE_DS_NAMES) if tested_db in one_model]
+
         if len(model_name_idx) != 1 or len(target_db_idx) != 1:
             raise Exception(f'The length is not 1: {model_name_idx} or {target_db_idx}')
+
+        # Not test this dataset
+        #if tested_db == NO_DATASET_TEST:
+        #   continue
 
         db_name_idx = RESULTS_TARGET_FILES.index(db_name)
         threshold = results[1].strip()
         accuracy = results[2].strip()
         auc = results[3].strip()
 
-        table_row = model_name_idx[0] * len(MODELS_DIRS_LIST) + target_db_idx[0]
+        # minues 1 because of the original dataset
+        table_row = model_name_idx[0] * (len(MODELS_DIRS_LIST) -1) + target_db_idx[0]
         arr_results[table_row, 0] = model_name
         arr_results[table_row, 1] = tested_db
         arr_results[table_row, 2] = threshold
@@ -115,7 +122,7 @@ def fill_table(arr_results, latest_jobs):
 
 
 def organized_results(prefix_input_files, output_file):
-    arr_results = np.empty([len(MODELS_DIRS_LIST) ** 2, 7], dtype='O')
+    arr_results = np.empty([len(MODELS_DIRS_LIST) * len(ARCFACE_DS_NAMES), 7], dtype='O')
     latest_jobs = get_latests_results(prefix_input_files)
     fill_table(arr_results, latest_jobs)
     np.savetxt(output_file, arr_results, fmt='%s', delimiter=',', header=RESULTS_HEADERS, comments='') 

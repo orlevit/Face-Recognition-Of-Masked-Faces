@@ -18,7 +18,7 @@ def main(args):
     # Get the directories
     for ds_dir in datasets_dirs:
         for masked_dir in os.listdir(ds_dir):
-            if not masked_dir.startswith('a'):# and not ds_dir.endswith('casia'):
+            if not masked_dir.startswith('a') and masked_dir.endswith('nomask'):
                 # masked_faces_input_dirs.append(os.path.join(ds_dir, masked_dir))
                 if ds_dir.find('/lfw') != -1:
                     lfw_dirs.append(os.path.join(ds_dir, 'a' + masked_dir))

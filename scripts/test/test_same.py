@@ -1,5 +1,6 @@
 import os
 import sys
+import shutil
 import inspect
 from glob import iglob
 from itertools import groupby
@@ -13,7 +14,7 @@ sys.path.insert(-1, parent_parent_dir)
 from scripts.script_helper import sbatch, delete_create_file, wait_until_jobs_finished, organized_results
 from scripts.script_config import TEST_SAME_MEM, TEST_SAME_JOBS_NAME, TEST_SAME_SBATCH_FILE, ARCFACE_ENV, \
     TEST_SAME_COMMANDS_FILE, TEST_SAME_TRACK_FILE, MODELS_DIRS_LIST, ARCFACE_DATSETS_LOC, ARCFACE_DS_NAMES, \
-    ARCFACE_VALIDATON_DS, TEST_SAME_RESULTS_FILE
+    ARCFACE_VALIDATON_DS, TEST_SAME_RESULTS_FILE, TEST_SAME_ROC
 
 
 def get_bin_test_files():
@@ -58,6 +59,10 @@ def get_model(model_dir):
 
 
 def make_test_same():
+    if os.path.exists(TEST_SAME_ROC):
+       shutil.rmtree(TEST_SAME_ROC)
+    os.makedirs(TEST_SAME_ROC)
+
     grouped_input = get_bin_test_files()
     delete_create_file(TEST_SAME_TRACK_FILE)
     items_number = sum([len(list_input) for list_input in grouped_input])
@@ -72,7 +77,7 @@ def make_test_same():
                 data_dir, target = os.path.split(input_file)
                 _, dir_name = os.path.split(data_dir)
                 target_name_only = target.split('.')[0]
-                roc_name = f'{target_name_only}_{model_name}_{dir_name}'
+                roc_name = os.path.join(TEST_SAME_ROC, f'same-{target_name_only}_{model_name}_{dir_name}')
                 input_str += f'{ARCFACE_ENV} {data_dir} {target_name_only} {model} ' \
                              f'{roc_name} {threshold} {TEST_SAME_COMMANDS_FILE} {TEST_SAME_TRACK_FILE} '
 

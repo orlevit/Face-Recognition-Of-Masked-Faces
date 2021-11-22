@@ -43,6 +43,8 @@ from sklearn.decomposition import PCA
 import mxnet as mx
 from mxnet import ndarray as nd
 import sklearn.metrics as metrics
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 class LFold:
@@ -346,6 +348,7 @@ def test(data_set,
     # Save image as figure
     if ROC:
        roc_auc_graph = metrics.auc(fpr_graph, tpr_graph)
+       fig = plt.figure()
        plt.title('Receiver Operating Characteristic')
        plt.plot(fpr_graph, tpr_graph, 'b', label = 'AUC = %0.2f' % roc_auc_graph)
        plt.legend(loc = 'lower right')
@@ -355,7 +358,8 @@ def test(data_set,
        plt.ylabel('True Positive Rate')
        plt.xlabel('False Positive Rate')
        path = os.getcwd()
-       plt.savefig(str(target_name)+'_ROC.jpg')
+       plt.close(fig)
+       plt.savefig(os.path.join(roc_dst, str(target_name)+'_ROC.jpg'))
 
     return acc1, std1, acc2, std2, _xnorm, roc_auc
 
@@ -375,7 +379,7 @@ if __name__ == '__main__':
                         help='path to load model.')
     parser.add_argument('--target-mask', default='lfw,cfp_ff,cfp_fp,agedb_30', help='test targets.')
     parser.add_argument('--target-nomask', default='lfw,cfp_ff,cfp_fp,agedb_30', help='test targets.')
-    parser.add_argument('--plot-roc',default =False, help='true or false to plot ROC curve')
+    parser.add_argument('--plot-roc', default=True, help='true or false to plot ROC curve')
     parser.add_argument('--roc-name', help='test targets.')
     parser.add_argument('--gpu', default=0, type=int, help='gpu id')
     parser.add_argument('--batch-size', default=32, type=int, help='')
@@ -452,6 +456,8 @@ if __name__ == '__main__':
     path = os.path.join(args.data_dir_nomask, args.target_nomask + ".bin")
     print('loading.. ', name) 
     nomasks_data_set = load_bin(path, image_size)
+
+    roc_dst, roc_name = args.roc_name.rsplit('/', 1)
 
     if args.mode == 0:
         for i in range(len(ver_list)):

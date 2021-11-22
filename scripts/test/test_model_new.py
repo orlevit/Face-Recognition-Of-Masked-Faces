@@ -43,6 +43,8 @@ from sklearn.decomposition import PCA
 import mxnet as mx
 from mxnet import ndarray as nd
 import sklearn.metrics as metrics
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 class LFold:
@@ -241,7 +243,8 @@ def test(data_set,
          data_extra=None,
          label_shape=None,
          ROC = False,
-         target_name=None):
+         target_name=None,
+         roc_dst=None):
     print('testing verification..')
     #print(len(data_set[0]),,data_set[1].shape)
     data_list = data_set[0]
@@ -332,6 +335,7 @@ def test(data_set,
     # Save image as figure
     if ROC:
        roc_auc_graph = metrics.auc(fpr_graph, tpr_graph)
+       fig = plt.figure()
        plt.title('Receiver Operating Characteristic')
        plt.plot(fpr_graph, tpr_graph, 'b', label = 'AUC = %0.2f' % roc_auc_graph)
        plt.legend(loc = 'lower right')
@@ -341,7 +345,8 @@ def test(data_set,
        plt.ylabel('True Positive Rate')
        plt.xlabel('False Positive Rate')
        path = os.getcwd()
-       plt.savefig(str(target_name)+'_ROC.jpg')
+       plt.close(fig)
+       plt.savefig(os.path.join(roc_dst, str(target_name)+'_ROC.jpg'))
 
     return acc1, std1, acc2, std2, _xnorm, embeddings_list, roc_auc
 
@@ -361,7 +366,7 @@ if __name__ == '__main__':
     parser.add_argument('--target',
                         default='lfw,cfp_ff,cfp_fp,agedb_30',
                         help='test targets.')
-    parser.add_argument('--plot-roc',default =False, help='true or false to plot ROC curve')
+    parser.add_argument('--plot-roc', default=True, help='true or false to plot ROC curve')
     parser.add_argument('--roc-name', help='test targets.')
     parser.add_argument('--gpu', default=0, type=int, help='gpu id')
     parser.add_argument('--batch-size', default=32, type=int, help='')
@@ -434,11 +439,13 @@ if __name__ == '__main__':
             ver_list.append(data_set)
             ver_name_list.append(name)
 
+    roc_dst, roc_name = args.roc_name.rsplit('/', 1)
+
     if args.mode == 0:
         for i in range(len(ver_list)):
             results = []
             for model, threshold in zip(nets, epoch_thresholds):
-                acc1, std1, acc2, std2, xnorm, embeddings_list, roc_auc = test(ver_list[i], model, args.batch_size, threshold, args.nfolds, ROC=args.plot_roc, target_name=args.roc_name)
+                acc1, std1, acc2, std2, xnorm, embeddings_list, roc_auc = test(ver_list[i], model, args.batch_size, threshold, args.nfolds, ROC=args.plot_roc, target_name=roc_name, roc_dst=roc_dst)
  
                 roc_auc_mean, roc_auc_std = np.mean(roc_auc), np.std(roc_auc)
 
