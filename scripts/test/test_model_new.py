@@ -345,7 +345,6 @@ def test(data_set,
        plt.ylabel('True Positive Rate')
        plt.xlabel('False Positive Rate')
        path = os.getcwd()
-       plt.close(fig)
        plt.savefig(os.path.join(roc_dst, str(target_name)+'_ROC.jpg'))
 
     return acc1, std1, acc2, std2, _xnorm, embeddings_list, roc_auc

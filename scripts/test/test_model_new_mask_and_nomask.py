@@ -358,7 +358,6 @@ def test(data_set,
        plt.ylabel('True Positive Rate')
        plt.xlabel('False Positive Rate')
        path = os.getcwd()
-       plt.close(fig)
        plt.savefig(os.path.join(roc_dst, str(target_name)+'_ROC.jpg'))
 
     return acc1, std1, acc2, std2, _xnorm, roc_auc
@@ -470,8 +469,8 @@ if __name__ == '__main__':
                 print('The threshold is:', epoch_thresholds)
                 print('[%s]XNorm: %f' % (ver_name_list[i], xnorm))
                 print('[%s]Accuracy: %1.5f+-%1.5f' % (ver_name_list[i], acc1, std1))
-                print('Accuracy: %1.5f+-%1.5f' %(acc2, std2))
-                print('AUC: %1.5f+-%1.5f' %(roc_auc_mean, roc_auc_std))
+                print('%1.5f+-%1.5f' %(acc2, std2))
+                print('%1.5f+-%1.5f' %(roc_auc_mean, roc_auc_std))
                 results.append(acc2)
             print('Max of [%s] is %1.5f' % (ver_name_list[i], np.max(results)))
     elif args.mode == 1:
