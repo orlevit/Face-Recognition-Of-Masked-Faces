@@ -8,10 +8,32 @@ from helpers import split_head_mask_parts, get_1id_pose, resize_image, project_3
 from config_file import config, VERTICES_PATH, EYE_MASK_NAME, HAT_MASK_NAME, SCARF_MASK_NAME, COVID19_MASK_NAME, \
      SUNGLASSES_MASK_NAME, NEAR_NEIGHBOUR_STRIDE, MIN_MASK_SIZE, FILTER_MASK_RIGHT_POINT_IMAGE_SIZE, TOP_EYEMASK_INDS, \
      MASK_RIGHT_POINT, ADD_LEFT_POINT, ADD_RIGHT_POINT, MIN_POSE_OPEN_EYEMASK, RANGE_CHECK, MASK_EXTEND_BBOX_NORM, \
-     HEAD_3D_NAME, THRESHOLD_BUFFER, MASK_EXTEND_PIXELS, EYE_HAT_MASK_LEFT_POINT, EYE_HAT_MASK_RIGHT_POINT
-
+     HEAD_3D_NAME, THRESHOLD_BUFFER, MASK_EXTEND_PIXELS, EYE_HAT_MASK_LEFT_POINT, EYE_HAT_MASK_RIGHT_POINT, \
+     ALL_SINGLE_MASKS
 
 def render(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, bbox_ind, output_bbox, pose):
+    if not config[mask_name].masks_combination:
+        return render_mask(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, bbox_ind, output_bbox, pose)
+
+    multi_morph_mask_x = np.array([], dtype=np.int); multi_morph_mask_y = np.array([], dtype=np.int)
+    multi_morph_rest_x = np.array([]); multi_morph_rest_y = np.array([])
+    for single_name in config[mask_name].masks_list:
+        mask_x, mask_y, rest_mask_x, rest_mask_y = render_mask(img, r_img, df_3dh, h3d2i, single_name, scale_factor,
+                                                               bbox_ind, output_bbox, pose)
+        multi_morph_mask_x = np.append(multi_morph_mask_x, mask_x)
+        multi_morph_mask_y = np.append(multi_morph_mask_y, mask_y)
+        multi_morph_rest_x = np.append(multi_morph_rest_x, rest_mask_x)
+        multi_morph_rest_y = np.append(multi_morph_rest_y, rest_mask_y)
+
+    multi_morph_rest_x = multi_morph_rest_x[np.where(~np.isnan(multi_morph_rest_x.astype(float)))[0]]
+    multi_morph_rest_y = multi_morph_rest_y[np.where(~np.isnan(multi_morph_rest_y.astype(float)))[0]]
+
+    multi_morph_rest_x = multi_morph_rest_x.astype(int) if len(multi_morph_rest_x) else None
+    multi_morph_rest_y = multi_morph_rest_y.astype(int) if len(multi_morph_rest_y) else None
+
+    return multi_morph_mask_x, multi_morph_mask_y, multi_morph_rest_x, multi_morph_rest_y
+
+def render_mask(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, bbox_ind, output_bbox, pose):
     # Get only frontal face areas
     frontal_mask, frontal_add_mask, frontal_rest = get_frontal(r_img, df_3dh, h3d2i, mask_name, scale_factor)
 
@@ -349,15 +371,16 @@ def masks_templates(masks_name):
     rest_ind = [get_rest_mask(maskInd1, maskInd2, maskAInd, vertices_rotated, mask_name)
                 for maskInd1, maskInd2, maskAInd, mask_name in zip(masks_ind1, masks_ind2, masks_add_ind, masks_order)]
     masks_to_create = masks_name.split(',')
+    masks_to_store = ALL_SINGLE_MASKS.split(',')
     head3d_cords = index_on_vertices(range(0, len(vertices)), vertices)
-    add_mask_to_config(head3d_cords, masks_ind1, masks_ind2, masks_add_ind, rest_ind, masks_order, masks_to_create)
+    add_mask_to_config(head3d_cords, masks_ind1, masks_ind2, masks_add_ind, rest_ind, masks_order, masks_to_store)
 
     return masks_to_create
 
 
-def add_mask_to_config(head3d_cords, masks_ind1, masks_ind2, masks_add_ind, rest_ind, masks_order, masks_to_create):
+def add_mask_to_config(head3d_cords, masks_ind1, masks_ind2, masks_add_ind, rest_ind, masks_order, masks_to_store):
     config[HEAD_3D_NAME] = head3d_cords
-    for mask_name in masks_to_create:
+    for mask_name in masks_to_store:
         config[mask_name].mask_ind1 = masks_ind1[masks_order.index(mask_name)]
         config[mask_name].mask_ind2 = masks_ind2[masks_order.index(mask_name)]
         config[mask_name].mask_add_ind = masks_add_ind[masks_order.index(mask_name)]

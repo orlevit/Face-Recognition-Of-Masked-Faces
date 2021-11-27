@@ -26,6 +26,8 @@ HAT_MASK_NAME = "hatmask"
 SCARF_MASK_NAME = "scarfmask"
 COVID19_MASK_NAME = "covid19mask"
 SUNGLASSES_MASK_NAME = "sunglassesmask"
+SC_MASK_NAME = "scmask"
+SH_MASK_NAME = "shmask"
 CENTER_FACE_PART = 'CENTER'
 LEFT_FACE_PART = 'LEFT'
 RIGHT_FACE_PART = 'RIGHT'
@@ -46,7 +48,8 @@ ADD_RIGHT_POINT = 26
 EYE_HAT_MASK_LEFT_POINT = 6
 EYE_HAT_MASK_RIGHT_POINT = 15
 # Hat needs to be before the eyemask(even if only eyemask is needed, hat mask need to be included).
-ALL_MASKS = f"{HAT_MASK_NAME},{EYE_MASK_NAME},{COVID19_MASK_NAME},{SUNGLASSES_MASK_NAME}"
+ALL_MASKS = f"{HAT_MASK_NAME},{EYE_MASK_NAME},{COVID19_MASK_NAME},{SUNGLASSES_MASK_NAME},{SC_MASK_NAME},{SH_MASK_NAME}"
+ALL_SINGLE_MASKS = f"{HAT_MASK_NAME},{EYE_MASK_NAME},{COVID19_MASK_NAME},{SUNGLASSES_MASK_NAME}"
 
 # ------------------------------------------------ masks configuration ------------------------------------------------
 config = {
@@ -64,7 +67,8 @@ config = {
         "rest_filter_size": 9,
         "mask_front_points_calc": False,
         "mask_add_front_points_calc": False,
-        "main_mask_components_number": 1
+        "main_mask_components_number": 1,
+        "masks_combination": False
 
     },
     HAT_MASK_NAME: {
@@ -80,7 +84,8 @@ config = {
         "rest_filter_size": 15,
         "mask_front_points_calc": True,
         "mask_add_front_points_calc": False,
-        "main_mask_components_number": 1
+        "main_mask_components_number": 1,
+        "masks_combination": False
     },
     SCARF_MASK_NAME: {
         "inds": {
@@ -95,7 +100,8 @@ config = {
         "rest_filter_size": 15,
         "mask_front_points_calc": True,
         "mask_add_front_points_calc": False,
-        "main_mask_components_number": 1
+        "main_mask_components_number": 1,
+        "masks_combination": False
     },
     COVID19_MASK_NAME: {
         "inds": {
@@ -119,7 +125,8 @@ config = {
         "rest_filter_size": 15,
         "mask_front_points_calc": True,
         "mask_add_front_points_calc": True,
-        "main_mask_components_number": 1
+        "main_mask_components_number": 1,
+        "masks_combination": False
     },
     SUNGLASSES_MASK_NAME: {
         "inds": {
@@ -134,7 +141,18 @@ config = {
         "rest_filter_size": 9.355,
         "mask_front_points_calc": True,
         "mask_add_front_points_calc": True,
-        "main_mask_components_number": 2
+        "main_mask_components_number": 2,
+        "masks_combination": False
+    },
+    SC_MASK_NAME: {
+        "draw_rest_mask": False,
+        "masks_combination": True,
+        "masks_list": [SUNGLASSES_MASK_NAME, COVID19_MASK_NAME]
+    },
+    SH_MASK_NAME: {
+        "draw_rest_mask": False,
+        "masks_combination": True,
+        "masks_list": [SUNGLASSES_MASK_NAME, HAT_MASK_NAME]
     }
 }
 config = edict(config)
