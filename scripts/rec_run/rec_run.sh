@@ -8,7 +8,7 @@
 #SBATCH --output=../logs/slurm_logs/%x-%A-%a.out
 #SBATCH --error=../logs/slurm_logs/%x-%A-%a.err
 #SBATCH --qos=gpu
-#SBATCH --array=1-5
+#SBATCH --array=1-2
 #SBATCH --exclude=gpu6
 
 # %A = job_name

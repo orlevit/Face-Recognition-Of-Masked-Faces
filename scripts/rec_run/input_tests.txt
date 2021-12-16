@@ -3,3 +3,5 @@ eye_masked
 covid19_masked
 sunglasses_masked
 no_masked
+sh_masked
+sc_masked

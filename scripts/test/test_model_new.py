@@ -345,8 +345,10 @@ def test(data_set,
        plt.ylabel('True Positive Rate')
        plt.xlabel('False Positive Rate')
        path = os.getcwd()
-       plt.savefig(os.path.join(roc_dst, str(target_name)+'_ROC.jpg'))
-
+       plt.savefig(os.path.join(roc_dst, 'images', str(target_name)+'_ROC.jpg'))
+       with open(os.path.join(roc_dst, 'arrays', str(target_name) +'.pkl'), 'wb') as f:
+           pickle.dump({'fpr':fpr_graph, 'tpr':tpr_graph, 'auc':roc_auc_graph}, f)
+        
     return acc1, std1, acc2, std2, _xnorm, embeddings_list, roc_auc
 
 
@@ -439,6 +441,11 @@ if __name__ == '__main__':
             ver_name_list.append(name)
 
     roc_dst, roc_name = args.roc_name.rsplit('/', 1)
+
+    if not os.path.exists(os.path.join(roc_dst, 'images')):
+       os.makedirs(os.path.join(roc_dst, 'images'))
+    if not os.path.exists(os.path.join(roc_dst, 'arrays')):
+       os.makedirs(os.path.join(roc_dst, 'arrays'))
 
     if args.mode == 0:
         for i in range(len(ver_list)):
