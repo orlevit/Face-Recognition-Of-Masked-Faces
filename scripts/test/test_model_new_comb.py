@@ -303,6 +303,8 @@ def create_embeddings(data, model, batch_size, data_extra, label_shape):
             db = mx.io.DataBatch(data=(_data, ), label=(_label, ))
         else:
             db = mx.io.DataBatch(data=(_data, _data_extra), label=(_label, ))
+
+        import pdb; pdb.set_trace()
         model.forward(db, is_train=False)
         net_out = model.get_outputs()
         _embeddings = net_out[0].asnumpy()
@@ -316,7 +318,6 @@ def create_embeddings(data, model, batch_size, data_extra, label_shape):
     return embeddings
 
 def score_calc(raw_embeddings_list, raw_thresholds):
-    import pdb; pdb.set_trace()
     # calulate cosine similarity
     cos_sim_list = []
     for model_emb in raw_embeddings_list:
