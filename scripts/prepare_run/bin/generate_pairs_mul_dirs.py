@@ -37,7 +37,7 @@ def write_pairs_to_file(fname: str,
                         num_in_each_fold: int) -> None:
     metadata = '{}\t{}\n'.format(num_masks, num_in_each_fold)
     with io.open(fname,
-                 'w',
+                 'w+',
                  io.DEFAULT_BUFFER_SIZE,
                  encoding='utf-8') as fpairs:
         fpairs.write(metadata)
