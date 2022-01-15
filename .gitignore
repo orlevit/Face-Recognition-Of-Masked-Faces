@@ -2,6 +2,7 @@ kill/
 .idea/
 *_finished.txt
 *.npy
+*.bin
 *.zip
 scripts/converted_data/*/
 scripts/logs/finished_logs/*
