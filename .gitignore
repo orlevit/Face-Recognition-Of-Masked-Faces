@@ -5,6 +5,7 @@ kill/
 *.bin
 *.zip
 scripts/converted_data/*/
+scripts/prepare_run/bin/bins_files
 scripts/logs/finished_logs/*
 scripts/logs/slurm_logs/*
 scripts/rec_run/models/*

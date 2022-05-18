@@ -45,7 +45,6 @@ def write_pairs_to_file(fname: str,
 
 def _split_people_into_folds(image_dir: str,
                              num_folds: int) -> List[List[str]]:
-    import pdb;pdb.set_trace();
     names = [d for d in os.listdir(image_dir)
              if os.path.isdir(os.path.join(image_dir, d))]
     random.shuffle(names)
