@@ -4,7 +4,13 @@ kill/
 *.npy
 *.bin
 *.zip
-scripts/converted_data/*/
+scripts/converted_data/models
+scripts/converted_data/tmp
+scripts/converted_data/tmp2
+scripts/converted_data/train
+scripts/converted_data/ready_data
+scripts/converted_data/model_training/logs/*
+scripts/converted_data/all_data.zip
 scripts/prepare_run/bin/bins_files
 scripts/logs/finished_logs/*
 scripts/logs/slurm_logs/*
