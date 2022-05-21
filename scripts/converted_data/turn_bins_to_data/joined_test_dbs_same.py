@@ -1,14 +1,15 @@
-# Make sure that SPLIT_DATA_SAVE is divieded without leftovers, otherwise the while loop will truncate the last elements
-# only one bin file - chunckisize the file for small pieces by SPLIT_DATA_SAVE
+# only one bin file
 # virtual environment tf_gpu_py36
-#import h5py
+# The different between this and the "joined_test_dbs.py" and this is that this one a is:
+# joined_test_dbs.py - All the  datasets are run through each model(e.g. 7 datasets * 7 models = 49 iterations)
+# joined_test_dbs_same.py - Only the mask dataset runs on the same model(e.g. covid19 ds on the covid19 model)
+
 import os
 import gc
 import json
 import torch
 import pickle
 import shutil
-import argparse
 from mxnet import nd
 import mxnet as mx
 import numpy as np
@@ -17,25 +18,21 @@ from datetime import datetime
 from itertools import groupby
 
 # Constants
-MAX_NUMER_OF_DATA_FOR_MODEL = 300000
-SPLIT_DATA_SAVE = 20000
 BATCH_SIZE = 1
 NUMBER_OF_MODELS = 7
 IMAGE_SIZE = [112, 112]
-MASK_NAME = 'eye'
-BIN_LOC_SKELETON = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/a{}mask/a{}mask.bin'
-BIN_LOC = BIN_LOC_SKELETON.format(MASK_NAME, MASK_NAME)
-#BIN_LOC = '/RG/rg-tal/orlev/project/insightface/datasets/nomask/agedb30.bin'
-DBS_MODELS_DATA_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data'
-MODEL_DIR_LOC_SKELETON = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/rec_run/models/transfer_learning/r100-arcface-{}_masked'
-MODEL_DIR_LOC = MODEL_DIR_LOC_SKELETON.format(MASK_NAME)
-INPUT_MODELS_DATA_LOC = os.path.join(DBS_MODELS_DATA_LOC, 'train')
-TARGET_MODELS_DATA_LOC = os.path.join(DBS_MODELS_DATA_LOC, 'db_train_models')
-INPUT_MODELS_LOC = os.path.join(DBS_MODELS_DATA_LOC, 'db_train_models')
-TARGET_MODELS_LOC = os.path.join(DBS_MODELS_DATA_LOC, 'all_train')
-DATA_LOC_SKELETON = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/a{}mask'
-DATA_LOC = DATA_LOC_SKELETON.format(MASK_NAME)
+#BIN_LOC = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/multi_masks_350000.bin'
+BIN_LOC = '/home/orlev/work/project/insightface/datasets'
+JOINED_DATASET = 'lfw.bin' #'agedb30.bin'#'lfw.bin'
+DBS_MODELS_DATA_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data/tmp22_debug_kill'
+MODEL_DIR_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/rec_run/models/transfer_learning'
 
+# ------------   Also run this when change train to test ---------------
+INPUT_MODELS_DATA_LOC = os.path.join(DBS_MODELS_DATA_LOC, 'test')
+TARGET_MODELS_DATA_LOC = os.path.join(DBS_MODELS_DATA_LOC, 'db_test_models')
+INPUT_MODELS_LOC = os.path.join(DBS_MODELS_DATA_LOC, 'db_test_models')
+TARGET_MODELS_LOC = os.path.join(DBS_MODELS_DATA_LOC, 'all_test')
+# ---------------------------------------------------------------------
 
 def set_models_epochs(models_loc):
     print(f'Modls: {models_loc}')
@@ -101,7 +98,7 @@ def create_embeddings(data, model, batch_size, data_extra, label_shape):
     ba = 0
     ii=0; bb=0;
     while ba < data.shape[0]:
-        #print(f'embeddings::{ii}, bb:{bb}')
+        print(f'embeddings::{ii}, bb:{bb}')
         bb = min(ba + batch_size, data.shape[0])
         count = bb - ba
         _data = nd.slice_axis(data, axis=0, begin=bb - batch_size, end=bb)
@@ -111,12 +108,10 @@ def create_embeddings(data, model, batch_size, data_extra, label_shape):
             db = mx.io.DataBatch(data=(_data, _data_extra), label=(_label, ))
         model.forward(db, is_train=False)
         net_out = model.get_outputs()
-        #importpdb; pdb.set_trace();
-        _embeddings = net_out[0]#.asnumpy()
-        #_embeddings = net_out[0].asnumpy()
+        _embeddings = net_out[0].asnumpy()
         #print(_embeddings.shape)
         if embeddings is None:
-            embeddings = nd.zeros((data.shape[0], _embeddings.shape[1]))
+            embeddings = np.zeros((data.shape[0], _embeddings.shape[1]))
         embeddings[ba:bb, :] = _embeddings[(batch_size - count):, :]
         ba = bb
         ii+=1
@@ -128,14 +123,10 @@ def set_bins_loc(bins_loc):
     bins_files_loc = []
     for curr_dir, subFolder, files in os.walk(bins_loc):
         for file_name in files:
-         if file_name.endswith('.bin'): #file_name.endswith('agedb30.bin') or file_name.endswith('lfw.bin'):    ##################################### changr to include additonal files
+         if file_name.endswith(JOINED_DATASET):# or file_name.endswith('agedb30.bin'):    ##################################### changr to include additonal files
              bins_files_loc.append(os.path.join(curr_dir,file_name))
-    sorted_bin_files_loc = sorted(bins_files_loc,key=lambda x: (x.rsplit('/',1)[-1]))
-    gs_bin_files_loc = [list(v) for i, v in groupby(sorted_bin_files_loc, lambda x: x.rsplit('/',1)[-1])]
-    test_list = gs_bin_files_loc[0]
-    train_list = list(np.concatenate(gs_bin_files_loc[1:]))
-    #bins_loc_dict = {single_list[0].rsplit('/',1)[-1].split('.')[0]:single_list for single_list in gs_bin_files_loc}
-    return test_list, train_list
+    test_list = sorted(bins_files_loc,key=lambda x: (x.rsplit('/',2)[-2]))
+    return test_list
 
 def load_bins(bins_files_loc, image_size):
     all_data_list = []
@@ -174,88 +165,49 @@ def load_bins(bins_files_loc, image_size):
     return all_data_list, all_issame_list
 
 def bin_loc_to_data(bins_dir_loc, image_size):
-    bins_train_list = [bins_dir_loc]
-    train_data_list, train_issame_list = load_bins(bins_train_list, image_size)
-    data_dict = {'train': (train_data_list, train_issame_list)}
-    bins_train_names = [bin_loc.rsplit('/')[-2] +'_'+ bin_loc.rsplit('/',1)[-1].split('.')[0] for bin_loc in bins_train_list]
-    all_bins_names_dict = {'train': bins_train_names}
+    bins_test_list = set_bins_loc(bins_dir_loc)
+    test_data_list, test_issame_list = load_bins(bins_test_list, image_size)
+    data_dict = {'test': (test_data_list, test_issame_list)}
+    bins_train_names = [bin_loc.rsplit('/')[-2] +'_'+ bin_loc.rsplit('/',1)[-1].split('.')[0] for bin_loc in bins_test_list]
+    all_bins_names_dict = {'test': bins_train_names}
     return data_dict, all_bins_names_dict
 
 
 
-# this is read every file of  data and than save(instaed read a all sata and thaen save)
+# This is read every file of  data and than save(instaed read a all sata and thaen save)
 def forward_bins_through_models(model_dir_loc, bins_dir_loc, image_size, batch_size):
     models_dir, epochs = set_models_epochs(model_dir_loc)
     models, models_thresholds, models_names = set_models(models_dir, epochs, batch_size, image_size)
-    #models, models_thresholds, models_names = [models[args.model]], [models_thresholds[args.model]], [models_names[args.model]]
     data_dict, all_bins_names_dict = bin_loc_to_data(bins_dir_loc, image_size)
+    
     for dstype_name, (data_lists, issame_lists) in data_dict.items():
         for data_i, (data_list, issame_list) in enumerate(zip(data_lists, issame_lists)):
-            bin_data_length = data_list[0].shape[0]
-            issame_length = len(issame_list)
-
-            for model_i, model in enumerate(models):
-                aleardy_processed = 0; split_num = 0; 
-                while aleardy_processed < bin_data_length: #and aleardy_processed < 700000:#aleardy_processed < 200000:# 500000:#MAX_NUMER_OF_DATA_FOR_MODEL:
-                      #if aleardy_processed >= 100000:#200000:
-                      #if aleardy_processed >= 350000:
-                      if aleardy_processed >= 140000:
-                         coverted_data = None
-                         time1 = datetime.now()
-                         bin_data_org = data_list[0][aleardy_processed : min(aleardy_processed + SPLIT_DATA_SAVE, bin_data_length)]
-                         bin_data_flip = data_list[1][aleardy_processed : min(aleardy_processed + SPLIT_DATA_SAVE, bin_data_length)]
-                         embedding_org = create_embeddings(bin_data_org, model, batch_size,  None, None)
-                         embedding_flip = create_embeddings(bin_data_flip, model, batch_size, None, None)
-                         embeddings_joined = embedding_org + embedding_flip
-                         if coverted_data is None:
-                            coverted_data = embeddings_joined
-                            coverted_issame = nd.array(issame_list[aleardy_processed : min(aleardy_processed + SPLIT_DATA_SAVE, bin_data_length)])
+            model = models[data_i]
+            coverted_data = None
+            time1 = datetime.now()
+            embedding_org = create_embeddings(data_list[0], model, batch_size,  None, None)
+            embedding_flip = create_embeddings(data_list[1], model, batch_size, None, None)
+            embeddings_joined = embedding_org + embedding_flip
+            if coverted_data is None:
+               coverted_data = embeddings_joined
+               coverted_issame = np.asarray(issame_list)
     
-                         time2 = datetime.now()
-                         diff = time2 - time1
-                         time1 = datetime.now()
-                         #curr_model_name = models_dir[model_i].rsplit('/',1)[-1]
-                         curr_model_name = models_names[0]
-                         print(f'Emb created. db:{dstype_name}({data_i+1}/{len(data_lists)}). model:{curr_model_name}({model_i+1}/{len(models)}). Processed:({aleardy_processed}/{bin_data_length}) . time(min):{diff.total_seconds()/60}')
+            time2 = datetime.now()
+            diff = time2 - time1
+            curr_model_name = models_dir[data_i].rsplit('/',1)[-1]
+            print(f'Emb created. db:{dstype_name}({data_i+1}/{len(data_lists)}). model:{curr_model_name}({data_i+1}/{len(models)}). time(min):{np.round(diff.total_seconds()/60,2)}')
     
-                         dst_dir = os.path.join(DATA_LOC, dstype_name, 'db_' + all_bins_names_dict[dstype_name][data_i], models_names[0])
-                         os.makedirs(dst_dir, exist_ok=True)
-                         time2 = datetime.now()
-                         diff = time2 - time1
-                         print('MAKING THE DIRE IF NOT EXISTS', diff.total_seconds()/60)
-                         time1 = datetime.now()
-                         #import pdb; pdb.set_trace();
-                         #filename = os.path.join(dst_dir, f'data_{aleardy_processed}.h5py')
-                         #f1 = h5py.File(filename, "w")
-                         #f1.create_dataset('dataset',data= coverted_data.asnumpy(), shape=(1000,512), dtype=np.float32)
-                         #f1.close()
-                         #np.save(os.path.join(dst_dir, f'data_{aleardy_processed}.npy'), coverted_data)
-                         mx.nd.save(os.path.join(dst_dir, f'data_{aleardy_processed}.npy'), coverted_data) # This is essental 11
-                         time2 = datetime.now()
-                         diff = time2 - time1
-                         print('data saving time', diff.total_seconds()/60)
-                         time1 = datetime.now()
-                         if split_num <= issame_length:
-                            mx.nd.save(os.path.join(dst_dir, f'labels_{aleardy_processed}.npy'), coverted_issame)
-                         time2 = datetime.now()
-                         diff = time2 - time1
-                         print('Save file of labels to locaton time(min)', diff.total_seconds()/60)
-                         time1 = datetime.now()
-                         del coverted_data
-                         del coverted_issame
-                         del embedding_org
-                         del embedding_flip
-                         del embeddings_joined
-                         time2 = datetime.now()
-                         diff = time2 - time1
-                         print('Delete time(min)', diff.total_seconds()/60)
-                         time1 = datetime.now()
-                         gc.collect()
-                         time2 = datetime.now()
-                         diff = time2 - time1
-                         print('Collect time(min)', diff.total_seconds()/60)
-                      aleardy_processed += SPLIT_DATA_SAVE
-                      split_num += 1
+            # import pdb; pdb.set_trace()
+            dst_dir = os.path.join(INPUT_MODELS_DATA_LOC, 'db_' + all_bins_names_dict[dstype_name][data_i], models_names[data_i])
+            os.makedirs(dst_dir, exist_ok=True)
+            np.save(os.path.join(dst_dir, 'data.npy'), coverted_data)
+            np.save(os.path.join(dst_dir, 'labels.npy'), coverted_issame)
+            del coverted_data
+            del coverted_issame
+            del embedding_org
+            del embedding_flip
+            del embeddings_joined
+            gc.collect()
 
     print('Fiished: join_models_dbs funcion')
 
@@ -263,12 +215,19 @@ def get_files_loc_models_data(data_loc):
     data_files_loc = []
     label_files_loc = []
 
-    for curr_dir, subFolder, files in os.walk(data_loc):
-            if file_name.endswith('data.npy'):
-                data_files_loc.append(os.path.join(curr_dir,file_name))
+    for curr_dir1, subFolders, _ in os.walk(data_loc):
+        for sub_folder in sorted(subFolders, key=lambda x: x.rsplit('/',1)[-1]):
+            for curr_dir2, subFolders2, _ in os.walk(os.path.join(curr_dir1, sub_folder)):
+                for sub_folder2 in sorted(subFolders2, key=lambda x: x.rsplit('/',1)[-1]):
+                    for curr_dir3, _, files in os.walk(os.path.join(curr_dir2, sub_folder2)):
+                        for file_name in files:
+                            path = os.path.join(curr_dir3,file_name)
+                            name_of_file = path.rsplit('/',1)[-1] 
+                            if file_name.endswith('data.npy'):
+                                data_files_loc.append(os.path.join(curr_dir3,file_name))
 
-            if file_name.endswith('labels.npy'):
-                label_files_loc.append(os.path.join(curr_dir,file_name))
+                            if file_name.endswith('labels.npy'):
+                                label_files_loc.append(os.path.join(curr_dir3,file_name))
 
     joined_loc = [(i,j) for i,j in zip(data_files_loc, label_files_loc)]
     sorted_joined_loc = sorted(joined_loc,key=lambda x: (x[0].split('/')[-4],x[0].split('/')[-2],x[0].split('/')[-3]))
@@ -294,7 +253,7 @@ def joined_models(gs_joined_loc, target_data_loc):
                 combined_dbs_for_model = np.vstack((combined_dbs_for_model, loaded_db))
                 combined_lbls_for_model = np.hstack((combined_lbls_for_model, loaded_lbl))
             toc = datetime.now() 
-            db_name = model_locs[0][0].split('/')[-3]
+            db_name = masked_db[0].split('/')[-3]
             pprint(f'DB name: {db_name}; time: {toc-tic}')
         pprint(f'Loaded: {db_i} DBs for model: {model_name}')
         save_loc = os.path.join(target_data_loc, model_name)
@@ -303,23 +262,43 @@ def joined_models(gs_joined_loc, target_data_loc):
         np.save(save_loc + '/labels.npy', combined_lbls_for_model)
         
         
-
 def get_files_loc_models(data_loc):
     data_files_loc = []
     label_files_loc = []
 
-    for curr_dir, subFolder, files in os.walk(DATA_LOC):
-        for file_name in files:
-            if file_name.endswith('data.npy'):
-                data_files_loc.append(os.path.join(curr_dir,file_name))
+    for curr_dir1, subFolders1, _ in os.walk(data_loc):
+        for sub_folder1 in sorted(subFolders1, key=lambda x: x.rsplit('/',1)[-1]):
+            for curr_dir2, _, files in os.walk(os.path.join(curr_dir1, sub_folder1)):
+                for file_name in files:
+                    if file_name.endswith('data.npy'):
+                        data_files_loc.append(os.path.join(curr_dir2,file_name))
 
-            if file_name.endswith('labels.npy'):
-                label_files_loc.append(os.path.join(curr_dir,file_name))
+                    if file_name.endswith('labels.npy'):
+                        label_files_loc.append(os.path.join(curr_dir2,file_name))
 
     joined_loc = [(i,j) for i,j in zip(data_files_loc, label_files_loc)]
     sorted_joined_loc = sorted(joined_loc,key=lambda x: (x[0].split('/')[-2].split('_')[0]))
     
     return sorted_joined_loc
+
+#def get_files_loc_models(data_loc):
+#    data_files_loc = []
+#    label_files_loc = []
+#
+#    for curr_dir, subFolders, files in os.walk(data_loc):
+#        for sub_folder in subFolders:
+#            for curr_dir, subFolder, files in os.walk(os.path.join(curr_dir,sub_folder)):
+#                for file_name in files:
+#                    if file_name.endswith('data.npy'):
+#                        data_files_loc.append(os.path.join(curr_dir,file_name))
+#        
+#                    if file_name.endswith('labels.npy'):
+#                        label_files_loc.append(os.path.join(curr_dir,file_name))
+#        
+#    joined_loc = [(i,j) for i,j in zip(data_files_loc, label_files_loc)]
+#    sorted_joined_loc = sorted(joined_loc,key=lambda x: (x[0].split('/')[-2].split('_')[0]))
+#    
+#    return sorted_joined_loc
 
 def combine_datasets(dbs_loc, dst_loc):
     comb_data = None
@@ -333,21 +312,20 @@ def combine_datasets(dbs_loc, dst_loc):
     labels_file = np.load(loc[1])
     torch.save(labels_file, os.path.join(dst_loc, 'all_labels.pt'), pickle_protocol=4)
     torch.save(comb_data, os.path.join(dst_loc, 'all_data.pt'), pickle_protocol=4)
-
-
+    
 # Forward the bins files throught the different models and save them
-#import pdb; pdb.set_trace();
 forward_bins_through_models(MODEL_DIR_LOC, BIN_LOC, IMAGE_SIZE, BATCH_SIZE)
 
-#gs_joined_loc = get_files_loc_models_data(INPUT_MODELS_DATA_LOC)
-#joined_models(gs_joined_loc, TARGET_MODELS_DATA_LOC)
-#
-## join the bins for each model together
-#dbs_loc = get_files_loc_models(INPUT_MODELS_LOC)
-#os.makedirs(TARGET_MODELS_LOC, exist_ok=True)
-#combine_datasets(dbs_loc, TARGET_MODELS_LOC)
-#
-## Remove all intermediate files
+gs_joined_loc = get_files_loc_models_data(INPUT_MODELS_DATA_LOC)
+import pdb; pdb.set_trace()
+joined_models(gs_joined_loc, TARGET_MODELS_DATA_LOC)
+
+# join the bins for each model together
+dbs_loc = get_files_loc_models(INPUT_MODELS_LOC)
+os.makedirs(TARGET_MODELS_LOC, exist_ok=True)
+combine_datasets(dbs_loc, TARGET_MODELS_LOC)
+
+# Remove all intermediate files
 #shutil.rmtree(INPUT_MODELS_DATA_LOC)
 #shutil.rmtree(TARGET_MODELS_DATA_LOC)
 #shutil.rmtree(INPUT_MODELS_LOC)

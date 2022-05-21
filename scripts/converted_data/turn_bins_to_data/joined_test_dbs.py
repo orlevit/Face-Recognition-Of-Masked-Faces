@@ -19,8 +19,8 @@ NUMBER_OF_MODELS = 7
 IMAGE_SIZE = [112, 112]
 #BIN_LOC = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/multi_masks_350000.bin'
 BIN_LOC = '/home/orlev/work/project/insightface/datasets'
-JOINED_DATASET = 'agedb30.bin'#'lfw.bin'
-DBS_MODELS_DATA_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data/tmp22'
+JOINED_DATASET = 'lfw.bin' #'agedb30.bin'#'lfw.bin'
+DBS_MODELS_DATA_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data/tmp22_kill'
 MODEL_DIR_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/rec_run/models/transfer_learning'
 
 # ------------   Also run this when change train to test ---------------

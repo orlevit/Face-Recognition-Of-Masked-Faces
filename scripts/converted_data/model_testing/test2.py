@@ -13,12 +13,10 @@ from config import TEST_DS_IND
 from models_architecture import *
 from helper import EmbbedingsDataset, get_optimizer, one_epoch_run
 
-BASE_DATA_LOC = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/converted_data/ready_data/350000_test_lfw_casia_pairs'
+BASE_DATA_LOC = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/converted_data/tmp/db_for_test'
 BASE_MODELS_PATH='/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/converted_data/models'
 
 MODEL_PATH = os.path.join(BASE_MODELS_PATH, '350000_pairs_batch_all_hidden4096_NeuralNetwork5_lr1e-05_32_D20_02_2022_T18_53_58_770221.pt')
-TEST_DATA_LOC = os.path.join(BASE_DATA_LOC, 'data.pt')
-TEST_LABELS_LOC = os.path.join(BASE_DATA_LOC, 'labels.pt')
 
 # Disable
 def blockPrint():
@@ -64,9 +62,8 @@ def main():
 
     for cur_dir, subFolders, _ in os.walk(BASE_DATA_LOC):
         for sub_dir in subFolders:
-            data = torch.load(os.path.join(cur_dir, sub_dir, 'data.pt'))
-            labels = list(torch.load(os.path.join(cur_dir, sub_dir, 'labels.pt'))[0,:])
-            #import pdb;pdb.set_trace()
+            data = np.load(os.path.join(cur_dir, sub_dir, 'data.npy'))
+            labels = list(np.load(os.path.join(cur_dir, sub_dir, 'labels.npy'))[0,:])
             print(f'data shape: {data.shape}, labels length: {len(labels)}')
             indices = np.arange(len(labels))
             classification_list = []
