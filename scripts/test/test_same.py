@@ -77,6 +77,7 @@ def make_test_same():
                 data_dir, target = os.path.split(input_file)
                 _, dir_name = os.path.split(data_dir)
                 target_name_only = target.split('.')[0]
+                #import pdb;pdb.set_trace();
                 roc_name = os.path.join(TEST_SAME_ROC, f'same-{target_name_only}_{model_name}_{dir_name}')
                 input_str += f'{ARCFACE_ENV} {data_dir} {target_name_only} {model} ' \
                              f'{roc_name} {threshold} {TEST_SAME_COMMANDS_FILE} {TEST_SAME_TRACK_FILE} '

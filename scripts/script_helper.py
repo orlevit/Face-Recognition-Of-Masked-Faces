@@ -96,7 +96,7 @@ def fill_table(arr_results, latest_jobs):
         first, middle, _, tested_db = result.strip().split("_")
         _, db_name = first.split("-")
         model_name = middle.split("-")[-1]
-        model_name_idx = [i for i, one_model in enumerate(MODELS_DIRS_LIST) if model_name in one_model]
+        model_name_idx = [i for i, one_model in enumerate(MODELS_DIRS_LIST) if model_name in one_model.split('/')[-1]]
         target_db_idx = [i for i, one_model in enumerate(ARCFACE_DS_NAMES) if tested_db in one_model]
 
         if len(model_name_idx) != 1 or len(target_db_idx) != 1:

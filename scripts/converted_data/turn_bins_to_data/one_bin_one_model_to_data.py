@@ -22,7 +22,7 @@ SPLIT_DATA_SAVE = 20000
 BATCH_SIZE = 1
 NUMBER_OF_MODELS = 7
 IMAGE_SIZE = [112, 112]
-MASK_NAME = 'eye'
+MASK_NAME = 'sunglasses'
 BIN_LOC_SKELETON = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/a{}mask/a{}mask.bin'
 BIN_LOC = BIN_LOC_SKELETON.format(MASK_NAME, MASK_NAME)
 #BIN_LOC = '/RG/rg-tal/orlev/project/insightface/datasets/nomask/agedb30.bin'
@@ -199,7 +199,7 @@ def forward_bins_through_models(model_dir_loc, bins_dir_loc, image_size, batch_s
                 while aleardy_processed < bin_data_length: #and aleardy_processed < 700000:#aleardy_processed < 200000:# 500000:#MAX_NUMER_OF_DATA_FOR_MODEL:
                       #if aleardy_processed >= 100000:#200000:
                       #if aleardy_processed >= 350000:
-                      if aleardy_processed >= 140000:
+                      if aleardy_processed >= 260000:
                          coverted_data = None
                          time1 = datetime.now()
                          bin_data_org = data_list[0][aleardy_processed : min(aleardy_processed + SPLIT_DATA_SAVE, bin_data_length)]

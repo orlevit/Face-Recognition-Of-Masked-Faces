@@ -16,6 +16,7 @@ from helper import EmbbedingsDataset, get_optimizer, one_epoch_run
 BASE_DATA_LOC = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/converted_data/tmp/db_for_test'
 BASE_MODELS_PATH='/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/converted_data/models'
 
+#MODEL_PATH = os.path.join(BASE_MODELS_PATH, '350000_pairs_batch_all_NeuralNetwork5_lr(1e-07,)_32_D19_02_2022_T22_06_17_833096.pt')
 MODEL_PATH = os.path.join(BASE_MODELS_PATH, '350000_pairs_batch_all_hidden4096_NeuralNetwork5_lr1e-05_32_D20_02_2022_T18_53_58_770221.pt')
 
 # Disable
@@ -49,7 +50,7 @@ def get_test_data_by_indices(data, labels, indices):
     return test_dataloader
 
 def main():
-
+    print(MODEL_PATH)
     model = NeuralNetwork5()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.load_state_dict(torch.load(MODEL_PATH))

@@ -15,6 +15,9 @@ scripts/prepare_run/bin/bins_files
 scripts/logs/finished_logs/*
 scripts/logs/slurm_logs/*
 scripts/rec_run/models/*
+scripts/test/roc/*
+scripts/converted_data/lfw_new_composed_diff_masks/
+
 images_masked*
 *.err
 *.out

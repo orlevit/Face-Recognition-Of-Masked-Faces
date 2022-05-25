@@ -5,13 +5,9 @@ import numpy as np
 from pprint import pprint
 from datetime import datetime
 
-#DATA_PATH = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data/train/db_bin_multi_masks_350000'
-#TARGET_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data/train/db_bin_multi_masks_350000/all'
 MASK = 'covid19'
-DATA_PATH = f'/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/a{MASK}mask/train/db_a{MASK}mask_a{MASK}mask'
-TARGET_LOC = f'/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/a{MASK}mask/train/db_a{MASK}mask_a{MASK}mask/{MASK}_model/all'
-#DATA_PATH = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/converted_data/tmp/test/db_nomask_lfw'
-#TARGET_LOC = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/converted_data/ready_data/350000_test_lfw_casia_pairs/nomask'
+DATA_PATH = f'/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/a{MASK}mask/train/db_a{MASK}mask_a{MASK}mask/{MASK}_model'
+TARGET_LOC = f'/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/a{MASK}mask/train/combined'
 DATA_TARGET_LOC = os.path.join(TARGET_LOC, 'data.npy')
 LABELS_TARGET_LOC = os.path.join(TARGET_LOC, 'labels.npy')
 
@@ -36,6 +32,7 @@ def get_files_path(data_path):
     labels_path_list = sorted(labels_path_list, key=lambda path: int(path.rsplit('/',1)[-1].split('.')[0].split('_')[-1]))
     pprint(data_path_list)
     pprint(labels_path_list)
+    import pdb;pdb.set_trace();
     return data_path_list, labels_path_list
 
 def compose_data(paths, is_data):
@@ -46,11 +43,6 @@ def compose_data(paths, is_data):
         loaded = mx.nd.load(path)
         loaded_numpy = loaded[0].asnumpy()
         loaded_numpy = np.expand_dims(loaded_numpy, axis=0)
-#        if is_data:
-#           #import pdb;pdb.set_trace();
-#           loaded_numpy = np.expand_dims(np.load(path, allow_pickle=True), axis=0)
-#        else:
-#           loaded_numpy = np.expand_dims(np.load(path, allow_pickle=True), axis=0)
         if all_data is None:
             all_data = loaded_numpy
         else:

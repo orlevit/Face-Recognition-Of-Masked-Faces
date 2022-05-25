@@ -77,8 +77,10 @@ COVID19_MASK_MODEL = os.path.join(MODELS_BASE_LOC, 'r100-arcface-covid19_masked'
 HAT_MASK_MODEL = os.path.join(MODELS_BASE_LOC, 'r100-arcface-hat_masked')
 #SCARF_MASK_MODEL = os.path.join(MODELS_BASE_LOC, 'r100-arcface-scarf_masked')
 SUNGLASSES_MASK_MODEL = os.path.join(MODELS_BASE_LOC, 'r100-arcface-sunglasses_masked')
+SC_MASK_MODEL = os.path.join(MODELS_BASE_LOC, 'r100-arcface-sc_masked')
+SH_MASK_MODEL = os.path.join(MODELS_BASE_LOC, 'r100-arcface-sh_masked')
 
-MODELS_DIRS_LIST = [NOMASK_MODEL_ORG_LOC, NOMASK_MODEL_LOC, EYE_MASK_MODEL, HAT_MASK_MODEL, COVID19_MASK_MODEL, SUNGLASSES_MASK_MODEL]
+MODELS_DIRS_LIST = [NOMASK_MODEL_ORG_LOC, NOMASK_MODEL_LOC, EYE_MASK_MODEL, HAT_MASK_MODEL, COVID19_MASK_MODEL, SUNGLASSES_MASK_MODEL, SC_MASK_MODEL, SH_MASK_MODEL]
 
 # Results table
 RESULTS_HEADERS = 'Model, Masked Dataset, Threshold for best accuracy, Best accuracy on masked LFW, ' \
