@@ -23,7 +23,7 @@ def main(args):
      optimizer, opt_params = get_optimizer(args.combination_number, model)
 
      # Set training logs
-     model_name = f'350000_pairs_batch_all_hidden4096_{type(model).__name__}_lr{opt_params[0]}_{EMBBEDINGS_REDUCED}_{datetime.now().strftime("D%d_%m_%Y_T%H_%M_%S_%f")}'
+     model_name = f'300000_pairs_same_masks_hidden4096_{type(model).__name__}_lr{opt_params[0]}_{EMBBEDINGS_REDUCED}_{datetime.now().strftime("D%d_%m_%Y_T%H_%M_%S_%f")}'
      print(model_name)
      writer = SummaryWriter(os.path.join(RUN_DIR, model_name))
      

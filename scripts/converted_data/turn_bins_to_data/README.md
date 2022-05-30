@@ -15,6 +15,9 @@ Code files:
 * one_bin_one_model_to_data.py - Same as "one_bin_to_data3.py", but with the different data location, more easy to change the location. This is the latest
 
 * nd_to_np.py - turn mx.nd array to numpy array and save them.
+* all_to_one_one_dir.py - combined all the small ".npy" files of same mask type to one joined file of the same mask.
+* all_to_one_one_dir_all.py - combined all the combined files of mask types, to one file in total.
+
 
 In directory "sbatch":
 * sbatch_convert_bin.sh - run "one_bin_to_data3.py" for specific model
