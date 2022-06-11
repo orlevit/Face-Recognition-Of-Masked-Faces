@@ -10,7 +10,7 @@ from helper import one_epoch_run, create_dataloaders, get_optimizer, parse_argum
 
 def main(args):
      train_dataloader, valid_dataloader, test_dataloader = create_dataloaders(TRAIN_DATA_LOC, TRAIN_LABELS_LOC, TEST_DATA_LOC, TEST_LABELS_LOC, \
-                                                                              SPLIT_TRAIN, TRAIN_DS_IND, VALID_DS_IND, WHOLE_DATA_BATCH, TEST_DS_IND, args)
+                                                                              SPLIT_TRAIN, TRAIN_DS_IND, VALID_DS_IND, WHOLE_DATA_BATCH, TEST_DS_IND)
      device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
      print(f'The model will run on device: {device}')
      print(f'Train samples:{len(train_dataloader.dataset)}, Valid samples:{len(valid_dataloader.dataset)}, Test samples:{len(test_dataloader.dataset)}')

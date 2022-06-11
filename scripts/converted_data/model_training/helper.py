@@ -24,7 +24,7 @@ from config import TRAIN_DS_IND, VALID_DS_IND, TEST_DS_IND, WHOLE_DATA_BATCH, hs
 #       selected_labels = labels
 #    return selected_data, selected_labels 
 
-def select_train_valid(train_data, split_train, args):
+def select_train_valid(train_data, split_train):
     models_num, imgs_num, embs_num = train_data.shape
     total_pairs_mask_img_num = (imgs_num // 2) / models_num
     train_mask_imgs_num = math.ceil((total_pairs_mask_img_num) * split_train / 2.0) * 2
@@ -142,14 +142,14 @@ def one_epoch_run(train_dataloader, optimizer, model, loss_fn, device, train_ind
     return avg_loss, avg_classificatin_loss, run_time
 
 
-def create_dataloaders(train_data_loc, train_labels_loc, test_data_loc, test_labels_loc, split_train, train_ds_ind, valid_ds_ind, batch_size, test_ds_ind, args):
+def create_dataloaders(train_data_loc, train_labels_loc, test_data_loc, test_labels_loc, split_train, train_ds_ind, valid_ds_ind, batch_size, test_ds_ind):
     train_data = torch.load(train_data_loc)
     train_labels = torch.load(train_labels_loc)
     test_data = torch.load(test_data_loc)
     test_labels = torch.load(test_labels_loc)
   
     # Numbers for split the data properly 
-    mask =select_train_valid(train_data, split_train, args)
+    mask =select_train_valid(train_data, split_train)
 
     tic = datetime.now()
     trainDataset = EmbbedingsDataset(train_data, train_labels, train_ds_ind, mask)
