@@ -17,12 +17,12 @@ from datetime import datetime
 from itertools import groupby
 
 # Constants
-MAX_NUMER_OF_DATA_FOR_MODEL = 300000
+MAX_NUMER_OF_DATA_FOR_MODEL = 700000
 SPLIT_DATA_SAVE = 20000
 BATCH_SIZE = 1
 NUMBER_OF_MODELS = 7
 IMAGE_SIZE = [112, 112]
-MASK_NAME = 'covid19'
+MASK_NAME = 'sunglasses' # if change to "no" keep the model as orgmodel!
 BIN_LOC_SKELETON = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/train/a{}mask/a{}mask.bin'
 BIN_LOC = BIN_LOC_SKELETON.format(MASK_NAME, MASK_NAME)
 #BIN_LOC = '/RG/rg-tal/orlev/project/insightface/datasets/nomask/agedb30.bin'
@@ -196,10 +196,10 @@ def forward_bins_through_models(model_dir_loc, bins_dir_loc, image_size, batch_s
 
             for model_i, model in enumerate(models):
                 aleardy_processed = 0; split_num = 0; 
-                while aleardy_processed < bin_data_length: #and aleardy_processed < 700000:#aleardy_processed < 200000:# 500000:#MAX_NUMER_OF_DATA_FOR_MODEL:
+                while aleardy_processed <= bin_data_length: #and aleardy_processed < 700000:#aleardy_processed < 200000:# 500000:#MAX_NUMER_OF_DATA_FOR_MODEL:
                       #if aleardy_processed >= 100000:#200000:
                       #if aleardy_processed >= 350000:
-                      if aleardy_processed >= 320000:
+                      if aleardy_processed == 440000:
                          coverted_data = None
                          time1 = datetime.now()
                          bin_data_org = data_list[0][aleardy_processed : min(aleardy_processed + SPLIT_DATA_SAVE, bin_data_length)]

@@ -18,12 +18,13 @@ from itertools import groupby
 
 # Constants
 NUMBER_OF_MODELS = 7
+#DBS_MODELS_DATA_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/images_masked_crop/sample_ROF/wsnp/covid19/combined'
 DBS_MODELS_DATA_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data/tmp'
 MODEL_DIR_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/rec_run/models/transfer_learning'
 
 # ------------   Also run this when change train to test ---------------
 INPUT_MODELS_DATA_LOC = os.path.join(DBS_MODELS_DATA_LOC, 'test')
-TARGET_MODELS_DATA_LOC = os.path.join(DBS_MODELS_DATA_LOC, 'db_for_test')
+TARGET_MODELS_DATA_LOC = os.path.join(DBS_MODELS_DATA_LOC, 'db_for_test_combinedV1')
 # ---------------------------------------------------------------------
 # The change in this functon relative to the dame fucntion in the joined_test_dbs.py file is changing 2 to 3 in the location with the arrow: "<---"
 def get_files_loc_models_data(data_loc):
@@ -111,5 +112,6 @@ def combine_datasets(dbs_loc, dst_loc):
     torch.save(comb_data, os.path.join(dst_loc, 'all_data.pt'), pickle_protocol=4)
     
 gs_joined_loc = get_files_loc_models_data(INPUT_MODELS_DATA_LOC)
+import pdb;pdb.set_trace();
 joined_models(gs_joined_loc, TARGET_MODELS_DATA_LOC)
 

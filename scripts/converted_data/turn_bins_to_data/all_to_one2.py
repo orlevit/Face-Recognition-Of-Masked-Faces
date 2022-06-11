@@ -7,8 +7,8 @@ from datetime import datetime
 #DATA_PATH = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data/train/db_bin_multi_masks_350000'
 #TARGET_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data/train/db_bin_multi_masks_350000/all'
 MASK = 'covid19'
-DATA_PATH = f'/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/a{MASK}mask/train/db_a{MASK}mask_a{MASK}mask'
-TARGET_LOC = f'/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/a{MASK}mask/train/db_a{MASK}mask_a{MASK}mask/{MASK}_model/all'
+DATA_PATH = f'/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/train/a{MASK}mask/train/db_a{MASK}mask_a{MASK}mask'
+TARGET_LOC = f'/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/train/a{MASK}mask/train/db_a{MASK}mask_a{MASK}mask/combined350k'
 #DATA_PATH = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/converted_data/tmp/test/db_nomask_lfw'
 #TARGET_LOC = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/converted_data/ready_data/350000_test_lfw_casia_pairs/nomask'
 DATA_TARGET_LOC = os.path.join(TARGET_LOC, 'data.npy')
@@ -31,8 +31,8 @@ def get_files_path(data_path):
                     if name_of_file.startswith('labels'): 
                         labels_path_list.append(path)
                    
-    data_path_list = sorted(data_path_list, key=lambda path: path.rsplit('/',1)[-2])
-    labels_path_list = sorted(labels_path_list, key=lambda path: path.rsplit('/',1)[-2])
+    data_path_list = sorted(data_path_list, key=lambda path:int(path.rsplit('/',1)[-1].split('.')[0].split('_')[-1]))
+    labels_path_list = sorted(labels_path_list, key=lambda path: int(path.rsplit('/',1)[-1].split('.')[0].split('_')[-1]))
     pprint(data_path_list)
     pprint(labels_path_list)
     return data_path_list, labels_path_list
@@ -59,6 +59,7 @@ def compose_data(paths, is_data):
     return all_data 
 
 data_path_list, labels_path_list =  get_files_path(DATA_PATH)
+import pdb;pdb.set_trace();
 data = compose_data(data_path_list, True)
 lables = compose_data(labels_path_list, False)
 

@@ -5,7 +5,7 @@ kill/
 *.bin
 *.zip
 scripts/converted_data/models
-scripts/converted_data/tmp
+scripts/converted_data/lfw_test
 scripts/converted_data/tmp2
 scripts/converted_data/train
 scripts/converted_data/ready_data
