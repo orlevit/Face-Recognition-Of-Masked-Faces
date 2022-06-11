@@ -34,12 +34,12 @@ def main(args):
      best_cvloss = -float('inf')
      
      while epoch < EPOCHS and continue_training:
-         avg_loss, avg_ctrain_loss, ttime = one_epoch_run(train_dataloader, optimizer, model, loss_fn, device, train_ind=True)
+         avg_loss, avg_ctrain_loss, avg_thr_train, run_time = one_epoch_run(train_dataloader, optimizer, model, loss_fn, device, train_ind=True)
          # We don't need gradients on to do reporting
-         avg_vloss, avg_cvalid_loss, vtime = one_epoch_run(valid_dataloader, optimizer, model, loss_fn, device, train_ind=False)
+         avg_vloss, avg_cvalid_loss, avg_threshold, run_time = one_epoch_run(valid_dataloader, optimizer, model, loss_fn, device, train_ind=False, best_threshold=avg_thr_train)
      
-         print('Epoch:{}/{}. Time- Train:{} Valid:{}. Loss- Train:{} Valid:{}, classification acc:- Train:{} Valid:{}'.format(
-                epoch, EPOCHS, ttime, vtime, avg_loss, avg_vloss, avg_ctrain_loss, avg_cvalid_loss))
+         print('Epoch:{}/{}. Time- Train:{} Valid:{}. Loss- Train:{} Valid:{}, classification acc:- Train:{} Valid:{}, threshold:{}'.format(
+                epoch, EPOCHS, ttime, vtime, avg_loss, avg_vloss, avg_ctrain_loss, avg_cvalid_loss, avg_thr_train))
 
          # Lof to tensorboard
          writer.add_scalars('Loss', {'Train': avg_loss, 'Valid': avg_vloss}, epoch)

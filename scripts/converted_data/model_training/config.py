@@ -16,7 +16,7 @@ SPLIT_TRAIN = 0.8
 
 # Training hyperparameters
 EPOCHS = 1000000
-MIN_LOSS_SAVE = 1
+MIN_LOSS_SAVE = 0.5
 EARLY_STOP_DIFF = float('inf')
 WHOLE_DATA_BATCH = -1 # contant that meant to take the batch size as whole the dataset
 BATCH_SIZE = 1000

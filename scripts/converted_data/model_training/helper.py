@@ -107,11 +107,38 @@ class EmbbedingsDataset(Dataset):
         embeddings2 = np.concatenate(np.expand_dims([emb[2 * idx + 1, :] for emb in self.data],axis=0), axis=1)
         label = self.labels[idx]
         return embeddings1, embeddings2, label
-    
-def one_epoch_run(train_dataloader, optimizer, model, loss_fn, device, train_ind):
+   
+def calculate_accuracy(threshold, dist, actual_issame):
+    predict_issame = torch.gt(dist, threshold)
+    tp = torch.sum(torch.logical_and(predict_issame, actual_issame))
+    tn = torch.sum(torch.logical_and(torch.logical_not(predict_issame), torch.logical_not(actual_issame)))
+    acc = float(tp + tn) / len(dist)
+
+    return  acc
+
+def find_a_threshold(outputs, labels, train_ind, best_threshold):
+    if train_ind:
+       thresholds = np.arange(-0.1, 0.1, 0.0001)
+       nrof_thresholds = len(thresholds)
+       accuracy = np.zeros(10)
+       outputs = torch.squeeze(outputs)
+
+       for threshold_idx, threshold in enumerate(thresholds):
+           accuracy[threshold_idx] = calculate_accuracy(threshold, dist, labels)
+
+       max_threshold_idx = np.argmax(accuracy)
+       max_threshold = thresholds[max_threshold_idx]
+       max_accuracy = accuracy[max_threshold_idx]
+    else
+       max_accuracy = calculate_accuracy(best_threshold, dist, labels)
+       max_threshold = best_threshold
+    return max_threshold, max_accuracy
+
+def one_epoch_run(train_dataloader, optimizer, model, loss_fn, device, train_ind, best_threshold=None):
     last_loss = 0.
     running_loss = 0.
     running_classificatin_loss = 0.
+    thresholdis_list = [] 
     tic = datetime.now()
 
     model.train(train_ind)
@@ -131,15 +158,19 @@ def one_epoch_run(train_dataloader, optimizer, model, loss_fn, device, train_ind
            optimizer.step()
 
         running_loss += loss.item()
-        running_classificatin_loss += (sum((converted_labels.cpu().detach().numpy() * outputs.cpu().detach().numpy()) > 0) / len(converted_labels))[0]
-        #import pdb; pdb.set_trace();
-        #running_classificatin_loss += (sum((labels.cpu().detach().numpy().nonzero()[1] * np.argmax(outputs.cpu().detach().numpy(), axis=1)) > 0) / len(labels[:,0]))
+
+        threshold, max_accuracy = find_a_threshold(outputs, labels, train_ind, best_threshold)
+        running_classificatin_loss += max_accuracy
+        thresholds_list.append(threshold)
+        print("is only one batch?") # del
+        import pdb;pdb.set_trace(); # del
         
     run_time = round((datetime.now() - tic).total_seconds(), 1)
     avg_classificatin_loss = running_classificatin_loss / len(train_dataloader)
     avg_loss = running_loss / len(train_dataloader)
+    avg_threshold = np.mean(thresholds_list)
 
-    return avg_loss, avg_classificatin_loss, run_time
+    return avg_loss, avg_classificatin_loss, run_time, avg_threshold
 
 
 def create_dataloaders(train_data_loc, train_labels_loc, test_data_loc, test_labels_loc, split_train, train_ds_ind, valid_ds_ind, batch_size, test_ds_ind):
