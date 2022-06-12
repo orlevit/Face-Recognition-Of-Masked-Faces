@@ -1,11 +1,16 @@
+# joined all the "all files" (got form "chuncks_all.py"). will jouned 7 files along the first axis
 import os
 import torch
 import numpy as np
+from glob import glob
 from pprint import pprint
 from datetime import datetime
 
-DATA_PATH = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data/train/db_bin_multi_masks_350000'
-TARGET_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data/train/db_bin_multi_masks_350000/all'
+JOINED_INPUT_DIR = "all_350k_pairs"
+DATA_PATH = f'/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/train'#/a{args.mask}mask/train/db_a{args.mask}mask_a{args.mask}mask'
+TARGET_LOC = f'/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/train/all/350k_pairs'
+#DATA_PATH = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data/train/db_bin_multi_masks_350000'
+#TARGET_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data/train/db_bin_multi_masks_350000/all'
 DATA_TARGET_LOC = os.path.join(TARGET_LOC, 'data.pt')
 LABELS_TARGET_LOC = os.path.join(TARGET_LOC, 'labels.pt')
 
@@ -13,16 +18,16 @@ def get_files_path(data_path):
     data_path_list = []
     labels_path_list = []
     
-    for cur_dir, _, files in os.walk(data_path):
-        if cur_dir.endswith('all'):
-           for file in files:
-               path = os.path.join(cur_dir,file)
-               name_of_file = path.rsplit('/',1)[-1] 
-               
-               if name_of_file.startswith('data'): 
-                   data_path_list.append(path)
-               if name_of_file.startswith('labels'): 
-                   labels_path_list.append(path)
+    #for cur_dir, _, files in os.walk(data_path):
+    cur_dir = 'sf'
+    for file in glob(data_path + '*/**/train/all_350k_pairs/*.npy'):
+        path = os.path.join(cur_dir,file)
+        name_of_file = path.rsplit('/',1)[-1] 
+        
+        if name_of_file.startswith('data'): 
+            data_path_list.append(path)
+        if name_of_file.startswith('labels'): 
+            labels_path_list.append(path)
                    
     data_path_list = sorted(data_path_list, key=lambda path: path.rsplit('/',1)[-2])
     labels_path_list = sorted(labels_path_list, key=lambda path: path.rsplit('/',1)[-2])
@@ -36,14 +41,13 @@ def compose_data(paths, is_data):
         print('Processing file: ', path)
         tic = datetime.now()
         if is_data:
-           #import pdb;pdb.set_trace();
-           loaded_numpy = np.expand_dims(np.load(path), axis=0)
+           loaded_numpy = torch.load(path) # load mxnet/torch or numpy
         else:
-           loaded_numpy = np.expand_dims(np.load(path), axis=0)
+           loaded_numpy = torch.load(path) # load mxnet/torch or numpy
         if all_data is None:
             all_data = loaded_numpy
         else:
-            all_data = np.concatenate((all_data, loaded_numpy), axis=0)
+            all_data = np.concatenate((all_data, loaded_numpy), axis=0) # to contatenate according o an axis - change to poper use
             
         del loaded_numpy
         toc = datetime.now()

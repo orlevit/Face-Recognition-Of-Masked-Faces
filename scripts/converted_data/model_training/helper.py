@@ -9,7 +9,7 @@ from datetime import datetime
 import torch.nn.functional as F
 from sklearn.preprocessing import normalize
 from torch.utils.data import Dataset, DataLoader
-from config import TRAIN_DS_IND, VALID_DS_IND, TEST_DS_IND, WHOLE_DATA_BATCH, hsdict
+from config import TRAIN_DS_IND, VALID_DS_IND, TEST_DS_IND, WHOLE_DATA_BATCH, THRESHOLDS_INTERVALS, LINEAR_INIT, BILINEAR_INIT, LOAD_MODEL, PRELOADED_MODEL_LOC, hsdict
 
 #def select_train_valid(data, labels, ds_ind):
 #    imgs_num, mask_imgs_num, total_mask_img_num = 154000,22000*0.8, 22000
@@ -108,37 +108,46 @@ class EmbbedingsDataset(Dataset):
         label = self.labels[idx]
         return embeddings1, embeddings2, label
    
-def calculate_accuracy(threshold, dist, actual_issame):
-    predict_issame = torch.gt(dist, threshold)
-    tp = torch.sum(torch.logical_and(predict_issame, actual_issame))
-    tn = torch.sum(torch.logical_and(torch.logical_not(predict_issame), torch.logical_not(actual_issame)))
-    acc = float(tp + tn) / len(dist)
+def calculate_accuracy(threshold, outputs, actual_issame):
+    predict_issame = np.greater(outputs, threshold)
+    tp = np.sum(np.logical_and(predict_issame, actual_issame))
+    tn = np.sum(np.logical_and(np.logical_not(predict_issame), np.logical_not(actual_issame)))
+    acc = float(tp + tn) / len(outputs)
 
     return  acc
 
 def find_a_threshold(outputs, labels, train_ind, best_threshold):
+    thresholds = np.arange(-1, 1, THRESHOLDS_INTERVALS)
+    nrof_thresholds = len(thresholds)
+    accuracies = np.zeros(nrof_thresholds)
+    outputs = torch.squeeze(outputs)
+    outputs = outputs.cpu().detach().numpy()
+    labels = labels.cpu().detach().numpy()
+
     if train_ind:
-       thresholds = np.arange(-0.1, 0.1, 0.0001)
-       nrof_thresholds = len(thresholds)
-       accuracy = np.zeros(10)
-       outputs = torch.squeeze(outputs)
-
        for threshold_idx, threshold in enumerate(thresholds):
-           accuracy[threshold_idx] = calculate_accuracy(threshold, dist, labels)
+           accuracies[threshold_idx] = calculate_accuracy(threshold, outputs, labels)
 
-       max_threshold_idx = np.argmax(accuracy)
+       max_threshold_idx = np.argmax(accuracies)
        max_threshold = thresholds[max_threshold_idx]
-       max_accuracy = accuracy[max_threshold_idx]
-    else
-       max_accuracy = calculate_accuracy(best_threshold, dist, labels)
+       max_accuracy = accuracies[max_threshold_idx]
+    else:
+       max_accuracy = calculate_accuracy(best_threshold, outputs, labels)
        max_threshold = best_threshold
     return max_threshold, max_accuracy
+
+def join_ouputs(all_outputs, outputs):
+    if all_outputs is None:
+       return outputs
+    else:
+       return torch.cat((all_outputs, outputs), dim=0)
 
 def one_epoch_run(train_dataloader, optimizer, model, loss_fn, device, train_ind, best_threshold=None):
     last_loss = 0.
     running_loss = 0.
     running_classificatin_loss = 0.
-    thresholdis_list = [] 
+    all_outputs = None
+    all_labels = None
     tic = datetime.now()
 
     model.train(train_ind)
@@ -148,29 +157,24 @@ def one_epoch_run(train_dataloader, optimizer, model, loss_fn, device, train_ind
         emb1, emb2, labels = emb1.to(device), emb2.to(device), labels.to(device) 
         optimizer.zero_grad()
         outputs = model(emb1.float(), emb2.float())
+        all_outputs = join_ouputs(all_outputs, outputs)
+        all_labels = join_ouputs(all_labels, labels)
         converted_labels = labels.type(torch.float)[:, None]
         converted_labels[converted_labels == 0] = -1
         loss = loss_fn(outputs, converted_labels.float())
-        #import pdb;pdb.set_trace();
 
         if train_ind:
            loss.backward()
            optimizer.step()
 
         running_loss += loss.item()
-
         threshold, max_accuracy = find_a_threshold(outputs, labels, train_ind, best_threshold)
-        running_classificatin_loss += max_accuracy
-        thresholds_list.append(threshold)
-        print("is only one batch?") # del
-        import pdb;pdb.set_trace(); # del
         
+    threshold, max_accuracy = find_a_threshold(all_outputs, all_labels, train_ind, best_threshold)
     run_time = round((datetime.now() - tic).total_seconds(), 1)
-    avg_classificatin_loss = running_classificatin_loss / len(train_dataloader)
     avg_loss = running_loss / len(train_dataloader)
-    avg_threshold = np.mean(thresholds_list)
 
-    return avg_loss, avg_classificatin_loss, run_time, avg_threshold
+    return avg_loss, max_accuracy, threshold, run_time
 
 
 def create_dataloaders(train_data_loc, train_labels_loc, test_data_loc, test_labels_loc, split_train, train_ds_ind, valid_ds_ind, batch_size, test_ds_ind):
@@ -188,9 +192,9 @@ def create_dataloaders(train_data_loc, train_labels_loc, test_data_loc, test_lab
     testDataset = EmbbedingsDataset(test_data, test_labels, test_ds_ind)
 
     if batch_size == WHOLE_DATA_BATCH:
-       batch_size_train = len(trainDataset)
-       batch_size_valid = len(validDataset)
-       batch_size_test = len(testDataset)
+       batch_size_train = len(trainDataset) // 3 +1
+       batch_size_valid = len(validDataset) // 3 +1
+       batch_size_test = len(testDataset) // 3 +1
     else:
        batch_size_train = batch_size 
        batch_size_valid = batch_size
@@ -235,3 +239,32 @@ def initialize_weights(linear_const, bilinear_const):
             if m.bias is not None:
                 nn.init.uniform_(m.bias, -bilinear_const, bilinear_const)
     return inner
+
+def save_model_state(epoch, model, optimizer, avg_loss, avg_ctrain_loss, threshold, ttime, avg_vloss, avg_cvalid_loss, vtime, model_path):
+    param_dict = {
+                  'epoch': epoch,
+                  'model_state_dict': model.state_dict(),
+                  'optimizer_state_dict': optimizer.state_dict(),
+                  'threshold': threshold,
+                  'train':{
+                            'time': ttime,
+                            'avg_loss': avg_loss,
+                            'avg_classificaton_loss': avg_ctrain_loss,
+                          },
+                  'valid':{
+                            'time': vtime,
+                            'avg_loss': avg_vloss,
+                            'avg_classificaton_loss': avg_cvalid_loss,
+                          }
+                  }
+    torch.save(param_dict, model_path)
+
+def set_model(model, device):
+    if LOAD_MODEL:
+       model.load_state_dict(torch.load(PRELOADED_MODEL_LOC))
+       print(f'Loaded previous model: {PRELOADED_MODEL_LOC}')
+    else:
+       model.apply(initialize_weights(LINEAR_INIT, BILINEAR_INIT))
+       print('Initalized new model')
+    model.to(device)
+    return model

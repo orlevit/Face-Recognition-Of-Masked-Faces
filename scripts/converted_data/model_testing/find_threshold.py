@@ -100,17 +100,24 @@ def one_epoch_run_threshold(train_dataloader, optimizer, model, loss_fn, device,
         emb1, emb2, labels = emb1.to(device), emb2.to(device), labels.to(device) 
         optimizer.zero_grad()
         outputs = model(emb1.float(), emb2.float())
+
+        converted_labels = labels.type(torch.float)[:, None]
+        converted_labels[converted_labels == 0] = -1
+        loss = loss_fn(outputs, converted_labels.float())
+
         outputs = torch.squeeze(outputs)
 
         predict_issame = torch.gt(outputs, threshold)
         tp = torch.sum(torch.logical_and(predict_issame, labels))
         tn = torch.sum(torch.logical_and(torch.logical_not(predict_issame), torch.logical_not(labels)))
+        running_loss += loss.item()
         running_classificatin_loss += (tp + tn)/ len(labels)
         
     run_time = round((datetime.now() - tic).total_seconds(), 1)
     avg_classificatin_loss = running_classificatin_loss / len(train_dataloader)
+    avg_loss = running_loss / len(train_dataloader)
 
-    return avg_classificatin_loss, run_time
+    return avg_loss, avg_classificatin_loss, run_time
 
 def find_best_threshold(valid_dataloader, model, device):
     thresholds = np.arange(-0.1, 0.1, 0.0001)
@@ -200,9 +207,9 @@ def main():
             blockPrint()
             for _, test_indices in k_fold.split(indices):
                 test_dataloader = get_test_data_by_indices(test_data, test_labels, test_indices)
-                avg_classificatin_loss, run_time = one_epoch_run_threshold(test_dataloader, optimizer, model, loss_fn, device, threshold, train_ind=False)
+                avg_loss, avg_classificatin_loss, run_time = one_epoch_run_threshold(test_dataloader, optimizer, model, loss_fn, device, threshold, train_ind=False)
                 classification_list.append(avg_classificatin_loss.item())
-                print(f'Train: run_time:{run_time=}, classification accuracy:{avg_classificatin_loss=}')
+                print(f'Train: run_time:{run_time=}, loss={avg_loss=}, classification accuracy:{avg_classificatin_loss=}')
             enablePrint()
             print(f'Images:{sub_dir}: {np.mean(classification_list)}+-{np.std(classification_list)}')
             print('---------------------------------------------------------------------------------------------------------------------')

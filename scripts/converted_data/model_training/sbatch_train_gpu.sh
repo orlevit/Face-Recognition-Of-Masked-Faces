@@ -2,7 +2,7 @@
 ### Allocation Start
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=4g
+#SBATCH --mem=80g
 #SBATCH --gres=gpu
 #SBATCH --job-name=train_search
 #SBATCH --output=/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data/model_training/logs/slurm/%x-%A-%a.out

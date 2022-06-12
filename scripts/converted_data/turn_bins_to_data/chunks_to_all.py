@@ -1,5 +1,8 @@
+# joined the chuncked data into one all file(e.g. chunks of 2k images in 700k images will joined all  70k/2k=35 files into one file)
 import os
 import torch
+import argparse
+import mxnet as mx
 import numpy as np
 from pprint import pprint
 from datetime import datetime
@@ -7,12 +10,20 @@ from datetime import datetime
 #DATA_PATH = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data/train/db_bin_multi_masks_350000'
 #TARGET_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data/train/db_bin_multi_masks_350000/all'
 MASK = 'covid19'
-DATA_PATH = f'/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/train/a{MASK}mask/train/db_a{MASK}mask_a{MASK}mask'
-TARGET_LOC = f'/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/train/a{MASK}mask/train/db_a{MASK}mask_a{MASK}mask/combined350k'
 #DATA_PATH = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/converted_data/tmp/test/db_nomask_lfw'
 #TARGET_LOC = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/converted_data/ready_data/350000_test_lfw_casia_pairs/nomask'
-DATA_TARGET_LOC = os.path.join(TARGET_LOC, 'data.npy')
-LABELS_TARGET_LOC = os.path.join(TARGET_LOC, 'labels.npy')
+
+def return_input_loc(args):
+    DATA_PATH = f'/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/train/a{args.mask}mask/train/db_a{args.mask}mask_a{args.mask}mask'
+    TARGET_LOC = f'/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/train/a{args.mask}mask/train/all_350k_pairs'
+    return DATA_PATH, TARGET_LOC
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='do verification')
+    parser.add_argument('-m', '--mask', type=str, help='The mask to joined all the small chuncks of it to one file that joined them all')
+    args = parser.parse_args()
+
+    return args
 
 def get_files_path(data_path): 
     print(data_path)
@@ -43,14 +54,13 @@ def compose_data(paths, is_data):
         print('Processing file: ', path)
         tic = datetime.now()
         if is_data:
-           #import pdb;pdb.set_trace();
-           loaded_numpy = np.expand_dims(np.load(path), axis=0)
+           loaded_numpy = np.expand_dims(mx.nd.load(path)[0].asnumpy(), axis=0) # load mxnet/torch or numpy
         else:
-           loaded_numpy = np.expand_dims(np.load(path), axis=0)
+           loaded_numpy = np.expand_dims(mx.nd.load(path)[0].asnumpy(), axis=0) # load mxnet/torch or numpy
         if all_data is None:
             all_data = loaded_numpy
         else:
-            all_data = np.concatenate((all_data, loaded_numpy), axis=0)
+            all_data = np.concatenate((all_data, loaded_numpy), axis=1) # to contatenate according o an axis - change to poper use
             
         del loaded_numpy
         toc = datetime.now()
@@ -58,11 +68,18 @@ def compose_data(paths, is_data):
         print(all_data.shape)
     return all_data 
 
-data_path_list, labels_path_list =  get_files_path(DATA_PATH)
-import pdb;pdb.set_trace();
-data = compose_data(data_path_list, True)
-lables = compose_data(labels_path_list, False)
+def main(args):
+    data_path, target_loc = return_input_loc(args)
+    data_path_list, labels_path_list =  get_files_path(data_path)
+    data = compose_data(data_path_list, True)
+    lables = compose_data(labels_path_list, False)
+    
+    os.makedirs(target_loc)
+    data_target_loc = os.path.join(target_loc, 'data.npy')
+    labels_target_loc = os.path.join(target_loc, 'labels.npy')
+    torch.save(data, data_target_loc, pickle_protocol=4)
+    torch.save(lables, labels_target_loc, pickle_protocol=4)
 
-os.makedirs(TARGET_LOC)
-torch.save(data, DATA_TARGET_LOC, pickle_protocol=4)
-torch.save(lables, LABELS_TARGET_LOC, pickle_protocol=4)
+if __name__ == '__main__':
+   args = parse_arguments()
+   main(args)
