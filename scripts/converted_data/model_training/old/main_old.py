@@ -5,8 +5,8 @@ from models_architecture import *
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from config import TRAIN_DATA_LOC, TRAIN_LABELS_LOC, TEST_DATA_LOC, TEST_LABELS_LOC, SPLIT_TRAIN, BATCH_SIZE, RUN_DIR, EMBBEDINGS_NUMBER, MODELS_NUMBER, \
-                   TRAIN_DS_IND, VALID_DS_IND, TEST_DS_IND, EPOCHS, MODELS_SAVE_PATH, MIN_LOSS_SAVE, EARLY_STOP_DIFF, EMBBEDINGS_REDUCED, WHOLE_DATA_BATCH, MODEL_VERSON
-from helper import one_epoch_run, create_dataloaders, get_optimizer, parse_arguments, initialize_weights, save_model_state, set_model
+                   TRAIN_DS_IND, VALID_DS_IND, TEST_DS_IND, EPOCHS, MODELS_SAVE_PATH, MIN_LOSS_SAVE, EARLY_STOP_DIFF, EMBBEDINGS_REDUCED, WHOLE_DATA_BATCH
+from helper_old import one_epoch_run, create_dataloaders, get_optimizer, parse_arguments, initialize_weights, save_model_state, set_model
 
 def main(args):
      train_dataloader, valid_dataloader, test_dataloader = create_dataloaders(TRAIN_DATA_LOC, TRAIN_LABELS_LOC, TEST_DATA_LOC, TEST_LABELS_LOC, \
@@ -15,7 +15,7 @@ def main(args):
      print(f'The model will run on device: {device}')
      print(f'Train samples:{len(train_dataloader.dataset)}, Valid samples:{len(valid_dataloader.dataset)}, Test samples:{len(test_dataloader.dataset)}')
      # set model parameters
-     model = NeuralNetwork14()
+     model = NeuralNetwork5()
      model = set_model(model, device)
      loss_fn = torch.nn.MSELoss()
      #loss_fn = torch.nn.CrossEntropyLoss()#L1Loss()
@@ -24,7 +24,7 @@ def main(args):
      # Set training logs
      pairs_num = len(train_dataloader.dataset) + len(valid_dataloader.dataset)
      layer_size = model.fc2.in_features
-     model_name =f'{pairs_num}pairs{MODEL_VERSON}_long_reduce4_seed42_{type(model).__name__}_lastHidden{layer_size}_lr{opt_params[0]}_{EMBBEDINGS_REDUCED}_{datetime.now().strftime("D%d_%m_%Y_T%H_%M_%S_%f")}'
+     model_name = f'{pairs_num}_OLD_pairsV2_{type(model).__name__}_lastHidden{layer_size}_lr{opt_params[0]}_{EMBBEDINGS_REDUCED}_{datetime.now().strftime("D%d_%m_%Y_T%H_%M_%S_%f")}'
      print(f'model saved under name: {model_name}')
      writer = SummaryWriter(os.path.join(RUN_DIR, model_name))
      
@@ -34,11 +34,12 @@ def main(args):
      continue_training = True
      best_cvloss = -float('inf')
      best_model_threshold = -float('inf')
+     threshold = 0
      
      while epoch < EPOCHS and continue_training:
-         avg_tloss, ctrain_acc, threshold, ttime = one_epoch_run(train_dataloader, optimizer, model, loss_fn, device, train_ind=True)
+         avg_tloss, ctrain_acc, ttime = one_epoch_run(train_dataloader, optimizer, model, loss_fn, device, train_ind=True)
          # We don't need gradients on to do reporting
-         avg_vloss, cvalid_acc, _, vtime = one_epoch_run(valid_dataloader, optimizer, model, loss_fn, device, train_ind=False, best_threshold=threshold)
+         avg_vloss, cvalid_acc, vtime = one_epoch_run(valid_dataloader, optimizer, model, loss_fn, device, train_ind=False)
      
          print('Epoch:{}/{}. Time- Train:{} Valid:{}. Loss- Train:{} Valid:{}, classification acc:- Train:{} Valid:{}, threshold:{}'.format(
                 epoch, EPOCHS, ttime, vtime, avg_tloss, avg_vloss, ctrain_acc, cvalid_acc, threshold))

@@ -14,8 +14,12 @@ MASK = 'covid19'
 #TARGET_LOC = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/converted_data/ready_data/350000_test_lfw_casia_pairs/nomask'
 
 def return_input_loc(args):
-    DATA_PATH = f'/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/train/a{args.mask}mask/train/db_a{args.mask}mask_a{args.mask}mask'
-    TARGET_LOC = f'/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/train/a{args.mask}mask/train/all_350k_pairs'
+    # uersin 1
+    DATA_PATH = f'/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/train/combinedV1/{args.mask}_model'
+    TARGET_LOC = f'/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/train/combinedV1/{args.mask}_model_all/all_20k_pairs'
+    # Versin 2
+    #DATA_PATH = f'/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/train/combinedV2/a{args.mask}mask/train/db_a{args.mask}mask_a{args.mask}mask'
+    #TARGET_LOC = f'/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/train/combinedV2/a{args.mask}mask/train/all_20k_pairs'
     return DATA_PATH, TARGET_LOC
 
 def parse_arguments():
@@ -34,6 +38,7 @@ def get_files_path(data_path):
         for sub_dir in dirs1:
             for cur_dir2, _, files in os.walk(os.path.join(cur_dir1, sub_dir)):
                 for file in files:
+                    data_num = int(file.rsplit('/',1)[-1].split('.')[0].split('_')[-1]) # The file number
                     path = os.path.join(cur_dir2,file)
                     name_of_file = path.rsplit('/',1)[-1] 
                     

@@ -6,11 +6,12 @@ from glob import glob
 from pprint import pprint
 from datetime import datetime
 
-JOINED_INPUT_DIR = "all_350k_pairs"
-DATA_PATH = f'/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/train'#/a{args.mask}mask/train/db_a{args.mask}mask_a{args.mask}mask'
-TARGET_LOC = f'/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/train/all/350k_pairs'
-#DATA_PATH = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data/train/db_bin_multi_masks_350000'
-#TARGET_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data/train/db_bin_multi_masks_350000/all'
+# version 1
+DATA_PATH = f'/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/train/combinedV1'
+TARGET_LOC = f'/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/train/combinedV1/all/20k_pairs'
+# verson 2
+#DATA_PATH = f'/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/train/combinedV2'
+#TARGET_LOC = f'/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/train/combinedV2/all/20k_pairs'
 DATA_TARGET_LOC = os.path.join(TARGET_LOC, 'data.pt')
 LABELS_TARGET_LOC = os.path.join(TARGET_LOC, 'labels.pt')
 

@@ -3,6 +3,7 @@ import numpy as np
 from torch import nn
 import torch.nn.functional as F
 from sklearn.preprocessing import normalize
+from sklearn.metrics.pairwise import cosine_similarity
 from config import EMBBEDINGS_NUMBER, MODELS_NUMBER, EMBBEDINGS_REDUCED
 
 class NeuralNetwork1(nn.Module):
@@ -506,3 +507,264 @@ class LogisticRegressionOr(nn.Module):
         dist_torch = torch.from_numpy(np.expand_dims(dist, 1))
         outputs = torch.sigmoid(self.linear(dist_torch.type(torch.float)))
         return outputs
+
+class NeuralNetwork9(nn.Module):
+    def __init__(self):
+        super(NeuralNetwork9, self).__init__()
+        self.flatten = nn.Flatten()
+        self.reduction1 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.reduction2 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.reduction3 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.reduction4 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.reduction5 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.reduction6 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.reduction7 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.cos_sim = nn.CosineSimilarity()
+        self.fc1 = nn.Linear(2 * EMBBEDINGS_REDUCED * MODELS_NUMBER + MODELS_NUMBER, 4096)
+        self.fc2 = nn.Linear(4096, 1)
+
+    def forward(self, emb1, emb2): 
+        red1_1 = self.reduction1(emb1[:, 0, :])
+        red2_1 = self.reduction2(emb1[:, 1, :])
+        red3_1 = self.reduction3(emb1[:, 2, :])
+        red4_1 = self.reduction4(emb1[:, 3, :])
+        red5_1 = self.reduction5(emb1[:, 4, :])
+        red6_1 = self.reduction6(emb1[:, 5, :])
+        red7_1 = self.reduction7(emb1[:, 6, :])
+        red1_2 = self.reduction1(emb2[:, 0, :])
+        red2_2 = self.reduction2(emb2[:, 1, :])
+        red3_2 = self.reduction3(emb2[:, 2, :])
+        red4_2 = self.reduction4(emb2[:, 3, :])
+        red5_2 = self.reduction5(emb2[:, 4, :])
+        red6_2 = self.reduction6(emb2[:, 5, :])
+        red7_2 = self.reduction7(emb2[:, 6, :])
+        
+        cs0 = self.cos_sim(emb1[:, 0, :], emb2[:, 0, :])[:, None]
+        cs1 = self.cos_sim(emb1[:, 1, :], emb2[:, 1, :])[:, None]
+        cs2 = self.cos_sim(emb1[:, 2, :], emb2[:, 2, :])[:, None]
+        cs3 = self.cos_sim(emb1[:, 3, :], emb2[:, 3, :])[:, None]
+        cs4 = self.cos_sim(emb1[:, 4, :], emb2[:, 4, :])[:, None]
+        cs5 = self.cos_sim(emb1[:, 5, :], emb2[:, 5, :])[:, None]
+        cs6 = self.cos_sim(emb1[:, 6, :], emb2[:, 6, :])[:, None]
+
+        reduce_dim1 = torch.cat([red1_1, red2_1, red3_1, red4_1, red5_1, red6_1, red7_1], axis = -1)
+        reduce_dim2 = torch.cat([red1_2, red2_2, red3_2, red4_2, red5_2, red6_2, red7_2], axis = -1)
+        reduce_dim = torch.cat([reduce_dim1, reduce_dim2, cs0, cs1, cs2, cs3, cs4, cs5, cs6], axis = -1)
+        x = torch.tanh(self.fc1(reduce_dim))
+        logits = self.fc2(x)
+        return logits
+
+class NeuralNetwork10(nn.Module):
+    def __init__(self):
+        super(NeuralNetwork10, self).__init__()
+        self.reduction1 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.reduction2 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.reduction3 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.reduction4 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.reduction5 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.reduction6 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.reduction7 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.cos_sim = nn.CosineSimilarity()
+        self.fc1 = nn.Linear(2 * EMBBEDINGS_REDUCED * MODELS_NUMBER, 4096)
+        self.fc2 = nn.Linear(4096, 1)
+
+    def forward(self, emb1, emb2): 
+        red1_1 = self.reduction1(emb1[:, 0, :])
+        red2_1 = self.reduction2(emb1[:, 1, :])
+        red3_1 = self.reduction3(emb1[:, 2, :])
+        red4_1 = self.reduction4(emb1[:, 3, :])
+        red5_1 = self.reduction5(emb1[:, 4, :])
+        red6_1 = self.reduction6(emb1[:, 5, :])
+        red7_1 = self.reduction7(emb1[:, 6, :])
+        red1_2 = self.reduction1(emb2[:, 0, :])
+        red2_2 = self.reduction2(emb2[:, 1, :])
+        red3_2 = self.reduction3(emb2[:, 2, :])
+        red4_2 = self.reduction4(emb2[:, 3, :])
+        red5_2 = self.reduction5(emb2[:, 4, :])
+        red6_2 = self.reduction6(emb2[:, 5, :])
+        red7_2 = self.reduction7(emb2[:, 6, :])
+        
+        reduce_dim1 = torch.cat([red1_1, red2_1, red3_1, red4_1, red5_1, red6_1, red7_1], axis = -1)
+        reduce_dim2 = torch.cat([red1_2, red2_2, red3_2, red4_2, red5_2, red6_2, red7_2], axis = -1)
+        reduce_dim = torch.cat([reduce_dim1, reduce_dim2], axis = -1)
+        x = torch.tanh(self.fc1(reduce_dim))
+        logits = self.fc2(x)
+        return logits
+
+class NeuralNetwork11(nn.Module):
+    def __init__(self):
+        super(NeuralNetwork11, self).__init__()
+        self.fc1 = nn.Linear(2 * 512 * MODELS_NUMBER, 4096)
+        self.fc2 = nn.Linear(4096, 1)
+
+    def forward(self, emb1, emb2): 
+        red1_1 = emb1[:, 0, :]
+        red2_1 = emb1[:, 1, :]
+        red3_1 = emb1[:, 2, :]
+        red4_1 = emb1[:, 3, :]
+        red5_1 = emb1[:, 4, :]
+        red6_1 = emb1[:, 5, :]
+        red7_1 = emb1[:, 6, :]
+        red1_2 = emb2[:, 0, :]
+        red2_2 = emb2[:, 1, :]
+        red3_2 = emb2[:, 2, :]
+        red4_2 = emb2[:, 3, :]
+        red5_2 = emb2[:, 4, :]
+        red6_2 = emb2[:, 5, :]
+        red7_2 = emb2[:, 6, :]
+        
+        reduce_dim1 = torch.cat([red1_1, red2_1, red3_1, red4_1, red5_1, red6_1, red7_1], axis = -1)
+        reduce_dim2 = torch.cat([red1_2, red2_2, red3_2, red4_2, red5_2, red6_2, red7_2], axis = -1)
+        reduce_dim = torch.cat([reduce_dim1, reduce_dim2], axis = -1)
+        x = torch.tanh(self.fc1(reduce_dim))
+        logits = self.fc2(x)
+        return logits
+
+
+class NeuralNetwork12(nn.Module):
+    def __init__(self):
+        super(NeuralNetwork12, self).__init__()
+        cross_number = MODELS_NUMBER * (MODELS_NUMBER -1)
+        self.reduction1 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.reduction2 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.reduction3 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.reduction4 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.reduction5 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.reduction6 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.reduction7 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.bilinears = nn.ModuleList([nn.Bilinear(32 , 32 , 64, bias=True)  for i in range(cross_number)])
+        self.fc1 = nn.Linear(64 * cross_number, 64)
+        self.fc2 = nn.Linear(64, 1)
+
+    def _get_binilinar_list(self, reduce_dim1_list, reduce_dim2_list):
+        idx = 0
+        bilinar_list = []
+        for i, red1 in enumerate(reduce_dim1_list, 1):
+            for j, red2 in enumerate(reduce_dim2_list, 1):
+                if i != j:
+                   bilinar_list.append(self.bilinears[idx](red1, red2))
+                   idx += 1
+        return bilinar_list           
+
+    def forward(self, emb1, emb2): 
+        red1_1 = self.reduction1(emb1[:, 0, :])
+        red2_1 = self.reduction2(emb1[:, 1, :])
+        red3_1 = self.reduction3(emb1[:, 2, :])
+        red4_1 = self.reduction4(emb1[:, 3, :])
+        red5_1 = self.reduction5(emb1[:, 4, :])
+        red6_1 = self.reduction6(emb1[:, 5, :])
+        red7_1 = self.reduction7(emb1[:, 6, :])
+        red1_2 = self.reduction1(emb2[:, 0, :])
+        red2_2 = self.reduction2(emb2[:, 1, :])
+        red3_2 = self.reduction3(emb2[:, 2, :])
+        red4_2 = self.reduction4(emb2[:, 3, :])
+        red5_2 = self.reduction5(emb2[:, 4, :])
+        red6_2 = self.reduction6(emb2[:, 5, :])
+        red7_2 = self.reduction7(emb2[:, 6, :])
+        
+        reduce_dim1_list = [red1_1, red2_1, red3_1, red4_1, red5_1, red6_1, red7_1]
+        reduce_dim2_list = [red1_2, red2_2, red3_2, red4_2, red5_2, red6_2, red7_2]
+        bilinar_list = self._get_binilinar_list(reduce_dim1_list, reduce_dim2_list)
+        bilinars_concat = torch.cat(bilinar_list, axis = -1)
+        x = torch.tanh(self.fc1(bilinars_concat))
+        logits = self.fc2(x)
+        return logits
+
+class NeuralNetwork13(nn.Module):
+    def __init__(self):
+        super(NeuralNetwork13, self).__init__()
+        cross_number = MODELS_NUMBER * (MODELS_NUMBER -1)
+        self.reduction1 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.reduction2 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.reduction3 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.reduction4 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.reduction5 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.reduction6 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.reduction7 = nn.Linear(EMBBEDINGS_NUMBER, EMBBEDINGS_REDUCED)
+        self.bilinears = nn.ModuleList([nn.Bilinear(32 , 32 , 64, bias=True)  for i in range(cross_number)])
+        self.fc1 = nn.Linear(64 * cross_number + 32 * MODELS_NUMBER * 2, 64)
+        self.fc2 = nn.Linear(64, 1)
+
+    def _get_binilinar_list(self, reduce_dim1_list, reduce_dim2_list):
+        idx = 0
+        bilinar_list = []
+        for i, red1 in enumerate(reduce_dim1_list, 1):
+            for j, red2 in enumerate(reduce_dim2_list, 1):
+                if i != j:
+                   bilinar_list.append(self.bilinears[idx](red1, red2))
+                   idx += 1
+        return bilinar_list           
+
+    def forward(self, emb1, emb2): 
+        red1_1 = self.reduction1(emb1[:, 0, :])
+        red2_1 = self.reduction2(emb1[:, 1, :])
+        red3_1 = self.reduction3(emb1[:, 2, :])
+        red4_1 = self.reduction4(emb1[:, 3, :])
+        red5_1 = self.reduction5(emb1[:, 4, :])
+        red6_1 = self.reduction6(emb1[:, 5, :])
+        red7_1 = self.reduction7(emb1[:, 6, :])
+        red1_2 = self.reduction1(emb2[:, 0, :])
+        red2_2 = self.reduction2(emb2[:, 1, :])
+        red3_2 = self.reduction3(emb2[:, 2, :])
+        red4_2 = self.reduction4(emb2[:, 3, :])
+        red5_2 = self.reduction5(emb2[:, 4, :])
+        red6_2 = self.reduction6(emb2[:, 5, :])
+        red7_2 = self.reduction7(emb2[:, 6, :])
+        
+        reduce_dim1_list = [red1_1, red2_1, red3_1, red4_1, red5_1, red6_1, red7_1]
+        reduce_dim2_list = [red1_2, red2_2, red3_2, red4_2, red5_2, red6_2, red7_2]
+        bilinar_list = self._get_binilinar_list(reduce_dim1_list, reduce_dim2_list)
+        bilinars_concat = torch.cat(bilinar_list, axis = -1)
+        reduce_dim1 = torch.cat([red1_1, red2_1, red3_1, red4_1, red5_1, red6_1, red7_1], axis = -1)
+        reduce_dim2 = torch.cat([red1_2, red2_2, red3_2, red4_2, red5_2, red6_2, red7_2], axis = -1)
+        reduce_dim = torch.cat([reduce_dim1, reduce_dim2, bilinars_concat], axis = -1)
+        x = torch.tanh(self.fc1(reduce_dim))
+        logits = self.fc2(x)
+        return logits
+
+class NeuralNetwork14(nn.Module):
+    def __init__(self):
+        super(NeuralNetwork14, self).__init__()
+        self.flatten = nn.Flatten()
+        self.reduction1 = nn.Linear(EMBBEDINGS_NUMBER, 4)
+        self.reduction2 = nn.Linear(EMBBEDINGS_NUMBER, 4)
+        self.reduction3 = nn.Linear(EMBBEDINGS_NUMBER, 4)
+        self.reduction4 = nn.Linear(EMBBEDINGS_NUMBER, 4)
+        self.reduction5 = nn.Linear(EMBBEDINGS_NUMBER, 4)
+        self.reduction6 = nn.Linear(EMBBEDINGS_NUMBER, 4)
+        self.reduction7 = nn.Linear(EMBBEDINGS_NUMBER, 4)
+        self.cos_sim = nn.CosineSimilarity()
+        self.fc1 = nn.Linear(2 * 4 * MODELS_NUMBER + MODELS_NUMBER, 4096)
+        self.fc2 = nn.Linear(4096, 1)
+
+    def forward(self, emb1, emb2): 
+        red1_1 = self.reduction1(emb1[:, 0, :])
+        red2_1 = self.reduction2(emb1[:, 1, :])
+        red3_1 = self.reduction3(emb1[:, 2, :])
+        red4_1 = self.reduction4(emb1[:, 3, :])
+        red5_1 = self.reduction5(emb1[:, 4, :])
+        red6_1 = self.reduction6(emb1[:, 5, :])
+        red7_1 = self.reduction7(emb1[:, 6, :])
+        red1_2 = self.reduction1(emb2[:, 0, :])
+        red2_2 = self.reduction2(emb2[:, 1, :])
+        red3_2 = self.reduction3(emb2[:, 2, :])
+        red4_2 = self.reduction4(emb2[:, 3, :])
+        red5_2 = self.reduction5(emb2[:, 4, :])
+        red6_2 = self.reduction6(emb2[:, 5, :])
+        red7_2 = self.reduction7(emb2[:, 6, :])
+        
+        cs0 = self.cos_sim(emb1[:, 0, :], emb2[:, 0, :])[:, None]
+        cs1 = self.cos_sim(emb1[:, 1, :], emb2[:, 1, :])[:, None]
+        cs2 = self.cos_sim(emb1[:, 2, :], emb2[:, 2, :])[:, None]
+        cs3 = self.cos_sim(emb1[:, 3, :], emb2[:, 3, :])[:, None]
+        cs4 = self.cos_sim(emb1[:, 4, :], emb2[:, 4, :])[:, None]
+        cs5 = self.cos_sim(emb1[:, 5, :], emb2[:, 5, :])[:, None]
+        cs6 = self.cos_sim(emb1[:, 6, :], emb2[:, 6, :])[:, None]
+
+        reduce_dim1 = torch.cat([red1_1, red2_1, red3_1, red4_1, red5_1, red6_1, red7_1], axis = -1)
+        reduce_dim2 = torch.cat([red1_2, red2_2, red3_2, red4_2, red5_2, red6_2, red7_2], axis = -1)
+        reduce_dim = torch.cat([reduce_dim1, reduce_dim2, cs0, cs1, cs2, cs3, cs4, cs5, cs6], axis = -1)
+        x = torch.tanh(self.fc1(reduce_dim))
+        logits = self.fc2(x)
+        return logits
+

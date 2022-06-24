@@ -123,7 +123,6 @@ def find_a_threshold(outputs, labels, train_ind, best_threshold):
     outputs = torch.squeeze(outputs)
     outputs = outputs.cpu().detach().numpy()
     labels = labels.cpu().detach().numpy()
-    labels[labels == -1] = 0
 
     if train_ind:
        for threshold_idx, threshold in enumerate(thresholds):
@@ -143,38 +142,38 @@ def join_ouputs(all_outputs, outputs):
     else:
        return torch.cat((all_outputs, outputs), dim=0)
 
-def one_epoch_run(train_dataloader, optimizer, model, loss_fn, device, train_ind, best_threshold=None):
+def one_epoch_run(train_dataloader, optimizer, model, loss_fn, device, train_ind):
     last_loss = 0.
     running_loss = 0.
     running_classificatin_loss = 0.
-    all_outputs = None
-    all_labels = None
     tic = datetime.now()
 
     model.train(train_ind)
+ 
     for i, data in enumerate(train_dataloader):
         emb1, emb2, labels = data
         emb1, emb2, labels = emb1.to(device), emb2.to(device), labels.to(device) 
         optimizer.zero_grad()
         outputs = model(emb1.float(), emb2.float())
-        all_outputs = join_ouputs(all_outputs, outputs)
-        all_labels = join_ouputs(all_labels, labels)
         converted_labels = labels.type(torch.float)[:, None]
         converted_labels[converted_labels == 0] = -1
         loss = loss_fn(outputs, converted_labels.float())
+        #import pdb;pdb.set_trace();
 
         if train_ind:
            loss.backward()
            optimizer.step()
 
         running_loss += loss.item()
- 
-    threshold, max_accuracy = find_a_threshold(all_outputs, all_labels, train_ind, best_threshold)
+        running_classificatin_loss += (sum((converted_labels.cpu().detach().numpy() * outputs.cpu().detach().numpy()) > 0) / len(converted_labels))[0]
+        #import pdb; pdb.set_trace();
+        #running_classificatin_loss += (sum((labels.cpu().detach().numpy().nonzero()[1] * np.argmax(outputs.cpu().detach().numpy(), axis=1)) > 0) / len(labels[:,0]))
+        
     run_time = round((datetime.now() - tic).total_seconds(), 1)
+    avg_classificatin_loss = running_classificatin_loss / len(train_dataloader)
     avg_loss = running_loss / len(train_dataloader)
 
-    return avg_loss, max_accuracy, threshold, run_time
-
+    return avg_loss, avg_classificatin_loss, run_time
 
 def create_dataloaders(train_data_loc, train_labels_loc, test_data_loc, test_labels_loc, split_train, train_ds_ind, valid_ds_ind, batch_size, test_ds_ind):
     train_data = torch.load(train_data_loc)
