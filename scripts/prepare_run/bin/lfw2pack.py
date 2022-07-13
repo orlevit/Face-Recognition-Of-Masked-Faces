@@ -12,11 +12,17 @@ parser = argparse.ArgumentParser(description='Package LFW images')
 parser.add_argument('--data-dir', default='', help='')
 parser.add_argument('--image-size', type=str, default='112,112', help='')
 parser.add_argument('--output', default='', help='path to save.')
+parser.add_argument('--mask-nomask', type=int, default=0, help='mask to no mask pair or mask to unmask pair')
 args = parser.parse_args()
 lfw_dir = args.data_dir
 image_size = [int(x) for x in args.image_size.split(',')]
 lfw_pairs = lfw.read_pairs(os.path.join(lfw_dir, 'pairs.txt'))
-lfw_paths, issame_list = lfw.get_paths(lfw_dir, lfw_pairs, 'jpg')
+
+print(args.data_dir,args.mask_nomask)
+if  args.mask_nomask:
+   lfw_paths, issame_list = lfw.get_paths_mask_nomask(lfw_pairs, 'jpg')
+else:
+   lfw_paths, issame_list = lfw.get_paths(lfw_dir, lfw_pairs, 'jpg')
 lfw_bins = []
 #lfw_data = nd.empty((len(lfw_paths), 3, image_size[0], image_size[1]))
 i = 0

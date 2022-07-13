@@ -19,11 +19,18 @@ from itertools import groupby
 # Constants
 NUMBER_OF_MODELS = 7
 #DBS_MODELS_DATA_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/images_masked_crop/sample_ROF/wsnp/covid19/combined'
-DBS_MODELS_DATA_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data/tmp'
+#DBS_MODELS_DATA_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data/tmp'
+#DBS_MODELS_DATA_LOC = '/RG/rg-tal/orlev/datasets/original_ds/MFR2/converted_data'
+#DBS_MODELS_DATA_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data/test_benchmarks/agedb30'
+#DBS_MODELS_DATA_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data/cfp/c'
+#DBS_MODELS_DATA_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data/cfp/f'
+#DBS_MODELS_DATA_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data/test_benchmarks/RMFD'
+#DBS_MODELS_DATA_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data/casia_mask_nomask/5k'
+DBS_MODELS_DATA_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/train/combinedV1/mask_nomask/combinedV1/covid19_unmask_5K_2/train'
 MODEL_DIR_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/rec_run/models/transfer_learning'
 
 # ------------   Also run this when change train to test ---------------
-INPUT_MODELS_DATA_LOC = os.path.join(DBS_MODELS_DATA_LOC, 'test')
+INPUT_MODELS_DATA_LOC = os.path.join(DBS_MODELS_DATA_LOC, 'train')
 TARGET_MODELS_DATA_LOC = os.path.join(DBS_MODELS_DATA_LOC, 'db_for_test_combinedV1')
 # ---------------------------------------------------------------------
 # The change in this functon relative to the dame fucntion in the joined_test_dbs.py file is changing 2 to 3 in the location with the arrow: "<---"
@@ -39,10 +46,12 @@ def get_files_loc_models_data(data_loc):
                         for file_name in files:
                             path = os.path.join(curr_dir3,file_name)
                             name_of_file = path.rsplit('/',1)[-1] 
-                            if file_name.endswith('data.npy'):
+                            #if file_name.endswith('data.npy'):
+                            if file_name.startswith('data'):
                                 data_files_loc.append(os.path.join(curr_dir3,file_name))
 
-                            if file_name.endswith('labels.npy'):
+                            #if file_name.endswith('labels.npy'):
+                            if file_name.startswith('labels'):
                                 label_files_loc.append(os.path.join(curr_dir3,file_name))
 
     joined_loc = [(i,j) for i,j in zip(data_files_loc, label_files_loc)]
@@ -60,8 +69,10 @@ def joined_models(gs_joined_loc, target_data_loc):
         for db_i, masked_db in  enumerate(dbs_locs, 1):
             tic = datetime.now()
     
-            loaded_db = np.expand_dims(np.load(masked_db[0]), axis=0)
-            loaded_lbl = np.expand_dims(np.load(masked_db[1]), axis=0)
+            #loaded_db = np.expand_dims(np.load(masked_db[0]), axis=0)
+            #loaded_lbl = np.expand_dims(np.load(masked_db[1]), axis=0)
+            loaded_db = np.expand_dims(mx.nd.load(masked_db[0])[0].asnumpy(), axis=0)
+            loaded_lbl = np.expand_dims(mx.nd.load(masked_db[1])[0].asnumpy(), axis=0)
     
             if combined_dbs_for_model is None:
                 combined_dbs_for_model = loaded_db

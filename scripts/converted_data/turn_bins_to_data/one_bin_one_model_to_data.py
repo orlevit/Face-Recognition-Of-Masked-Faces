@@ -18,24 +18,21 @@ from itertools import groupby
 
 # Constants
 MAX_NUMER_OF_DATA_FOR_MODEL = 700000
-SPLIT_DATA_SAVE = 20000
+SPLIT_DATA_SAVE = 10000
 BATCH_SIZE = 1
 NUMBER_OF_MODELS = 7
 IMAGE_SIZE = [112, 112]
-MASK_NAME = 'sunglasses' # if change to "no" keep the model as orgmodel!
-BIN_LOC_SKELETON = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/train/a{}mask/a{}mask.bin'
-BIN_LOC = BIN_LOC_SKELETON.format(MASK_NAME, MASK_NAME)
+MASK_NAME = 'org' # if change to "no" keep the model as orgmodel!
+#BIN_LOC_SKELETON = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/train/a{}mask/a{}mask.bin'
+DATA_LOC = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/images_masked_crop/cfp'
+#BIN_LOC_SKELETON = '/RG/rg-tal/orlev/datasets/original_ds/MFR2_bg/a{}mask/a{}mask.bin'
+BIN_LOC_SKELETON = os.path.join(DATA_LOC, 'a{}mask/a{}mask_c.bin')
 #BIN_LOC = '/RG/rg-tal/orlev/project/insightface/datasets/nomask/agedb30.bin'
-DBS_MODELS_DATA_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data'
+#DBS_MODELS_DATA_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data'
 MODEL_DIR_LOC_SKELETON = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/rec_run/models/transfer_learning/r100-arcface-{}_masked'
-MODEL_DIR_LOC = MODEL_DIR_LOC_SKELETON.format(MASK_NAME)
-INPUT_MODELS_DATA_LOC = os.path.join(DBS_MODELS_DATA_LOC, 'train')
-TARGET_MODELS_DATA_LOC = os.path.join(DBS_MODELS_DATA_LOC, 'db_train_models')
-INPUT_MODELS_LOC = os.path.join(DBS_MODELS_DATA_LOC, 'db_train_models')
-TARGET_MODELS_LOC = os.path.join(DBS_MODELS_DATA_LOC, 'all_train')
-DATA_LOC_SKELETON = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/train/a{}mask'
-DATA_LOC = DATA_LOC_SKELETON.format(MASK_NAME)
 
+BIN_LOC = ""
+MODEL_DIR_LOC = ""
 
 def set_models_epochs(models_loc):
     print(f'Modls: {models_loc}')
@@ -109,6 +106,7 @@ def create_embeddings(data, model, batch_size, data_extra, label_shape):
             db = mx.io.DataBatch(data=(_data, ), label=(_label, ))
         else:
             db = mx.io.DataBatch(data=(_data, _data_extra), label=(_label, ))
+        import pdb;pdb.set_trace();
         model.forward(db, is_train=False)
         net_out = model.get_outputs()
         #importpdb; pdb.set_trace();
@@ -184,7 +182,9 @@ def bin_loc_to_data(bins_dir_loc, image_size):
 
 
 # this is read every file of  data and than save(instaed read a all sata and thaen save)
-def forward_bins_through_models(model_dir_loc, bins_dir_loc, image_size, batch_size):
+def forward_bins_through_models(image_size, batch_size, args):
+    bins_dir_loc = BIN_LOC_SKELETON.format(args.model, args.model)
+    model_dir_loc = MODEL_DIR_LOC_SKELETON.format(args.model)
     models_dir, epochs = set_models_epochs(model_dir_loc)
     models, models_thresholds, models_names = set_models(models_dir, epochs, batch_size, image_size)
     #models, models_thresholds, models_names = [models[args.model]], [models_thresholds[args.model]], [models_names[args.model]]
@@ -199,7 +199,7 @@ def forward_bins_through_models(model_dir_loc, bins_dir_loc, image_size, batch_s
                 while aleardy_processed <= bin_data_length: #and aleardy_processed < 700000:#aleardy_processed < 200000:# 500000:#MAX_NUMER_OF_DATA_FOR_MODEL:
                       #if aleardy_processed >= 100000:#200000:
                       #if aleardy_processed >= 350000:
-                      if aleardy_processed == 440000:
+                      #if aleardy_processed == 440000:
                          coverted_data = None
                          time1 = datetime.now()
                          bin_data_org = data_list[0][aleardy_processed : min(aleardy_processed + SPLIT_DATA_SAVE, bin_data_length)]
@@ -254,8 +254,8 @@ def forward_bins_through_models(model_dir_loc, bins_dir_loc, image_size, batch_s
                          time2 = datetime.now()
                          diff = time2 - time1
                          print('Collect time(min)', diff.total_seconds()/60)
-                      aleardy_processed += SPLIT_DATA_SAVE
-                      split_num += 1
+                         aleardy_processed += SPLIT_DATA_SAVE
+                         split_num += 1
 
     print('Fiished: join_models_dbs funcion')
 
@@ -303,6 +303,11 @@ def joined_models(gs_joined_loc, target_data_loc):
         np.save(save_loc + '/labels.npy', combined_lbls_for_model)
         
         
+def parse_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-m', '--model', type=str, help='Which model to create.')
+
+    return parser.parse_args()
 
 def get_files_loc_models(data_loc):
     data_files_loc = []
@@ -336,18 +341,6 @@ def combine_datasets(dbs_loc, dst_loc):
 
 
 # Forward the bins files throught the different models and save them
-#import pdb; pdb.set_trace();
-forward_bins_through_models(MODEL_DIR_LOC, BIN_LOC, IMAGE_SIZE, BATCH_SIZE)
-
-#gs_joined_loc = get_files_loc_models_data(INPUT_MODELS_DATA_LOC)
-#joined_models(gs_joined_loc, TARGET_MODELS_DATA_LOC)
-#
-## join the bins for each model together
-#dbs_loc = get_files_loc_models(INPUT_MODELS_LOC)
-#os.makedirs(TARGET_MODELS_LOC, exist_ok=True)
-#combine_datasets(dbs_loc, TARGET_MODELS_LOC)
-#
-## Remove all intermediate files
-#shutil.rmtree(INPUT_MODELS_DATA_LOC)
-#shutil.rmtree(TARGET_MODELS_DATA_LOC)
-#shutil.rmtree(INPUT_MODELS_LOC)
+import pdb; pdb.set_trace();
+args = parse_arguments()
+forward_bins_through_models(IMAGE_SIZE, BATCH_SIZE, args)

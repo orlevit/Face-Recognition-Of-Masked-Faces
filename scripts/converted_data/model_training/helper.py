@@ -9,7 +9,7 @@ from datetime import datetime
 import torch.nn.functional as F
 from sklearn.preprocessing import normalize
 from torch.utils.data import Dataset, DataLoader
-from config import TRAIN_DS_IND, VALID_DS_IND, TEST_DS_IND, WHOLE_DATA_BATCH, THRESHOLDS_INTERVALS, LINEAR_INIT, BILINEAR_INIT, LOAD_MODEL, PRELOADED_MODEL_LOC, hsdict
+from config import TRAIN_DS_IND, VALID_DS_IND, TEST_DS_IND, WHOLE_DATA_BATCH, THRESHOLDS_INTERVALS, LINEAR_INIT, BILINEAR_INIT, LOAD_MODEL, PRELOADED_MODEL_LOC, SEED, hsdict
 
 #def select_train_valid(data, labels, ds_ind):
 #    imgs_num, mask_imgs_num, total_mask_img_num = 154000,22000*0.8, 22000
@@ -30,7 +30,7 @@ def select_train_valid(train_data, split_train):
     train_mask_imgs_num = math.ceil((total_pairs_mask_img_num) * split_train / 2.0) * 2
     valid_mask_imgs_num = int(total_pairs_mask_img_num - train_mask_imgs_num)
     mask_data_chunck = np.r_[np.ones(train_mask_imgs_num), np.zeros(valid_mask_imgs_num)].astype(bool)
-    random.seed(42)
+    random.seed(SEED)
     random.shuffle(mask_data_chunck)
     mask = np.tile(mask_data_chunck, models_num)
     leftover = imgs_num//2 - len(mask)
@@ -85,7 +85,6 @@ class EmbbedingsDataset(Dataset):
 #            mask = mask[:11000]
 #            data = data[:,:22000,:]
         if ds_ind == TRAIN_DS_IND:
-       #     import pdb;pdb.set_trace();
             self.data = data[:, np.repeat(mask, 2), :]
             #self.labels = labels[:len(mask)][mask]
             self.labels = labels[0, :len(mask)][mask]
@@ -143,6 +142,18 @@ def join_ouputs(all_outputs, outputs):
     else:
        return torch.cat((all_outputs, outputs), dim=0)
 
+def add_l1(model, loss):
+    l1_lambda = 0.001
+    l1_norm = sum(p.abs().sum() for p in model.parameters())
+    final_loss = loss + l1_lambda * l1_norm
+    return final_loss
+
+def add_l2(model, loss):
+    l2_lambda = 0.01
+    l2_norm = sum(p.pow(2.0).sum() for p in model.parameters())
+    final_loss = loss + l2_lambda * l2_norm
+    return final_loss
+
 def one_epoch_run(train_dataloader, optimizer, model, loss_fn, device, train_ind, best_threshold=None):
     last_loss = 0.
     running_loss = 0.
@@ -150,7 +161,6 @@ def one_epoch_run(train_dataloader, optimizer, model, loss_fn, device, train_ind
     all_outputs = None
     all_labels = None
     tic = datetime.now()
-
     model.train(train_ind)
     for i, data in enumerate(train_dataloader):
         emb1, emb2, labels = data
@@ -159,9 +169,15 @@ def one_epoch_run(train_dataloader, optimizer, model, loss_fn, device, train_ind
         outputs = model(emb1.float(), emb2.float())
         all_outputs = join_ouputs(all_outputs, outputs)
         all_labels = join_ouputs(all_labels, labels)
+        #converted_labels = labels.type(torch.long)
         converted_labels = labels.type(torch.float)[:, None]
-        converted_labels[converted_labels == 0] = -1
+        if type(loss_fn).__name__ != 'BCELoss':
+           converted_labels[converted_labels == 0] = -1
+           converted_labels = converted_labels.type(torch.float)[:, None]
+
         loss = loss_fn(outputs, converted_labels.float())
+        #loss = add_l2(model, loss)
+        #loss = loss_fn(outputs, converted_labels)
 
         if train_ind:
            loss.backward()
@@ -170,6 +186,12 @@ def one_epoch_run(train_dataloader, optimizer, model, loss_fn, device, train_ind
         running_loss += loss.item()
  
     threshold, max_accuracy = find_a_threshold(all_outputs, all_labels, train_ind, best_threshold)
+    #if type(loss_fn).__name__ != 'CrossEntropyLoss':
+    #   threshold, max_accuracy = find_a_threshold(all_outputs, all_labels, train_ind, best_threshold)
+    #else:
+    #   threshold = float('inf')
+    #   import pdb;pdb.set_trace();
+    #   max_accuracy = np.sum(all_outputs == all_labels) 
     run_time = round((datetime.now() - tic).total_seconds(), 1)
     avg_loss = running_loss / len(train_dataloader)
 
@@ -224,7 +246,7 @@ def parse_arguments():
 
 def initialize_weights(linear_const, bilinear_const):
     def inner(m):
-        torch.manual_seed(42)
+        torch.manual_seed(SEED)
     
         if isinstance(m, nn.Linear):
             linear_bond = 1 / math.sqrt(linear_const)

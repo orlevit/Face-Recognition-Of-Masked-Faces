@@ -132,7 +132,9 @@ def load_bins(bins_files_loc, image_size):
     all_issame_list = []
     # Get all the bins filesin a location
     print('f{bins_files_loc}:bins_files_loc')
+    import pdb; pdb.set_trace();
     for bin_files_loc in bins_files_loc:
+        import pdb;pdb.set_trace();
         print(bin_files_loc)
         try:
             with open(bin_files_loc, 'rb') as f:
@@ -290,14 +292,14 @@ def combine_datasets(dbs_loc, dst_loc):
 # Forward the bins files throught the different models and save them
 forward_bins_through_models(MODEL_DIR_LOC, BIN_LOC, IMAGE_SIZE, BATCH_SIZE)
 
-import pdb; pdb.set_trace();
-gs_joined_loc = get_files_loc_models_data(INPUT_MODELS_DATA_LOC)
-joined_models(gs_joined_loc, TARGET_MODELS_DATA_LOC)
-
-# join the bins for each model together
-dbs_loc = get_files_loc_models(INPUT_MODELS_LOC)
-os.makedirs(TARGET_MODELS_LOC, exist_ok=True)
-combine_datasets(dbs_loc, TARGET_MODELS_LOC)
+#import pdb; pdb.set_trace();
+#gs_joined_loc = get_files_loc_models_data(INPUT_MODELS_DATA_LOC)
+#joined_models(gs_joined_loc, TARGET_MODELS_DATA_LOC)
+#
+## join the bins for each model together
+#dbs_loc = get_files_loc_models(INPUT_MODELS_LOC)
+#os.makedirs(TARGET_MODELS_LOC, exist_ok=True)
+#combine_datasets(dbs_loc, TARGET_MODELS_LOC)
 
 # Remove all intermediate files
 #shutil.rmtree(INPUT_MODELS_DATA_LOC)

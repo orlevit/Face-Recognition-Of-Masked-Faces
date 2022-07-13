@@ -1,3 +1,4 @@
+# Make sure that SPLIT_DATA_SAVE is divieded without leftovers, otherwise the while loop will truncate the last elements
 # only one bin file - chunckisize the file for small pieces by SPLIT_DATA_SAVE
 # virtual environment tf_gpu_py36
 import os
@@ -6,6 +7,7 @@ import json
 import torch
 import pickle
 import shutil
+import argparse
 from mxnet import nd
 import mxnet as mx
 import numpy as np
@@ -14,26 +16,21 @@ from datetime import datetime
 from itertools import groupby
 
 # Constants
-SPLIT_DATA_SAVE =  15000
+MAX_NUMER_OF_DATA_FOR_MODEL = 300000
+SPLIT_DATA_SAVE = 10000
 BATCH_SIZE = 1
 NUMBER_OF_MODELS = 7
 IMAGE_SIZE = [112, 112]
-#BIN_LOC = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/multi_masks_350000.bin'
-#BIN_LOC = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/images_masked_crop/cfp/aorgmask/aorgmask_c.bin'
-#BIN_LOC = '/RG/rg-tal/orlev/downloads/RMFD/amasked_whn_converted/amasked_whn_converted.bin'
-#BIN_LOC =  '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data/casia_mask_nomask/mask_no_mask_covid19_5k.bin'
-BIN_LOC =  '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/train/combinedV1/mask_nomask/combinedV1/covid19_unmask_5K_2/covid19_unmask_5K_2.bin'
+BIN_LOC = '/RG/rg-tal/orlev/datasets/original_ds/MFR2/aorgmask/aorgmask.bin'
 #BIN_LOC = '/home/orlev/work/project/insightface/datasets/eyemask/lfw.bin'
-DBS_MODELS_DATA_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data'
+DBS_MODELS_DATA_LOC = '/RG/rg-tal/orlev/datasets/original_ds/MFR2/composedV1'
 MODEL_DIR_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/rec_run/models/transfer_learning'
-INPUT_MODELS_DATA_LOC = os.path.join(DBS_MODELS_DATA_LOC, 'train')
+INPUT_MODELS_DATA_LOC = DBS_MODELS_DATA_LOC# os.path.join(DBS_MODELS_DATA_LOC, 'train')
 TARGET_MODELS_DATA_LOC = os.path.join(DBS_MODELS_DATA_LOC, 'db_train_models')
 INPUT_MODELS_LOC = os.path.join(DBS_MODELS_DATA_LOC, 'db_train_models')
 TARGET_MODELS_LOC = os.path.join(DBS_MODELS_DATA_LOC, 'all_train')
-#DATA_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data'
-#DATA_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data/cfp/c'
-#DATA_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/converted_data/RMFD'
-DATA_LOC = '/RG/rg-tal/orlev/Face-Recognition-Of-Masked-Faces/scripts/prepare_run/bin/bins_files/train/combinedV1/mask_nomask/combinedV1/covid19_unmask_5K_2/train'
+DATA_LOC = '/RG/rg-tal/orlev/datasets/original_ds/MFR2/composedV1'
+
 
 def set_models_epochs(models_loc):
     print(f'Modls: {models_loc}')
@@ -99,7 +96,7 @@ def create_embeddings(data, model, batch_size, data_extra, label_shape):
     ba = 0
     ii=0; bb=0;
     while ba < data.shape[0]:
-        print(f'embeddings::{ii}, bb:{bb}')
+        #print(f'embeddings::{ii}, bb:{bb}')
         bb = min(ba + batch_size, data.shape[0])
         count = bb - ba
         _data = nd.slice_axis(data, axis=0, begin=bb - batch_size, end=bb)
@@ -109,7 +106,7 @@ def create_embeddings(data, model, batch_size, data_extra, label_shape):
             db = mx.io.DataBatch(data=(_data, _data_extra), label=(_label, ))
         model.forward(db, is_train=False)
         net_out = model.get_outputs()
-        #import pdb; pdb.set_trace();
+        #importpdb; pdb.set_trace();
         _embeddings = net_out[0]#.asnumpy()
         #_embeddings = net_out[0].asnumpy()
         #print(_embeddings.shape)
@@ -181,26 +178,28 @@ def bin_loc_to_data(bins_dir_loc, image_size):
 
 
 
-# This is read every file of  data and than save(instaed read a all sata and thaen save)
+# this is read every file of  data and than save(instaed read a all sata and thaen save)
 def forward_bins_through_models(model_dir_loc, bins_dir_loc, image_size, batch_size):
-    models_dir, epochs = set_models_epochs(MODEL_DIR_LOC)
+    models_dir, epochs = set_models_epochs(model_dir_loc)
     models, models_thresholds, models_names = set_models(models_dir, epochs, batch_size, image_size)
     data_dict, all_bins_names_dict = bin_loc_to_data(bins_dir_loc, image_size)
-    
-    #import pdb;pdb.set_trace();
-    
     for dstype_name, (data_lists, issame_lists) in data_dict.items():
         for data_i, (data_list, issame_list) in enumerate(zip(data_lists, issame_lists)):
+            bin_data_length = data_list[0].shape[0]
+            issame_length = len(issame_list)
+
             for model_i, model in enumerate(models):
-                aleardy_processed = 0; split_num = 0; bin_data_length = data_list[0].shape[0]
-                while aleardy_processed < bin_data_length:
-                 #  if 107 <= split_num:
+                aleardy_processed = 0; split_num = 0; 
+                while aleardy_processed < bin_data_length and aleardy_processed < 700000:#aleardy_processed < 200000:# 500000:#MAX_NUMER_OF_DATA_FOR_MODEL:
+                      #if aleardy_processed >= 100000:#200000:
+                      #if aleardy_processed >= 350000:
+                      if True:
                          coverted_data = None
                          time1 = datetime.now()
-                         #import pdb; pdb.set_trace()
-                         bin_data = data_list[0][aleardy_processed : min(aleardy_processed + SPLIT_DATA_SAVE, bin_data_length)]
-                         embedding_org = create_embeddings(bin_data, model, batch_size,  None, None)
-                         embedding_flip = create_embeddings(bin_data, model, batch_size, None, None)
+                         bin_data_org = data_list[0][aleardy_processed : min(aleardy_processed + SPLIT_DATA_SAVE, bin_data_length)]
+                         bin_data_flip = data_list[1][aleardy_processed : min(aleardy_processed + SPLIT_DATA_SAVE, bin_data_length)]
+                         embedding_org = create_embeddings(bin_data_org, model, batch_size,  None, None)
+                         embedding_flip = create_embeddings(bin_data_flip, model, batch_size, None, None)
                          embeddings_joined = embedding_org + embedding_flip
                          if coverted_data is None:
                             coverted_data = embeddings_joined
@@ -208,21 +207,23 @@ def forward_bins_through_models(model_dir_loc, bins_dir_loc, image_size, batch_s
     
                          time2 = datetime.now()
                          diff = time2 - time1
-                         curr_model_name = models_dir[model_i].rsplit('/',1)[-1]
-                         print(f'Emb created. db:{dstype_name}({data_i+1}/{len(data_lists)}). model:{curr_model_name}({model_i+1}/{len(models)}). time(min):{np.round(diff.total_seconds()/60,2)}')
+                         #curr_model_name = models_dir[model_i].rsplit('/',1)[-1]
+                         curr_model_name = models_names[model_i]
+                         print(f'Emb created. db:{dstype_name}({data_i+1}/{len(data_lists)}). model:{curr_model_name}({model_i+1}/{len(models)}). Processed:({aleardy_processed}/{bin_data_length}) . time(min):{np.round(diff.total_seconds()/60,2)}')
     
                          dst_dir = os.path.join(DATA_LOC, dstype_name, 'db_' + all_bins_names_dict[dstype_name][data_i], models_names[model_i])
                          os.makedirs(dst_dir, exist_ok=True)
-                         mx.nd.save(os.path.join(dst_dir, f'data_{split_num}.npy'), coverted_data)
-                         mx.nd.save(os.path.join(dst_dir, f'labels_{split_num}.npy'), coverted_issame)
+                         mx.nd.save(os.path.join(dst_dir, f'data_{aleardy_processed}.npy'), coverted_data)
+                         if split_num <= issame_length:
+                            mx.nd.save(os.path.join(dst_dir, f'labels_{aleardy_processed}.npy'), coverted_issame)
                          del coverted_data
                          del coverted_issame
                          del embedding_org
                          del embedding_flip
                          del embeddings_joined
                          gc.collect()
-                         aleardy_processed += SPLIT_DATA_SAVE
-                         split_num += 1
+                      aleardy_processed += SPLIT_DATA_SAVE
+                      split_num += 1
 
     print('Fiished: join_models_dbs funcion')
 
@@ -300,13 +301,14 @@ def combine_datasets(dbs_loc, dst_loc):
     labels_file = np.load(loc[1])
     torch.save(labels_file, os.path.join(dst_loc, 'all_labels.pt'), pickle_protocol=4)
     torch.save(comb_data, os.path.join(dst_loc, 'all_data.pt'), pickle_protocol=4)
-    
+
+
 # Forward the bins files throught the different models and save them
 forward_bins_through_models(MODEL_DIR_LOC, BIN_LOC, IMAGE_SIZE, BATCH_SIZE)
 
-#gs_joined_loc = get_files_loc_models_data(INPUT_MODELS_DATA_LOC)
-#joined_models(gs_joined_loc, TARGET_MODELS_DATA_LOC)
-#
+gs_joined_loc = get_files_loc_models_data(INPUT_MODELS_DATA_LOC)
+joined_models(gs_joined_loc, TARGET_MODELS_DATA_LOC)
+
 ## join the bins for each model together
 #dbs_loc = get_files_loc_models(INPUT_MODELS_LOC)
 #os.makedirs(TARGET_MODELS_LOC, exist_ok=True)

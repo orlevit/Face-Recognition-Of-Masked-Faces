@@ -9,9 +9,9 @@ from time import time
 from datetime  import datetime
 from torch.utils.data import DataLoader
 from sklearn.model_selection import KFold
-sys.path.append(os.path.realpath('../model_training'))
+sys.path.append(os.path.realpath('../../model_training'))
 from config import SPLIT_TRAIN, TRAIN_DS_IND, VALID_DS_IND, WHOLE_DATA_BATCH, TEST_DS_IND
-from models_architecture import NeuralNetwork5
+from models_architecture import *
 from helper import EmbbedingsDataset, get_optimizer, select_train_valid, find_a_threshold, calculate_accuracy
 
 BASE_MODELS_PATH = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/converted_data/models'
@@ -33,7 +33,8 @@ BASE_MODELS_PATH = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/co
 #MODEL_PATH = os.path.join(BASE_MODELS_PATH, '350000_pairs_batch_all_hidden4096_NeuralNetwork5_lr1e-05_32_D20_02_2022_T18_53_58_770221.pt')
 
 # Combined version2
-TEST_BASE_DATA_LOC = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/converted_data/lfw_test/db_for_test_combinedV2'
+#TEST_BASE_DATA_LOC = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/converted_data/lfw_test/db_for_test_combinedV2'
+TEST_BASE_DATA_LOC = '/RG/rg-tal/orlev/datasets/original_ds/MFR2/converted_data/db_for_test_combinedV2'
 
 ### Retrain
 # Version1
@@ -43,7 +44,9 @@ TEST_BASE_DATA_LOC = '/home/orlev/work/Face-Recognition-Of-Masked-Faces/scripts/
 # Version2
 #MODEL_PATH = os.path.join(BASE_MODELS_PATH, '350000pairsV2_NeuralNetwork5_lastHidden4096_lr1e-05_32_D17_06_2022_T16_44_18_742560.pt')
 #MODEL_PATH = os.path.join(BASE_MODELS_PATH, '350000pairsV2_NeuralNetwork5_lastHidden4096_lr1e-06_32_D17_06_2022_T16_42_13_910480.pt')
-MODEL_PATH = os.path.join(BASE_MODELS_PATH, '350000pairsV2_NeuralNetwork5_lastHidden4096_lr1e-07_32_D17_06_2022_T16_41_08_309996.pt')
+#MODEL_PATH = os.path.join(BASE_MODELS_PATH, '350000pairsV2_NeuralNetwork5_lastHidden4096_lr1e-07_32_D17_06_2022_T16_41_08_309996.pt')
+#MODEL_PATH = os.path.join(BASE_MODELS_PATH, '20000pairsV2_long_reduce2_seed42_NeuralNetwork14_lastHidden4096_lr1e-07_32_D24_06_2022_T01_04_00_719484.pt')
+MODEL_PATH = os.path.join(BASE_MODELS_PATH, '20000pairsV2_long_reduce4_seed42_NeuralNetwork14_lastHidden4096_lr1e-07_32_D24_06_2022_T01_13_29_644254.pt')
 
 # Disable
 def blockPrint():
@@ -185,7 +188,7 @@ def get_test_data_by_indices(data, labels, indices):
     return test_dataloader
 def main():
     print(MODEL_PATH)
-    model = NeuralNetwork5()
+    model = NeuralNetwork14()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     checkpoint = torch.load(MODEL_PATH)
     model_state_dict = checkpoint["model_state_dict"]
@@ -211,7 +214,7 @@ def main():
             classification_list = []
             thresholds_list = []
 
-            #blockPrint()
+            blockPrint()
             for fold_num,(train_indices, test_indices) in enumerate(k_fold.split(indices)):
                 train_dataloader = get_test_data_by_indices(test_data, test_labels, train_indices)
                 threshold = find_best_threshold(train_dataloader, model, device, fold_num)
@@ -221,7 +224,7 @@ def main():
                 classification_list.append(avg_classificatin_loss)
                 print(f'Test: run_time:{run_time}, loss={avg_loss}, classification accuracy:{avg_classificatin_loss}, thresold:{threshold}')
                 thresholds_list.append(threshold)
-            #enablePrint()
+            enablePrint()
             print(f'Images:{sub_dir}: {np.mean(classification_list)}+-{np.std(classification_list)}, avg_thresold={np.mean(thresholds_list)} ,{thresholds_list=}')
             print('---------------------------------------------------------------------------------------------------------------------')
 

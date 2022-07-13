@@ -167,6 +167,44 @@ def file_name(lfw_dir, pair1, pair2, file_ext):
 
     return file_path
 
+def file_name_mask_no_mask(pair, file_ext):
+    loc, person, name = pair.rsplit('/', 2)
+    file_path = os.path.join(loc, person, person + '_' + '%04d' % int(name)+'.'+file_ext)
+    if not os.path.exists(file_path):
+       file_path = os.path.join(loc, person, '%03d' % int(name)+'.'+file_ext)
+    if not os.path.exists(file_path):
+       file_path = os.path.join(loc, person, name + '.' + file_ext)
+
+    return file_path
+
+def get_paths_mask_nomask(pairs, file_ext):
+    nrof_skipped_pairs = 0
+    path_list = []
+    issame_list = []
+    for pair in pairs:
+        print(pair)
+        path0 = file_name_mask_no_mask(pair[0], file_ext)
+        path1 = file_name_mask_no_mask(pair[1], file_ext)
+        issame = True if pair[2] else False
+        if os.path.exists(path0) and os.path.exists(path1):    # Only add the pair if both paths exist
+            path_list += (path0,path1)
+            issame_list.append(issame)
+        else:
+            print('not exists', path0, path1)
+            nrof_skipped_pairs += 1
+    if nrof_skipped_pairs>0:
+        print('Skipped %d image pairs' % nrof_skipped_pairs)
+    
+    return path_list, issame_list
+
+def read_pairs(pairs_filename):
+    pairs = []
+    with open(pairs_filename, 'r') as f:
+        for line in f.readlines()[1:]:
+            pair = line.strip().split()
+            pairs.append(pair)
+    return np.array(pairs)
+
 def get_paths(lfw_dir, pairs, file_ext):
     nrof_skipped_pairs = 0
     path_list = []

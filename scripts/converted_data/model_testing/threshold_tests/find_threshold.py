@@ -9,7 +9,7 @@ from time import time
 from datetime  import datetime
 from torch.utils.data import DataLoader
 from sklearn.model_selection import KFold
-sys.path.append(os.path.realpath('../model_training'))
+sys.path.append(os.path.realpath('../../model_training'))
 from config import SPLIT_TRAIN, TRAIN_DS_IND, VALID_DS_IND, WHOLE_DATA_BATCH, TEST_DS_IND
 from models_architecture import NeuralNetwork5
 from helper import EmbbedingsDataset, get_optimizer, select_train_valid
