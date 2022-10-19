@@ -187,7 +187,7 @@ def trapezoid(x):
 
 def pose_scores(poses):
     pitches, yaws = poses[:, 0], poses[:, 1]
-    vtrapezoid = np.vectorize(trapezoid)
+    vtrapezoid = np.vectorize(trapezoid, otypes=[float])
     composition = YAW_IMPORTANCE * vtrapezoid(yaws) + PITCH_IMPORTANCE * vtrapezoid(pitches)
     scores = np.where(MIN_POSE_SCORES <= composition, composition, MIN_POSE_SCORES)
 
