@@ -4,7 +4,7 @@ Brief summary of the analysis results.
 
 🧪 Testing scenarios:
 <br><br>
-Two scenarios of Face verification were tested: 
+Two scenarios of Face verification were tested on the Sunglasses, Hat, Surgical and Ski masks:
 
 a.  Masked-Masked: A comparison between two masked facial images.
 
