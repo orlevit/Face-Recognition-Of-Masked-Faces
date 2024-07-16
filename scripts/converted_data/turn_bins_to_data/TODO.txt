@@ -1,3 +1,0 @@
-# recreate the files for the masked lfw to checkif i get the same result from the test.py in convertd_data/test
-
-run joined_test_dbs.py; run all_to_one3.py

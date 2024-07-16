@@ -15,7 +15,7 @@ def render(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, bbox_ind, output_
     if not config[mask_name].masks_combination:
         return render_mask(img, r_img, df_3dh, h3d2i, mask_name, scale_factor, bbox_ind, output_bbox, pose)
 
-    multi_morph_mask_x = np.array([], dtype=np.int); multi_morph_mask_y = np.array([], dtype=np.int)
+    multi_morph_mask_x = np.array([], dtype=np.int64); multi_morph_mask_y = np.array([], dtype=np.int64)
     multi_morph_rest_x = np.array([]); multi_morph_rest_y = np.array([])
     for single_name in config[mask_name].masks_list:
         mask_x, mask_y, rest_mask_x, rest_mask_y = render_mask(img, r_img, df_3dh, h3d2i, single_name, scale_factor,
@@ -91,7 +91,7 @@ def neighbors_cells_z(mask_on_img, x_pixel, y_pixel, max_x, max_y):
             if mask_on_img[y, x] is not None:
                 z_neighbors.extend(mask_on_img[y, x])
 
-    return np.asarray(z_neighbors, dtype=np.float)
+    return np.asarray(z_neighbors, dtype=np.float64)
 
 
 def otsu_clustering(elements, bins_number, bin_half_size):
