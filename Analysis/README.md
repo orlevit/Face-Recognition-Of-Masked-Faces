@@ -29,7 +29,7 @@ We introduced a metric to obtain a single value for each model, aiming to enhanc
 Here are the results of our study:
 1.	When the type of occlusion is not known in advance:
 <p align="center">
-  <img src="images/8.jpg" width="380" height="120">
+  <img src="images/8.jpg" width="380" height="140">
 </p>
 
 2.	When the type of occlusion is known in advance:
