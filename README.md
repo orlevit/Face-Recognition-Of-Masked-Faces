@@ -104,4 +104,3 @@ python main.py -i /input_image_directory -o /output_image_directory
 ```
 ## License
 This project is licensed under the [MIT License](https://en.wikipedia.org/wiki/MIT_License).
-
